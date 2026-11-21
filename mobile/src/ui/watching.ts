@@ -4,7 +4,6 @@ import { minutesLeft } from '@web/lib/format';
 import { episodeCode, episodeName } from '@web/titles/words';
 import type { Continue } from '@web/wire';
 
-/** How much of a video in Continue watching was watched, or null when it has not been started. */
 export function progressOf(item: Continue): number | null {
   return item.resume_at !== null && item.duration ? item.resume_at / item.duration : null;
 }

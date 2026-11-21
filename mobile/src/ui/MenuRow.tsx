@@ -5,7 +5,6 @@ import { color, font, radius, space } from '@/theme';
 import { Icon, icons } from './Icon';
 import { Tap } from './Tap';
 
-/** One action in a sheet's menu. */
 export function MenuRow({
   icon,
   label,

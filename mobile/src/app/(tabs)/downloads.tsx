@@ -41,7 +41,7 @@ export default function Downloads() {
   const { docked } = useChrome();
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState<Job | null>(null);
-  const [copyMenu, setCopyMenu] = useState<Copy | null>(null);
+  const [copyMenu, setCopyMenu] = useState<string | null>(null);
   const copies = useCopies();
 
   const active = jobs.filter((job) => ACTIVE.has(job.state));
@@ -72,7 +72,7 @@ export default function Downloads() {
               </Text>
             </Animated.View>
           }
-          renderItem={({ item, index }) => <CopyRow copy={item} index={index} onMenu={() => setCopyMenu(item)} />}
+          renderItem={({ item, index }) => <CopyRow copy={item} index={index} onMenu={() => setCopyMenu(item.job)} />}
         />
       ) : (
         <Animated.FlatList
@@ -116,7 +116,7 @@ export default function Downloads() {
       />
       <Fab icon={icons.add} label="Add a magnet link" onPress={() => router.push('/add')} />
       {menu ? <JobMenu job={menu} onClose={() => setMenu(null)} /> : null}
-      {copyMenu ? <CopyMenu job={copyMenu.job} onClose={() => setCopyMenu(null)} /> : null}
+      {copyMenu ? <CopyMenu job={copyMenu} onClose={() => setCopyMenu(null)} /> : null}
     </View>
   );
 }
@@ -298,7 +298,6 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   );
 }
 
-/** How a copy onto the phone is going, under the download it came from. */
 function CopyState({ copy }: { copy: Copy }) {
   if (copy.state === 'saving') {
     return (
