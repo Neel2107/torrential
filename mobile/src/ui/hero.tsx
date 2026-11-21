@@ -1,4 +1,4 @@
-import { useNavigation, usePreventRemove, type NativeStackNavigationProp } from 'expo-router';
+import { useIsFocused, useNavigation, usePreventRemove, type NativeStackNavigationProp } from 'expo-router';
 import { createContext, use, useEffect, useRef, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 import Animated, {
@@ -133,7 +133,9 @@ export function useHeroPage(id: string) {
     if (HERO && !flown.value) own.value = withTiming(1, FADE);
   }, [flown, own]);
 
-  usePreventRemove(HERO, ({ data }) => {
+  // Only while this page is in front: a Back from the player above it is the player's to take.
+  const focused = useIsFocused();
+  usePreventRemove(HERO && focused, ({ data }) => {
     if (leaving.current) return;
     leaving.current = true;
     const go = () => navigation.dispatch(data.action);
