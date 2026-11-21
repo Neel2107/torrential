@@ -70,15 +70,16 @@ function TopTabs({ labels, index, onChange }: { labels: string[]; index: number;
     position.value = withSpring(index, motion.settle);
   }, [index, position]);
 
-  const underline = useAnimatedStyle(() => {
-    if (widths.length !== labels.length) return { opacity: 0 };
-    const inputs = labels.map((_, i) => i);
-    return {
-      opacity: 1,
-      left: interpolate(position.value, inputs, widths.map((w) => w.x)),
-      width: interpolate(position.value, inputs, widths.map((w) => w.width)),
-    };
-  });
+  const ready = widths.length === labels.length && widths.every(Boolean);
+  const inputs = labels.map((_, i) => i);
+  const lefts = ready ? widths.map((w) => w.x) : inputs.map(() => 0);
+  const sizes = ready ? widths.map((w) => w.width) : inputs.map(() => 0);
+
+  const underline = useAnimatedStyle(() => ({
+    opacity: ready ? 1 : 0,
+    left: interpolate(position.value, inputs, lefts),
+    width: interpolate(position.value, inputs, sizes),
+  }));
 
   return (
     <View style={styles.tabs} accessibilityRole="tablist">
