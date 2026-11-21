@@ -15,7 +15,8 @@
       "infoPlist": {
         "NSLocalNetworkUsageDescription": "torrential connects to the engine on your computer or server over your home network.",
         "NSCameraUsageDescription": "The camera scans the pairing code your computer shows."
-      }
+      },
+      "appleTeamId": "D2AXUJVPA7"
     },
     "android": {
       "package": "dev.torrential.app",
