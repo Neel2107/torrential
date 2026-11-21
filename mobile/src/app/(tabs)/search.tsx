@@ -1,3 +1,5 @@
+import { useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -12,26 +14,31 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { bytes } from '@web/lib/format';
+import { bytes, percent, rate } from '@web/lib/format';
 import { readable } from '@web/lib/release';
 import { cardFacts } from '@web/titles/words';
-import type { Release, SearchMessage, TitleCard } from '@web/wire';
+import type { Continue, Job, Release, SearchMessage, TitleCard } from '@web/wire';
 
-import { stream } from '@/engine/client';
-import { useTitleSearch } from '@/engine/queries';
+import { post, stream } from '@/engine/client';
+import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
+import { keys, useHome, useTitleSearch } from '@/engine/queries';
 import { useRecentSearches } from '@/engine/recent';
 import { useLink } from '@/engine/session';
 import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Icon, icons } from '@/ui/Icon';
+import { Meter } from '@/ui/Meter';
 import { rise } from '@/ui/rise';
 import { TAB_BAR_HEIGHT } from '@/ui/TabBar';
 import { Tap } from '@/ui/Tap';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
+import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { color, font, motion, radius, space, type } from '@/theme';
 
 const TABS = ['Films & shows', 'Torrents'] as const;
+/** How many of each kind of thing to pick up again the search page lists before a search. */
+const SHOWN = 3;
 
 function useDebounced<T>(value: T, ms: number): T {
   const [settled, setSettled] = useState(value);
@@ -50,9 +57,18 @@ export default function Search() {
   const top = insets.top + BAR_HEIGHT + TABS_HEIGHT;
   const recents = useRecentSearches();
   const remember = () => recents.remember(text);
+  const pickup = usePickup();
   const idle =
-    recents.recent.length > 0 ? (
-      <Recent items={recents.recent} onPick={setText} onForget={recents.forget} onClear={recents.clear} />
+    pickup.unfinished.length > 0 || pickup.downloads.length > 0 || recents.recent.length > 0 ? (
+      <Recent
+        unfinished={pickup.unfinished}
+        downloads={pickup.downloads}
+        more={pickup.more}
+        searches={recents.recent}
+        onPick={setText}
+        onForget={recents.forget}
+        onClear={recents.clear}
+      />
     ) : null;
 
   return (
@@ -383,55 +399,198 @@ function ReleaseRow({ release, index, onOpen }: { release: Release; index: numbe
   );
 }
 
+/**
+ * What there is to pick up again before a search, as the web's search page shows it: unfinished
+ * videos first, then the latest downloads not already among them.
+ */
+function usePickup(): { unfinished: Continue[]; downloads: Job[]; more: boolean } {
+  const home = useHome();
+  const { jobs } = useJobs();
+  const unfinished = (home.data?.continue ?? []).slice(0, SHOWN);
+  const watching = new Set(unfinished.map((item) => item.title.id));
+  const others = jobs.filter((job) => !(job.title && watching.has(job.title.title)));
+  return { unfinished, downloads: others.slice(0, SHOWN), more: others.length > SHOWN };
+}
+
 function Recent({
-  items,
+  unfinished,
+  downloads,
+  more,
+  searches,
   onPick,
   onForget,
   onClear,
 }: {
-  items: string[];
+  unfinished: Continue[];
+  downloads: Job[];
+  more: boolean;
+  searches: string[];
   onPick: (query: string) => void;
   onForget: (query: string) => void;
   onClear: () => void;
 }) {
+  let order = 0;
   return (
-    <Animated.View entering={rise(0)}>
-      <View style={styles.recentHead}>
-        <Text style={type.title}>Recent</Text>
-        <Tap shrink={0.94} haptic onPress={onClear} accessibilityLabel="Clear recent searches">
-          <Text style={[type.label, { color: color.action }]}>Clear all</Text>
-        </Tap>
-      </View>
-      {items.map((item, index) => (
-        <Animated.View
-          key={item}
-          entering={rise(index + 1)}
-          exiting={FadeOut.duration(motion.quick)}
-          layout={LinearTransition.duration(motion.standard)}
-        >
-          <Tap
-            shrink={1}
-            highlight
-            onPress={() => onPick(item)}
-            accessibilityLabel={`Search for ${item}`}
-            style={styles.recentRow}
-          >
-            <Icon name={icons.history} size={18} tint={color.pencil} />
-            <Text style={[type.callout, { flex: 1 }]} numberOfLines={1}>
-              {item}
-            </Text>
-            <Tap
-              shrink={0.85}
-              onPress={() => onForget(item)}
-              accessibilityLabel={`Remove ${item}`}
-              style={styles.recentRemove}
+    <View style={{ gap: space.md }}>
+      {unfinished.length > 0 ? (
+        <Animated.View entering={rise(order++)}>
+          <SectionHead title="Continue watching" />
+          {unfinished.map((item) => (
+            <Animated.View
+              key={item.video}
+              entering={rise(order++)}
+              exiting={FadeOut.duration(motion.quick)}
+              layout={LinearTransition.duration(motion.standard)}
             >
-              <Icon name={icons.close} size={16} tint={color.pencil} />
-            </Tap>
-          </Tap>
+              <UnfinishedRow item={item} />
+            </Animated.View>
+          ))}
         </Animated.View>
-      ))}
-    </Animated.View>
+      ) : null}
+      {downloads.length > 0 ? (
+        <Animated.View entering={rise(order++)}>
+          <SectionHead
+            title="Downloads"
+            action={more ? { label: 'See all', onPress: () => router.navigate('/downloads') } : undefined}
+          />
+          {downloads.map((job) => (
+            <Animated.View key={job.id} entering={rise(order++)} layout={LinearTransition.duration(motion.standard)}>
+              <DownloadRow job={job} />
+            </Animated.View>
+          ))}
+        </Animated.View>
+      ) : null}
+      {searches.length > 0 ? (
+        <Animated.View entering={rise(order++)}>
+          <SectionHead title="Recent searches" action={{ label: 'Clear all', onPress: onClear }} />
+          {searches.map((item) => (
+            <Animated.View
+              key={item}
+              entering={rise(order++)}
+              exiting={FadeOut.duration(motion.quick)}
+              layout={LinearTransition.duration(motion.standard)}
+            >
+              <Tap
+                shrink={1}
+                highlight
+                onPress={() => onPick(item)}
+                accessibilityLabel={`Search for ${item}`}
+                style={styles.recentRow}
+              >
+                <Icon name={icons.history} size={18} tint={color.pencil} />
+                <Text style={[type.callout, { flex: 1 }]} numberOfLines={1}>
+                  {item}
+                </Text>
+                <Tap
+                  shrink={0.85}
+                  onPress={() => onForget(item)}
+                  accessibilityLabel={`Remove ${item}`}
+                  style={styles.recentRemove}
+                >
+                  <Icon name={icons.close} size={16} tint={color.pencil} />
+                </Tap>
+              </Tap>
+            </Animated.View>
+          ))}
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}
+
+function SectionHead({ title, action }: { title: string; action?: { label: string; onPress: () => void } }) {
+  return (
+    <View style={styles.recentHead}>
+      <Text style={type.title} accessibilityRole="header">
+        {title}
+      </Text>
+      {action ? (
+        <Tap shrink={0.94} haptic onPress={action.onPress} accessibilityLabel={action.label}>
+          <Text style={[type.label, { color: color.action }]}>{action.label}</Text>
+        </Tap>
+      ) : null}
+    </View>
+  );
+}
+
+function UnfinishedRow({ item }: { item: Continue }) {
+  const link = useLink();
+  const client = useQueryClient();
+  const progress = progressOf(item);
+  const subtitle = subtitleOf(item);
+  const forget = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await post(link, '/api/watched/forget', { video: item.video }).catch(() => {});
+    client.invalidateQueries({ queryKey: keys.home });
+  };
+
+  return (
+    <Tap
+      shrink={1}
+      highlight
+      onPress={() => resume(item)}
+      accessibilityLabel={[item.title.name, subtitle, remainingOf(item)].filter(Boolean).join(', ')}
+      style={styles.pickRow}
+    >
+      <Art id={item.title.id} kind="poster" name={item.title.name} style={styles.pickPoster} />
+      <View style={{ flex: 1, gap: 6 }}>
+        <Text style={type.callout} numberOfLines={1}>
+          {item.title.name} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{subtitle}</Text>
+        </Text>
+        {progress !== null ? <Meter fraction={progress} /> : null}
+        <Text style={type.numeric}>{remainingOf(item)}</Text>
+      </View>
+      {item.resume_at !== null ? (
+        <Tap
+          shrink={0.85}
+          onPress={forget}
+          accessibilityLabel={`Forget where ${item.title.name} stopped`}
+          style={styles.recentRemove}
+        >
+          <Icon name={icons.close} size={16} tint={color.pencil} />
+        </Tap>
+      ) : null}
+    </Tap>
+  );
+}
+
+function summary(job: Job): string {
+  if (job.waiting_for) return `Waiting for ${job.waiting_for}`;
+  const { size, verified, down_rate } = job.progress;
+  const share = size ? percent(verified / size) : null;
+  if (job.state === 'downloading') return [share, down_rate > 0 ? rate(down_rate) : null].filter(Boolean).join(' · ');
+  if (job.state === 'done') return size ? bytes(size) : STATE.done;
+  if (job.state === 'paused') return [STATE.paused, share].filter(Boolean).join(' · ');
+  return STATE[job.state];
+}
+
+function DownloadRow({ job }: { job: Job }) {
+  const name = useJobName(job);
+  const said = summary(job);
+  return (
+    <Tap
+      shrink={1}
+      highlight
+      onPress={() => openJob(job)}
+      accessibilityLabel={`${name.title}, ${said}`}
+      style={styles.pickRow}
+    >
+      {name.poster ? (
+        <Art id={name.poster} kind="poster" name={name.title} style={styles.pickPoster} />
+      ) : (
+        <View style={styles.pickBadge}>
+          <Icon name={job.state === 'done' ? icons.check : icons.downloads} size={18} tint={color.soft} />
+        </View>
+      )}
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={type.callout} numberOfLines={1}>
+          {name.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{name.tags}</Text>
+        </Text>
+        <Text style={[type.numeric, job.state === 'error' && { color: color.error }]} numberOfLines={1}>
+          {said}
+        </Text>
+      </View>
+    </Tap>
   );
 }
 
@@ -531,6 +690,22 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   recentRemove: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  pickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingHorizontal: space.page,
+    paddingVertical: space.sm,
+  },
+  pickPoster: { width: 40, height: 60, borderRadius: 6 },
+  pickBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.raised,
+  },
   hint: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 80 },
   hintIcon: {
     width: 64,
