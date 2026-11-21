@@ -1,10 +1,7 @@
 import { Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
 
-/**
- * torrential's engine running inside this app, on loopback. Missing on builds without the
- * native module, and on iOS until it gets one.
- */
+/** torrential's engine running inside this app, on loopback. Missing on builds without the native module. */
 type TorrentialEngine = {
   port: number;
   /** Starts the engine if it is not running, and answers with its port. */

@@ -54,3 +54,8 @@ listening on loopback.
   the engine sheet lists them, switches, runs the engine on the phone, and adds a computer. On the
   F6, "Run the engine on this phone" switched the app to it, and Big Buck Bunny played while it
   downloaded into the app's storage.
+- 2026-11-22: Step 6 on the simulator. The engine builds for `aarch64-apple-ios` and
+  `aarch64-apple-ios-sim` (libtorrent needs SystemConfiguration, as on macOS), packed as
+  `TorrentialMobile.xcframework` and started by a Swift module in Application Support. Phone builds
+  report ffmpeg as unavailable: the simulator had found the Mac's ffprobe and failed to run it, and
+  a phone has none to run. Big Buck Bunny played on the iOS simulator from the app's own engine.

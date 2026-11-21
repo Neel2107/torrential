@@ -31,7 +31,7 @@ fn main() {
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("cargo sets CARGO_CFG_TARGET_OS");
     let linking = match target_os.as_str() {
         "windows" => WINDOWS,
-        "macos" => MACOS,
+        "macos" | "ios" => MACOS,
         _ => UNIX,
     };
     let boost_root = required_env("BOOST_ROOT");
