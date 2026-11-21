@@ -1,9 +1,12 @@
+import { router } from 'expo-router';
 import { createContext, use, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
+import { readable } from '@web/lib/release';
 import type { Event, Job } from '@web/wire';
 
 import { events } from './client';
+import { useTitle } from './queries';
 import { useLink } from './session';
 
 /** The engine sends a heartbeat after 15 s of quiet; a stream silent for longer than this is dead. */
@@ -93,4 +96,32 @@ export function useJobs(): Jobs {
   const jobs = use(Context);
   if (!jobs) throw new Error('useJobs outside JobsProvider');
   return jobs;
+}
+
+export const STATE: Record<Job['state'], string> = {
+  queued: 'Queued',
+  metadata: 'Getting files',
+  checking: 'Checking',
+  downloading: 'Downloading',
+  paused: 'Paused',
+  done: 'Done',
+  error: 'Failed',
+};
+
+/** A download the engine tied to a film or show reads as that title, with its poster. */
+export function useJobName(job: Job): { title: string; tags: string; poster: string | null } {
+  const page = useTitle(job.title?.title ?? '', Boolean(job.title));
+  const fromName = readable(job.name ?? job.id);
+  if (job.title && page.data) {
+    const span =
+      job.title.span === 'film' ? (page.data.year ? String(page.data.year) : '') : job.title.span.toUpperCase();
+    return { title: page.data.name, tags: span, poster: job.title.title };
+  }
+  return { ...fromName, poster: null };
+}
+
+/** A download tied to a title opens the title's page; any other plays. */
+export function openJob(job: Job) {
+  if (job.title) router.push({ pathname: '/title/[id]', params: { id: job.title.title } });
+  else router.push({ pathname: '/play', params: { ref: job.id } });
 }

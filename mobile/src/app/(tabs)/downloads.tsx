@@ -12,12 +12,10 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ago, bytes, percent, rate, sentence, span } from '@web/lib/format';
-import { readable } from '@web/lib/release';
 import type { Job } from '@web/wire';
 
 import { post } from '@/engine/client';
-import { useJobs } from '@/engine/jobs';
-import { useTitle } from '@/engine/queries';
+import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
 import { Art } from '@/ui/Art';
 import { useLink } from '@/engine/session';
 import { useChromeScroll } from '@/ui/chrome';
@@ -32,16 +30,6 @@ import { TopBar, useTopInset } from '@/ui/TopBar';
 import { color, font, motion, radius, space, type } from '@/theme';
 
 const ACTIVE = new Set<Job['state']>(['queued', 'metadata', 'checking', 'downloading', 'paused', 'error']);
-
-const STATE: Record<Job['state'], string> = {
-  queued: 'Queued',
-  metadata: 'Getting files',
-  checking: 'Checking',
-  downloading: 'Downloading',
-  paused: 'Paused',
-  done: 'Done',
-  error: 'Failed',
-};
 
 export default function Downloads() {
   const { jobs, live } = useJobs();
@@ -100,23 +88,6 @@ export default function Downloads() {
   );
 }
 
-function open(job: Job) {
-  if (job.title) router.push({ pathname: '/title/[id]', params: { id: job.title.title } });
-  else router.push({ pathname: '/play', params: { ref: job.id } });
-}
-
-/** A download the engine tied to a film or show reads as that title, with its poster. */
-function useJobName(job: Job): { title: string; tags: string; poster: string | null } {
-  const page = useTitle(job.title?.title ?? '', Boolean(job.title));
-  const fromName = readable(job.name ?? job.id);
-  if (job.title && page.data) {
-    const span =
-      job.title.span === 'film' ? (page.data.year ? String(page.data.year) : '') : job.title.span.toUpperCase();
-    return { title: page.data.name, tags: span, poster: job.title.title };
-  }
-  return { ...fromName, poster: null };
-}
-
 function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () => void }) {
   const name = useJobName(job);
   const size = job.progress.size;
@@ -140,7 +111,7 @@ function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () =>
       <Tap
         shrink={1}
         highlight
-        onPress={() => open(job)}
+        onPress={() => openJob(job)}
         onLongPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           onMenu();
