@@ -44,6 +44,7 @@ import { useDownloaded, usePlayingJob } from './downloaded';
 import { Ended } from './Ended';
 import { FilesSheet, videosOf } from './FilesSheet';
 import { usePlayerPreferences } from './preferences';
+import { RecoveryNotice, useStallRecovery, type Takeover } from './recovery';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
 import { SettingsSheet } from './SettingsSheet';
@@ -79,6 +80,8 @@ export function Player({
   resumeAt,
   title,
   episode,
+  switched = false,
+  onTakeover,
 }: {
   video: string | null;
   play: PlayInfo;
@@ -86,6 +89,10 @@ export function Player({
   resumeAt: number | null;
   title: TitleCard | null;
   episode: EpisodeInfo | null;
+  /** This source took over from one that stalled. */
+  switched?: boolean;
+  /** Plays a source that takes over from this one when it stalls. A torrent played by hand has none. */
+  onTakeover?: (takeover: Takeover) => void;
 }) {
   const link = useLink();
   const insets = useSafeAreaInsets();
@@ -139,6 +146,17 @@ export function Player({
   const [preferences, setPreferences] = usePlayerPreferences();
   // Each time this screen starts or resumes playback it claims the saved place, as the web player does.
   const resumed = useRef(true);
+  const held = useRef(false);
+  const { recovery, retry } = useStallRecovery({
+    video: onTakeover ? video : null,
+    play,
+    job,
+    player,
+    status,
+    held,
+    now: timeline.now,
+    onTakeover: (takeover) => onTakeover?.(takeover),
+  });
   const client = useQueryClient();
   const [drawn, setDrawn] = useState<SubtitleChoice | null>(null);
   const cues = useSubtitleCues(play, drawn);
@@ -163,7 +181,9 @@ export function Player({
     setVisible(false);
   });
   useEventListener(player, 'playingChange', (event) => {
-    if (event.isPlaying) resumed.current = true;
+    if (!event.isPlaying) return;
+    resumed.current = true;
+    held.current = false;
   });
 
   useEffect(() => {
@@ -224,7 +244,11 @@ export function Player({
     player.playbackRate = preferences.speed;
   }, [player, preferences.speed]);
 
-  const toggle = () => (player.playing ? player.pause() : player.play());
+  const toggle = () => {
+    held.current = player.playing;
+    if (player.playing) player.pause();
+    else player.play();
+  };
 
   const leftSkip = useSharedValue(0);
   const rightSkip = useSharedValue(0);
@@ -450,6 +474,8 @@ export function Player({
           lifted={visible}
           look={preferences.subtitleStyle}
         />
+
+        <RecoveryNotice recovery={recovery} switched={switched} onRetry={retry} />
 
         {ended ? (
           <Ended

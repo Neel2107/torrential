@@ -19,6 +19,7 @@ import { CHECKS, episodeCode, episodeName } from '@web/titles/words';
 
 import { Player } from '@/player/Player';
 import { useTitlePlay, useTorrentPlay, type Start } from '@/player/start';
+import type { Takeover } from '@/player/recovery';
 import { FORCE_STREAM } from '@/player/timeline';
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
@@ -91,15 +92,21 @@ function ByTitle({
   retry: () => void;
 }) {
   const start = useTitlePlay(video, attempt, source);
+  // Kept with the start it took over from, so a new start drops it without an effect.
+  const [takeover, setTakeover] = useState<{ from: Start; to: Takeover } | null>(null);
   if (start.phase === 'ready') {
+    const shown = takeover?.from === start ? takeover.to : null;
     return (
       <Player
+        key={shown?.play.id ?? start.play.id}
         video={video}
-        play={start.play}
-        release={start.release}
-        resumeAt={at ?? start.resumeAt}
+        play={shown?.play ?? start.play}
+        release={shown?.release ?? start.release}
+        resumeAt={shown ? shown.at : (at ?? start.resumeAt)}
         title={start.title}
         episode={start.episode}
+        switched={shown !== null}
+        onTakeover={(to) => setTakeover({ from: start, to })}
       />
     );
   }

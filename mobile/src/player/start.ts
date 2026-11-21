@@ -13,7 +13,7 @@ import type {
   Viewer,
 } from '@web/wire';
 
-import { EngineError, post, stream } from '@/engine/client';
+import { EngineError, post, stream, type Link } from '@/engine/client';
 import { useLink } from '@/engine/session';
 
 type PlayMessage =
@@ -69,6 +69,34 @@ export function useViewer(): Viewer {
     playback: 'hevc',
     decoders: { h264: 'hardware', hevc: 'hardware', av1: 'no' },
   };
+}
+
+/** A source that took over from one that stalled, or why none could. */
+export type Replacement = { play: PlayInfo; release: Release } | { error: WireError };
+
+/**
+ * Asks the engine for another source of `video` in place of the download `stalled`, which the
+ * engine pauses once the new one plays. Reads the stream to its end, since the engine treats a
+ * caller that goes away early as one that no longer wants the source it is trying.
+ */
+export async function replaceStalled(
+  link: Link,
+  request: { video: string; stalled: string; viewer: Viewer },
+  signal: AbortSignal,
+): Promise<Replacement> {
+  const body: PlayTitle = { video: request.video, viewer: request.viewer, replace: request.stalled };
+  let outcome: Replacement | null = null;
+  try {
+    await stream<PlayMessage>(link, '/api/title/play', { method: 'POST', body, signal }, (message) => {
+      if (message.type === 'playing') outcome = { play: message.play, release: message.release };
+      if (message.type === 'failed') outcome = { error: message.error };
+    });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const message = error instanceof EngineError ? error.message : 'Lost the engine while looking for another source.';
+    return outcome ?? { error: { code: 'interrupted', message } };
+  }
+  return outcome ?? { error: { code: 'interrupted', message: 'The engine stopped answering before a source played.' } };
 }
 
 /** Asks the engine to find and start a source for `video`, following each step it reports. */
