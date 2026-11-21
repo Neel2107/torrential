@@ -1,7 +1,15 @@
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { RefreshControl, StyleSheet, Text, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import {
+  RefreshControl,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -80,7 +88,13 @@ export default function Home() {
         left={<EngineAvatar />}
         title={<Mark size={30} />}
         right={
-          <Tap haptic shrink={0.9} onPress={() => router.push('/tv')} accessibilityLabel="Play on TV" style={styles.iconButton}>
+          <Tap
+            haptic
+            shrink={0.9}
+            onPress={() => router.push('/tv')}
+            accessibilityLabel="Play on TV"
+            style={styles.iconButton}
+          >
             <Icon name={icons.cast} size={22} tint={color.ink} />
           </Tap>
         }
@@ -177,7 +191,11 @@ function ContinueCard({ item, width, index }: { item: Continue; width: number; i
             name={item.title.name}
             style={StyleSheet.absoluteFill}
           />
-          <LinearGradient colors={['transparent', 'rgba(10,9,7,0.85)']} locations={[0.45, 1]} style={StyleSheet.absoluteFill} />
+          <LinearGradient
+            colors={['transparent', 'rgba(10,9,7,0.85)']}
+            locations={[0.45, 1]}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.stillBody}>
             <Logo id={item.title.id} name={item.title.name} style={styles.logo} />
             <View style={styles.playPill}>
@@ -220,7 +238,12 @@ function Empty() {
       <Text style={[type.body, { textAlign: 'center' }]}>
         Find a film or a show and it starts playing in seconds, while it downloads.
       </Text>
-      <Button label="Search" icon={icons.search} onPress={() => router.navigate('/search')} style={{ marginTop: space.sm }} />
+      <Button
+        label="Search"
+        icon={icons.search}
+        onPress={() => router.navigate('/search')}
+        style={{ marginTop: space.sm }}
+      />
     </Animated.View>
   );
 }
@@ -229,7 +252,11 @@ function Loading() {
   const { width } = useWindowDimensions();
   const cardWidth = width - space.page * 2 - 28;
   return (
-    <View style={{ paddingHorizontal: space.page, gap: space.lg }} accessibilityLabel="Loading" accessibilityRole="progressbar">
+    <View
+      style={{ paddingHorizontal: space.page, gap: space.lg }}
+      accessibilityLabel="Loading"
+      accessibilityRole="progressbar"
+    >
       <Skeleton style={{ width: 200, height: 24, borderRadius: radius.sm }} />
       <Skeleton style={{ width: cardWidth, height: Math.round((cardWidth * 9) / 16), borderRadius: radius.lg }} />
       <Skeleton style={{ width: 160, height: 16, borderRadius: radius.sm }} />

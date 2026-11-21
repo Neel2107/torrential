@@ -18,7 +18,10 @@ export function useSubtitleFile(download: string, file: SubtitleFile | null): Cu
     setCues([]);
     if (!file) return;
     const controller = new AbortController();
-    fetch(url(link, '/api/subtitles', { id: download, file: file.index }), { headers: authHeaders(link), signal: controller.signal })
+    fetch(url(link, '/api/subtitles', { id: download, file: file.index }), {
+      headers: authHeaders(link),
+      signal: controller.signal,
+    })
       .then((response) => (response.ok ? response.text() : ''))
       .then((text) => {
         const parser = new VttParser();
@@ -43,7 +46,10 @@ export function SubtitleOverlay({ cues, time, lifted }: { cues: Cue[]; time: num
           {cue.lines.map((line, i) => (
             <Text key={i} style={styles.line}>
               {line.map((span, j) => (
-                <Text key={j} style={[span.italic && styles.italic, span.bold && styles.bold, span.underline && styles.underline]}>
+                <Text
+                  key={j}
+                  style={[span.italic && styles.italic, span.bold && styles.bold, span.underline && styles.underline]}
+                >
                   {span.text}
                 </Text>
               ))}

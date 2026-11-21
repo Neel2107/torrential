@@ -120,10 +120,14 @@ export function SeekBar({
             accessibilityLabel="Position"
             accessibilityValue={{ text: `${clock(position)} of ${clock(duration)}` }}
             accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-            onAccessibilityAction={(event) => onSeek(position + (event.nativeEvent.actionName === 'increment' ? 10 : -10))}
+            onAccessibilityAction={(event) =>
+              onSeek(position + (event.nativeEvent.actionName === 'increment' ? 10 : -10))
+            }
           >
             <Animated.View style={[styles.track, track]}>
-              <View style={[styles.buffered, { width: `${duration > 0 ? Math.min(1, buffered / duration) * 100 : 0}%` }]} />
+              <View
+                style={[styles.buffered, { width: `${duration > 0 ? Math.min(1, buffered / duration) * 100 : 0}%` }]}
+              />
               <View style={[styles.played, { width: `${(preview !== null ? previewFraction : fraction) * 100}%` }]} />
             </Animated.View>
             <Animated.View
@@ -155,8 +159,22 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  time: { fontFamily: font.medium, fontSize: 13, color: color.ink, fontVariant: ['tabular-nums'], minWidth: 44, textAlign: 'center' },
+  time: {
+    fontFamily: font.medium,
+    fontSize: 13,
+    color: color.ink,
+    fontVariant: ['tabular-nums'],
+    minWidth: 44,
+    textAlign: 'center',
+  },
   bubble: { position: 'absolute', bottom: 48, width: THUMB_WIDTH, alignItems: 'center', gap: 6 },
-  thumb: { width: THUMB_WIDTH, height: 90, borderRadius: radius.md, backgroundColor: color.raised, borderWidth: 2, borderColor: color.ink },
+  thumb: {
+    width: THUMB_WIDTH,
+    height: 90,
+    borderRadius: radius.md,
+    backgroundColor: color.raised,
+    borderWidth: 2,
+    borderColor: color.ink,
+  },
   bubbleTime: { fontFamily: font.semibold, fontSize: 14, color: color.ink, fontVariant: ['tabular-nums'] },
 });

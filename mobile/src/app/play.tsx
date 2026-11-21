@@ -2,7 +2,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bytes, sentence } from '@web/lib/format';
@@ -21,13 +29,19 @@ import { color, font, motion, radius, space, type } from '@/theme';
 export default function Play() {
   const { video, ref } = useLocalSearchParams<{ video?: string; ref?: string }>();
   const [attempt, setAttempt] = useState(0);
-  return ref ? <ByTorrent torrent={ref} attempt={attempt} retry={() => setAttempt((n) => n + 1)} /> : <ByTitle video={video ?? ''} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />;
+  return ref ? (
+    <ByTorrent torrent={ref} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />
+  ) : (
+    <ByTitle video={video ?? ''} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />
+  );
 }
 
 function ByTorrent({ torrent, attempt, retry }: { torrent: string; attempt: number; retry: () => void }) {
   const start = useTorrentPlay(torrent, attempt);
   if (start.phase === 'ready') {
-    return <Player video={null} play={start.play} release={start.release} resumeAt={null} title={null} episode={null} />;
+    return (
+      <Player video={null} play={start.play} release={start.release} resumeAt={null} title={null} episode={null} />
+    );
   }
   return <Starting video={null} start={start} onRetry={retry} />;
 }
@@ -60,11 +74,23 @@ function stepOf(start: Start): string {
   }
 }
 
-function Starting({ video, start, onRetry }: { video: string | null; start: Exclude<Start, { phase: 'ready' }>; onRetry: () => void }) {
+function Starting({
+  video,
+  start,
+  onRetry,
+}: {
+  video: string | null;
+  start: Exclude<Start, { phase: 'ready' }>;
+  onRetry: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const id = video ? titleOf(video) : null;
   const name = start.title?.name ?? '';
-  const detail = start.episode ? `${episodeCode(start.episode)} · ${episodeName(start.episode)}` : start.title?.year ? String(start.title.year) : '';
+  const detail = start.episode
+    ? `${episodeCode(start.episode)} · ${episodeName(start.episode)}`
+    : start.title?.year
+      ? String(start.title.year)
+      : '';
 
   return (
     <View style={styles.screen}>
@@ -97,13 +123,28 @@ function Starting({ video, start, onRetry }: { video: string | null; start: Excl
           </Animated.View>
         ) : (
           <View style={styles.progress}>
-            <Animated.Text key={stepOf(start)} entering={FadeIn.duration(motion.quick)} exiting={FadeOut.duration(120)} layout={LinearTransition} style={styles.step}>
+            <Animated.Text
+              key={stepOf(start)}
+              entering={FadeIn.duration(motion.quick)}
+              exiting={FadeOut.duration(120)}
+              layout={LinearTransition}
+              style={styles.step}
+            >
               {stepOf(start)}
             </Animated.Text>
             <Sweep />
             {start.phase === 'trying' ? (
-              <Animated.Text key={start.release.id} entering={FadeIn.duration(motion.quick)} style={styles.release} numberOfLines={1}>
-                {[start.release.quality.resolution?.toUpperCase(), start.release.size ? bytes(start.release.size) : null, start.release.seeders !== null ? `${start.release.seeders} seeds` : null]
+              <Animated.Text
+                key={start.release.id}
+                entering={FadeIn.duration(motion.quick)}
+                style={styles.release}
+                numberOfLines={1}
+              >
+                {[
+                  start.release.quality.resolution?.toUpperCase(),
+                  start.release.size ? bytes(start.release.size) : null,
+                  start.release.seeders !== null ? `${start.release.seeders} seeds` : null,
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </Animated.Text>
@@ -133,7 +174,14 @@ function Sweep() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#0a0907' },
   top: { position: 'absolute', top: 0, left: 0, zIndex: 2 },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(20,18,15,0.5)' },
+  round: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20,18,15,0.5)',
+  },
   body: { flex: 1, justifyContent: 'center', gap: space.md, maxWidth: 640 },
   logo: { height: 72, width: '70%' },
   detail: { fontFamily: font.medium, fontSize: 16, color: color.soft },

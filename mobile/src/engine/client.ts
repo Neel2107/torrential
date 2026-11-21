@@ -39,7 +39,11 @@ export function authHeaders(link: Link): Record<string, string> {
   return link.token ? { Cookie: `${COOKIE}=${link.token}` } : {};
 }
 
-export function url(link: Link, path: string, query?: Record<string, string | number | boolean | null | undefined>): string {
+export function url(
+  link: Link,
+  path: string,
+  query?: Record<string, string | number | boolean | null | undefined>,
+): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== null && value !== undefined) search.set(key, String(value));

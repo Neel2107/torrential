@@ -80,11 +80,19 @@ export default function Add() {
   return (
     <View style={[styles.sheet, { paddingBottom: insets.bottom + space.xl }]}>
       <Text style={type.title}>Add a torrent</Text>
-      <Text style={type.body}>Paste a magnet link, an infohash, or a link to a .torrent file. It starts playing while it downloads.</Text>
+      <Text style={type.body}>
+        Paste a magnet link, an infohash, or a link to a .torrent file. It starts playing while it downloads.
+      </Text>
 
       {clip && !text ? (
         <Animated.View entering={FadeIn} exiting={FadeOut}>
-          <Tap shrink={0.98} haptic onPress={() => setText(clip)} accessibilityLabel={`Paste ${describe(clip)}`} style={styles.clip}>
+          <Tap
+            shrink={0.98}
+            haptic
+            onPress={() => setText(clip)}
+            accessibilityLabel={`Paste ${describe(clip)}`}
+            style={styles.clip}
+          >
             <Icon name={icons.link} size={18} tint={color.action} />
             <View style={{ flex: 1 }}>
               <Text style={[type.caption, { color: color.action }]}>On your clipboard</Text>
@@ -137,7 +145,14 @@ export default function Add() {
 
 const styles = StyleSheet.create({
   sheet: { backgroundColor: color.raised, padding: space.xl, gap: space.lg },
-  clip: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: 'rgba(166,199,154,0.1)' },
+  clip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(166,199,154,0.1)',
+  },
   clipAction: { fontFamily: font.bold, fontSize: 15, color: color.action },
   input: {
     minHeight: 96,

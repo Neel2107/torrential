@@ -35,7 +35,7 @@ export function Poster({ title, width }: { title: TitleCard; width: number }) {
       style={{ width }}
     >
       <Art id={title.id} kind="poster" name={title.name} style={[styles.poster, { height: width * 1.5 }]} />
-      <Text style={[type.label, styles.name]} numberOfLines={1}>
+      <Text style={[type.label, styles.name]} numberOfLines={2}>
         {title.name}
       </Text>
       <View style={styles.facts}>

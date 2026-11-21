@@ -5,10 +5,7 @@ import { pair as pairWithCode, PORT, type Link } from './client';
 
 const KEY = 'engine-link';
 
-type Session =
-  | { state: 'loading' }
-  | { state: 'unpaired' }
-  | { state: 'paired'; link: Link };
+type Session = { state: 'loading' } | { state: 'unpaired' } | { state: 'paired'; link: Link };
 
 type SessionApi = {
   session: Session;

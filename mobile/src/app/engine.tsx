@@ -23,22 +23,54 @@ export default function Engine() {
         <Row label="Address" value={base} mono />
         <Row
           label="Status"
-          value={version.isSuccess ? `Online · torrential ${version.data.version}` : version.isError ? 'Not answering' : 'Checking…'}
+          value={
+            version.isSuccess
+              ? `Online · torrential ${version.data.version}`
+              : version.isError
+                ? 'Not answering'
+                : 'Checking…'
+          }
           tint={version.isSuccess ? color.action : version.isError ? color.error : undefined}
         />
-        <Row label="This phone" value={me.data?.asker === 'mac' ? 'Connected over USB (development)' : device ? `${device.name} · ${device.id}` : '…'} />
-        <Row label="App" value={`${Application.nativeApplicationVersion ?? ''} (${Application.nativeBuildVersion ?? ''})`} last />
+        <Row
+          label="This phone"
+          value={
+            me.data?.asker === 'mac'
+              ? 'Connected over USB (development)'
+              : device
+                ? `${device.name} · ${device.id}`
+                : '…'
+          }
+        />
+        <Row
+          label="App"
+          value={`${Application.nativeApplicationVersion ?? ''} (${Application.nativeBuildVersion ?? ''})`}
+          last
+        />
       </View>
       {version.data?.notice ? <Text style={type.label}>{version.data.notice}</Text> : null}
       <Text style={type.caption}>
-        Disconnecting forgets the engine on this phone. To stop the computer trusting this phone, remove it under Devices on the computer.
+        Disconnecting forgets the engine on this phone. To stop the computer trusting this phone, remove it under
+        Devices on the computer.
       </Text>
       <Button label="Disconnect" kind="secondary" onPress={forget} />
     </View>
   );
 }
 
-function Row({ label, value, mono = false, tint, last = false }: { label: string; value: string; mono?: boolean; tint?: string; last?: boolean }) {
+function Row({
+  label,
+  value,
+  mono = false,
+  tint,
+  last = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  tint?: string;
+  last?: boolean;
+}) {
   return (
     <View style={[styles.row, !last && styles.rowRule]}>
       <Text style={type.label}>{label}</Text>

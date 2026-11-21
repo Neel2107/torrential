@@ -1,7 +1,14 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bytes } from '@web/lib/format';
@@ -48,13 +55,25 @@ export default function Search() {
   );
 }
 
-function SearchHeader({ text, setText, tab, setTab }: { text: string; setText: (text: string) => void; tab: number; setTab: (tab: number) => void }) {
+function SearchHeader({
+  text,
+  setText,
+  tab,
+  setTab,
+}: {
+  text: string;
+  setText: (text: string) => void;
+  tab: number;
+  setTab: (tab: number) => void;
+}) {
   const insets = useSafeAreaInsets();
   const { hidden } = useChrome();
   const input = useRef<React.ComponentRef<typeof TextInput>>(null);
   const focus = useSharedValue(0);
   const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.value * BAR_HEIGHT }] }));
-  const field = useAnimatedStyle(() => ({ borderColor: interpolateColor(focus.value, [0, 1], ['rgba(166,199,154,0)', color.action]) }));
+  const field = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(focus.value, [0, 1], ['rgba(166,199,154,0)', color.action]),
+  }));
 
   return (
     <>
@@ -86,7 +105,13 @@ function SearchHeader({ text, setText, tab, setTab }: { text: string; setText: (
             ) : null}
           </Animated.View>
         </View>
-        <Tabs index={tab} onChange={(next) => { setTab(next); Keyboard.dismiss(); }} />
+        <Tabs
+          index={tab}
+          onChange={(next) => {
+            setTab(next);
+            Keyboard.dismiss();
+          }}
+        />
       </Animated.View>
       <View style={[styles.statusShade, { height: insets.top }]} pointerEvents="none" />
     </>
@@ -99,12 +124,26 @@ function Tabs({ index, onChange }: { index: number; onChange: (index: number) =>
   useEffect(() => {
     x.value = withTiming(index, { duration: motion.standard, easing: motion.out });
   }, [index, x]);
-  const underline = useAnimatedStyle(() => ({ transform: [{ translateX: x.value * (width / TABS.length) + (width / TABS.length - 56) / 2 }] }));
+  const underline = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value * (width / TABS.length) + (width / TABS.length - 56) / 2 }],
+  }));
 
   return (
-    <View style={styles.tabs} onLayout={(event) => setWidth(event.nativeEvent.layout.width)} accessibilityRole="tablist">
+    <View
+      style={styles.tabs}
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      accessibilityRole="tablist"
+    >
       {TABS.map((label, i) => (
-        <Tap key={label} shrink={1} haptic={i !== index} onPress={() => onChange(i)} accessibilityRole="tab" accessibilityState={{ selected: i === index }} style={styles.tab}>
+        <Tap
+          key={label}
+          shrink={1}
+          haptic={i !== index}
+          onPress={() => onChange(i)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: i === index }}
+          style={styles.tab}
+        >
           <Text style={[styles.tabLabel, i === index && styles.tabLabelOn]}>{label}</Text>
         </Tap>
       ))}
@@ -128,14 +167,26 @@ function Titles({ query, top }: { query: string; top: number }) {
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl }}
-      ListHeaderComponent={result.isFetching && query ? <ActivityIndicator style={{ marginTop: space.lg }} color={color.soft} /> : undefined}
+      ListHeaderComponent={
+        result.isFetching && query ? (
+          <ActivityIndicator style={{ marginTop: space.lg }} color={color.soft} />
+        ) : undefined
+      }
       ListEmptyComponent={
         !query ? (
-          <Hint icon={icons.search} title="Find something to watch" body="Search by name. A film or a show starts playing in seconds, while it downloads." />
+          <Hint
+            icon={icons.search}
+            title="Find something to watch"
+            body="Search by name. A film or a show starts playing in seconds, while it downloads."
+          />
         ) : result.isError ? (
           <EngineProblem error={result.error} onRetry={() => result.refetch()} />
         ) : result.isSuccess && !result.isPlaceholderData ? (
-          <Hint icon={icons.film} title={`No films or shows named “${query}”`} body="Try the Torrents tab to search every source by name." />
+          <Hint
+            icon={icons.film}
+            title={`No films or shows named “${query}”`}
+            body="Try the Torrents tab to search every source by name."
+          />
         ) : undefined
       }
       renderItem={({ item, index }) => <TitleRow title={item} index={index} />}
@@ -178,17 +229,33 @@ function Torrents({ query, top }: { query: string; top: number }) {
   const link = useLink();
   const insets = useSafeAreaInsets();
   const onScroll = useChromeScroll();
-  const [state, setState] = useState<{ releases: Release[]; pending: string[]; done: boolean; error: string | null }>({ releases: [], pending: [], done: false, error: null });
+  const [state, setState] = useState<{ releases: Release[]; pending: string[]; done: boolean; error: string | null }>({
+    releases: [],
+    pending: [],
+    done: false,
+    error: null,
+  });
 
   useEffect(() => {
     if (!query) return setState({ releases: [], pending: [], done: false, error: null });
     const controller = new AbortController();
     setState((previous) => ({ ...previous, pending: ['…'], done: false, error: null }));
-    stream<SearchMessage>(link, '/api/search', { method: 'POST', body: { q: query }, signal: controller.signal }, (message) => {
-      if (message.type === 'update') setState({ releases: message.result.releases, pending: message.pending, done: false, error: null });
-      if (message.type === 'done') setState({ releases: message.result.releases, pending: [], done: true, error: null });
-      if (message.type === 'error') setState((previous) => ({ ...previous, done: true, error: message.error.message }));
-    }).catch((error: Error) => !controller.signal.aborted && setState((previous) => ({ ...previous, done: true, error: error.message })));
+    stream<SearchMessage>(
+      link,
+      '/api/search',
+      { method: 'POST', body: { q: query }, signal: controller.signal },
+      (message) => {
+        if (message.type === 'update')
+          setState({ releases: message.result.releases, pending: message.pending, done: false, error: null });
+        if (message.type === 'done')
+          setState({ releases: message.result.releases, pending: [], done: true, error: null });
+        if (message.type === 'error')
+          setState((previous) => ({ ...previous, done: true, error: message.error.message }));
+      },
+    ).catch(
+      (error: Error) =>
+        !controller.signal.aborted && setState((previous) => ({ ...previous, done: true, error: error.message })),
+    );
     return () => controller.abort();
   }, [link, query]);
 
@@ -205,15 +272,25 @@ function Torrents({ query, top }: { query: string; top: number }) {
         query && !state.done ? (
           <View style={styles.searching}>
             <ActivityIndicator size="small" color={color.soft} />
-            <Text style={type.caption}>Asking {state.pending.length > 1 ? `${state.pending.length} sources` : 'sources'}…</Text>
+            <Text style={type.caption}>
+              Asking {state.pending.length > 1 ? `${state.pending.length} sources` : 'sources'}…
+            </Text>
           </View>
         ) : undefined
       }
       ListEmptyComponent={
         !query ? (
-          <Hint icon={icons.magnet} title="Search every source" body="Torrents are listed best first. Tap one to play it while it downloads." />
+          <Hint
+            icon={icons.magnet}
+            title="Search every source"
+            body="Torrents are listed best first. Tap one to play it while it downloads."
+          />
         ) : state.done ? (
-          <Hint icon={icons.warning} title={state.error ? 'Search failed' : 'No torrents found'} body={state.error ?? 'Try fewer or different words.'} />
+          <Hint
+            icon={icons.warning}
+            title={state.error ? 'Search failed' : 'No torrents found'}
+            body={state.error ?? 'Try fewer or different words.'}
+          />
         ) : undefined
       }
       renderItem={({ item, index }) => <ReleaseRow release={item} index={index} />}
@@ -223,7 +300,11 @@ function Torrents({ query, top }: { query: string; top: number }) {
 
 function ReleaseRow({ release, index }: { release: Release; index: number }) {
   const name = readable(release.name);
-  const chips = [release.quality.resolution?.toUpperCase(), release.quality.codec?.toUpperCase(), release.quality.hdr ? 'HDR' : null].filter(Boolean) as string[];
+  const chips = [
+    release.quality.resolution?.toUpperCase(),
+    release.quality.codec?.toUpperCase(),
+    release.quality.hdr ? 'HDR' : null,
+  ].filter(Boolean) as string[];
 
   return (
     <Animated.View entering={rise(index)}>
@@ -245,7 +326,9 @@ function ReleaseRow({ release, index }: { release: Release; index: number }) {
           ))}
           <Text style={type.numeric}>{release.size ? bytes(release.size) : '—'}</Text>
           {release.seeders !== null ? (
-            <Text style={[type.numeric, { color: release.seeders > 10 ? color.action : color.pencil }]}>{release.seeders} seeds</Text>
+            <Text style={[type.numeric, { color: release.seeders > 10 ? color.action : color.pencil }]}>
+              {release.seeders} seeds
+            </Text>
           ) : null}
         </View>
       </Tap>
@@ -281,20 +364,65 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   input: { flex: 1, fontFamily: font.regular, fontSize: 16, color: color.ink, paddingVertical: 0 },
-  clear: { width: 20, height: 20, borderRadius: 10, backgroundColor: color.soft, alignItems: 'center', justifyContent: 'center' },
-  tabs: { height: TABS_HEIGHT, flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.rule },
+  clear: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: color.soft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabs: {
+    height: TABS_HEIGHT,
+    flexDirection: 'row',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.rule,
+  },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabLabel: { fontFamily: font.medium, fontSize: 15, color: color.pencil },
   tabLabelOn: { fontFamily: font.bold, color: color.ink },
-  underline: { position: 'absolute', left: 0, bottom: 0, width: 56, height: 4, borderRadius: 2, backgroundColor: color.action },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.page, paddingVertical: space.md },
+  underline: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    width: 56,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: color.action,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingHorizontal: space.page,
+    paddingVertical: space.md,
+  },
   thumb: { width: 52, height: 78, borderRadius: radius.sm },
   facts: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  searching: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.page, paddingVertical: space.md },
-  release: { paddingHorizontal: space.page, paddingVertical: space.md, gap: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.hairline },
+  searching: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.page,
+    paddingVertical: space.md,
+  },
+  release: {
+    paddingHorizontal: space.page,
+    paddingVertical: space.md,
+    gap: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.hairline,
+  },
   releaseFacts: { flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' },
   chip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: color.lifted },
   chipText: { fontFamily: font.semibold, fontSize: 11, color: color.soft, letterSpacing: 0.3 },
   hint: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 80 },
-  hintIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: color.raised },
+  hintIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.raised,
+  },
 });

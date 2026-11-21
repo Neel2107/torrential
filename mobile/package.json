@@ -49,15 +49,17 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "prettier": "^3.10.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "check": "tsc --noEmit && prettier --check \"src/**/*.{ts,tsx}\""
   },
   "private": true
 }

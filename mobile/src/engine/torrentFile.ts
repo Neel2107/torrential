@@ -72,7 +72,8 @@ function scan(data: Uint8Array): Scan {
         if (path === '' && key === 'info') info = [start, at];
         if (path === '' && key === 'announce' && child instanceof Uint8Array) trackers.unshift(text.decode(child));
         if (path === '' && key === 'announce-list' && Array.isArray(child)) {
-          for (const tier of child) if (Array.isArray(tier)) for (const t of tier) if (t instanceof Uint8Array) trackers.push(text.decode(t));
+          for (const tier of child)
+            if (Array.isArray(tier)) for (const t of tier) if (t instanceof Uint8Array) trackers.push(text.decode(t));
         }
         if (path === '.info' && key === 'name' && child instanceof Uint8Array) name = text.decode(child);
       }
@@ -97,4 +98,3 @@ export function findTorrent(text: string): string | null {
   const hash = /\b([0-9a-f]{40}|[a-z2-7]{32})\b/i.exec(text.trim())?.[1];
   return hash ?? null;
 }
-

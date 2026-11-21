@@ -3,7 +3,15 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { clock, sentence } from '@web/lib/format';
@@ -20,7 +28,16 @@ import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
 
-const CONTAINERS: Record<string, string> = { mkv: 'MKV', mp4: 'MP4', webm: 'WebM', avi: 'AVI', ts: 'TS', mov: 'MOV', mpeg: 'MPEG', wmv: 'WMV' };
+const CONTAINERS: Record<string, string> = {
+  mkv: 'MKV',
+  mp4: 'MP4',
+  webm: 'WebM',
+  avi: 'AVI',
+  ts: 'TS',
+  mov: 'MOV',
+  mpeg: 'MPEG',
+  wmv: 'WMV',
+};
 const DECODES = { 'hevc-hdr': '4K HDR', hevc: '4K', h264: 'HD' } as const;
 
 export default function TvScreen() {
@@ -33,7 +50,11 @@ export default function TvScreen() {
   const tvs = useTvs(true);
   const casts = tvs.data?.casts ?? [];
   const current = casts.find(live) ?? null;
-  const what = params.video ? { video: params.video } : params.ref ? { ref: params.ref, file: params.file ? Number(params.file) : undefined } : null;
+  const what = params.video
+    ? { video: params.video }
+    : params.ref
+      ? { ref: params.ref, file: params.file ? Number(params.file) : undefined }
+      : null;
   const [problem, setProblem] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
 
@@ -64,7 +85,10 @@ export default function TvScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={{ padding: space.xl, paddingBottom: insets.bottom + space.xl, gap: space.lg }}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={{ padding: space.xl, paddingBottom: insets.bottom + space.xl, gap: space.lg }}
+    >
       {current ? (
         <Remote cast={current} />
       ) : (
@@ -74,7 +98,9 @@ export default function TvScreen() {
             <Radar active={scanning} />
           </View>
           <Text style={type.body}>
-            {what ? 'Pick a TV. Your phone becomes the remote.' : 'TVs on your home network. Open a film or an episode to play it on one.'}
+            {what
+              ? 'Pick a TV. Your phone becomes the remote.'
+              : 'TVs on your home network. Open a film or an episode to play it on one.'}
           </Text>
           {problem ? (
             <View style={styles.problem}>
@@ -85,7 +111,14 @@ export default function TvScreen() {
           <View style={{ gap: space.sm }}>
             {(tvs.data?.tvs ?? []).map((tv, index) => (
               <Animated.View key={tv.id} entering={rise(index)}>
-                <Tap shrink={0.98} highlight disabled={!what || starting !== null} onPress={() => start(tv)} accessibilityLabel={`Play on ${tv.name}`} style={styles.tvRow}>
+                <Tap
+                  shrink={0.98}
+                  highlight
+                  disabled={!what || starting !== null}
+                  onPress={() => start(tv)}
+                  accessibilityLabel={`Play on ${tv.name}`}
+                  style={styles.tvRow}
+                >
                   <View style={styles.tvIcon}>
                     <Icon name={icons.tv} size={22} tint={color.ink} />
                   </View>
@@ -94,10 +127,20 @@ export default function TvScreen() {
                       {tv.name}
                     </Text>
                     <Text style={type.caption} numberOfLines={1}>
-                      {[tv.address.replace(/^https?:\/\//, '').replace(/[:/].*$/, ''), DECODES[tv.decodes], tv.plays.map((c) => CONTAINERS[c] ?? c).join(', ')].filter(Boolean).join(' · ')}
+                      {[
+                        tv.address.replace(/^https?:\/\//, '').replace(/[:/].*$/, ''),
+                        DECODES[tv.decodes],
+                        tv.plays.map((c) => CONTAINERS[c] ?? c).join(', '),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </Text>
                   </View>
-                  {starting === tv.id ? <ActivityIndicator color={color.action} /> : what ? <Icon name={icons.chevron} size={18} tint={color.pencil} /> : null}
+                  {starting === tv.id ? (
+                    <ActivityIndicator color={color.action} />
+                  ) : what ? (
+                    <Icon name={icons.chevron} size={18} tint={color.pencil} />
+                  ) : null}
                 </Tap>
               </Animated.View>
             ))}
@@ -105,7 +148,8 @@ export default function TvScreen() {
               <Animated.View entering={FadeIn} style={styles.none}>
                 <Text style={type.headline}>No TVs found</Text>
                 <Text style={type.label}>
-                  The TV has to be on, on the same network as the computer running torrential, with DLNA or screen sharing turned on.
+                  The TV has to be on, on the same network as the computer running torrential, with DLNA or screen
+                  sharing turned on.
                 </Text>
                 <Button
                   label="Look again"
@@ -146,7 +190,10 @@ function Radar({ active }: { active: boolean }) {
 function Ring({ delay }: { delay: number }) {
   const t = useSharedValue(0);
   useEffect(() => {
-    t.value = withDelay(delay, withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false));
+    t.value = withDelay(
+      delay,
+      withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false),
+    );
   }, [delay, t]);
   const style = useAnimatedStyle(() => ({ opacity: 0.6 * (1 - t.value), transform: [{ scale: 0.6 + t.value * 1.4 }] }));
   return <Animated.View style={[styles.ring, style]} />;
@@ -171,21 +218,30 @@ function Remote({ cast }: { cast: Cast }) {
       <View style={styles.nowRow}>
         <View style={styles.livePill}>
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>{cast.state === 'finding' || cast.state === 'loading' ? 'Starting' : playing ? 'Playing' : 'Paused'}</Text>
+          <Text style={styles.liveText}>
+            {cast.state === 'finding' || cast.state === 'loading' ? 'Starting' : playing ? 'Playing' : 'Paused'}
+          </Text>
         </View>
         <Text style={type.label} numberOfLines={1}>
           on {cast.tv_name}
         </Text>
       </View>
       <View style={styles.cover}>
-        {cast.video ? <Art id={titleOf(cast.video)} kind="background" name={cast.name} style={StyleSheet.absoluteFill} /> : null}
+        {cast.video ? (
+          <Art id={titleOf(cast.video)} kind="background" name={cast.name} style={StyleSheet.absoluteFill} />
+        ) : null}
       </View>
       <Text style={type.title} numberOfLines={2}>
         {cast.name}
       </Text>
 
       <View style={{ gap: space.sm }}>
-        <Scrub position={position} duration={duration} onPreview={setPreview} onSeek={(seconds) => control({ action: 'seek', position: seconds })} />
+        <Scrub
+          position={position}
+          duration={duration}
+          onPreview={setPreview}
+          onSeek={(seconds) => control({ action: 'seek', position: seconds })}
+        />
         <View style={styles.times}>
           <Text style={type.numeric}>{clock(position)}</Text>
           <Text style={type.numeric}>-{clock(Math.max(0, duration - position))}</Text>
@@ -193,13 +249,28 @@ function Remote({ cast }: { cast: Cast }) {
       </View>
 
       <View style={styles.transport}>
-        <Tap shrink={0.86} onPress={() => control({ action: 'seek', position: Math.max(0, position - 30) })} accessibilityLabel="Back 30 seconds" style={styles.transportSide}>
+        <Tap
+          shrink={0.86}
+          onPress={() => control({ action: 'seek', position: Math.max(0, position - 30) })}
+          accessibilityLabel="Back 30 seconds"
+          style={styles.transportSide}
+        >
           <Icon name={icons.rewind} size={30} tint={color.ink} />
         </Tap>
-        <Tap shrink={0.9} onPress={() => control({ action: playing ? 'pause' : 'resume' })} accessibilityLabel={playing ? 'Pause' : 'Play'} style={styles.transportMain}>
+        <Tap
+          shrink={0.9}
+          onPress={() => control({ action: playing ? 'pause' : 'resume' })}
+          accessibilityLabel={playing ? 'Pause' : 'Play'}
+          style={styles.transportMain}
+        >
           <Icon name={playing ? icons.pause : icons.play} size={34} tint={color.actionInk} filled />
         </Tap>
-        <Tap shrink={0.86} onPress={() => control({ action: 'seek', position: Math.min(duration, position + 30) })} accessibilityLabel="Forward 30 seconds" style={styles.transportSide}>
+        <Tap
+          shrink={0.86}
+          onPress={() => control({ action: 'seek', position: Math.min(duration, position + 30) })}
+          accessibilityLabel="Forward 30 seconds"
+          style={styles.transportSide}
+        >
           <Icon name={icons.forward} size={30} tint={color.ink} />
         </Tap>
       </View>
@@ -207,24 +278,52 @@ function Remote({ cast }: { cast: Cast }) {
       <View style={styles.bottomRow}>
         {cast.volume !== null ? (
           <View style={styles.volume}>
-            <Tap shrink={0.86} onPress={() => control({ action: 'volume', level: Math.max(0, (cast.volume ?? 0) - 5) })} accessibilityLabel="Volume down" style={styles.volumeButton}>
+            <Tap
+              shrink={0.86}
+              onPress={() => control({ action: 'volume', level: Math.max(0, (cast.volume ?? 0) - 5) })}
+              accessibilityLabel="Volume down"
+              style={styles.volumeButton}
+            >
               <Icon name={icons.volumeDown} size={22} tint={color.ink} />
             </Tap>
             <Text style={[type.numeric, { minWidth: 28, textAlign: 'center' }]}>{cast.volume}</Text>
-            <Tap shrink={0.86} onPress={() => control({ action: 'volume', level: Math.min(100, (cast.volume ?? 0) + 5) })} accessibilityLabel="Volume up" style={styles.volumeButton}>
+            <Tap
+              shrink={0.86}
+              onPress={() => control({ action: 'volume', level: Math.min(100, (cast.volume ?? 0) + 5) })}
+              accessibilityLabel="Volume up"
+              style={styles.volumeButton}
+            >
               <Icon name={icons.volumeUp} size={22} tint={color.ink} />
             </Tap>
           </View>
         ) : (
           <View />
         )}
-        <Button label="Stop" kind="secondary" icon={icons.stop} onPress={async () => { await control({ action: 'stop' }); router.back(); }} />
+        <Button
+          label="Stop"
+          kind="secondary"
+          icon={icons.stop}
+          onPress={async () => {
+            await control({ action: 'stop' });
+            router.back();
+          }}
+        />
       </View>
     </Animated.View>
   );
 }
 
-function Scrub({ position, duration, onPreview, onSeek }: { position: number; duration: number; onPreview: (seconds: number | null) => void; onSeek: (seconds: number) => void }) {
+function Scrub({
+  position,
+  duration,
+  onPreview,
+  onSeek,
+}: {
+  position: number;
+  duration: number;
+  onPreview: (seconds: number | null) => void;
+  onSeek: (seconds: number) => void;
+}) {
   const [width, setWidth] = useState(1);
   const fraction = duration > 0 ? Math.min(1, position / duration) : 0;
   const at = (x: number) => Math.max(0, Math.min(duration, (x / width) * duration));
@@ -255,12 +354,40 @@ const styles = StyleSheet.create({
   headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   radar: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   ring: { position: 'absolute', width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: color.action },
-  problem: { flexDirection: 'row', gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: 'rgba(226,128,110,0.12)' },
-  tvRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, backgroundColor: color.lifted },
-  tvIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.raised },
+  problem: {
+    flexDirection: 'row',
+    gap: space.sm,
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(226,128,110,0.12)',
+  },
+  tvRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.lg,
+    backgroundColor: color.lifted,
+  },
+  tvIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.raised,
+  },
   none: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, backgroundColor: color.lifted },
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, height: 26, borderRadius: radius.pill, backgroundColor: 'rgba(166,199,154,0.16)' },
+  livePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    height: 26,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(166,199,154,0.16)',
+  },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: color.action },
   liveText: { fontFamily: font.semibold, fontSize: 12, color: color.action, letterSpacing: 0.3 },
   cover: { aspectRatio: 16 / 9, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: color.lifted },
@@ -271,8 +398,22 @@ const styles = StyleSheet.create({
   scrubKnob: { position: 'absolute', width: 18, height: 18, borderRadius: 9, backgroundColor: color.ink },
   transport: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 40 },
   transportSide: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
-  transportMain: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: color.action },
+  transportMain: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.action,
+  },
   bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  volume: { flexDirection: 'row', alignItems: 'center', gap: space.xs, borderRadius: radius.pill, backgroundColor: color.lifted, padding: 4 },
+  volume: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    borderRadius: radius.pill,
+    backgroundColor: color.lifted,
+    padding: 4,
+  },
   volumeButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 });

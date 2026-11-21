@@ -12,7 +12,11 @@ import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { color, font, space, type } from '@/theme';
 
-function trackName(track: { label?: string | null; language?: string | null; name?: string | null }, index: number, kind: string): string {
+function trackName(
+  track: { label?: string | null; language?: string | null; name?: string | null },
+  index: number,
+  kind: string,
+): string {
   const label = track.label && track.label !== 'und' ? track.label : null;
   return label || track.name || languageName(track.language) || `${kind} ${index + 1}`;
 }
@@ -71,7 +75,9 @@ export function TracksSheet({
             onPress={() => onFile(candidate)}
           />
         ))}
-        {subtitles.length === 0 && files.length === 0 ? <Text style={[type.caption, styles.empty]}>This video has no subtitles.</Text> : null}
+        {subtitles.length === 0 && files.length === 0 ? (
+          <Text style={[type.caption, styles.empty]}>This video has no subtitles.</Text>
+        ) : null}
 
         <Text style={[type.title, styles.heading, { marginTop: space.lg }]}>Audio</Text>
         {audio.map((track: AudioTrack, index) => {
@@ -79,8 +85,14 @@ export function TracksSheet({
           return (
             <Row
               key={`${track.id ?? index}`}
-              label={audio.length === 1 && !languageName(track.language) ? 'Original' : trackName(track, index, 'Audio')}
-              detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${fromEngine.channels > 2 ? `${fromEngine.channels - 1}.1` : fromEngine.channels === 2 ? 'Stereo' : 'Mono'}` : null}
+              label={
+                audio.length === 1 && !languageName(track.language) ? 'Original' : trackName(track, index, 'Audio')
+              }
+              detail={
+                fromEngine
+                  ? `${fromEngine.codec.toUpperCase()} · ${fromEngine.channels > 2 ? `${fromEngine.channels - 1}.1` : fromEngine.channels === 2 ? 'Stereo' : 'Mono'}`
+                  : null
+              }
               selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
               onPress={() => (player.audioTrack = track)}
             />
@@ -91,7 +103,17 @@ export function TracksSheet({
   );
 }
 
-function Row({ label, detail, selected, onPress }: { label: string; detail?: string | null; selected: boolean; onPress: () => void }) {
+function Row({
+  label,
+  detail,
+  selected,
+  onPress,
+}: {
+  label: string;
+  detail?: string | null;
+  selected: boolean;
+  onPress: () => void;
+}) {
   return (
     <Tap
       shrink={1}
@@ -113,7 +135,14 @@ function Row({ label, detail, selected, onPress }: { label: string; detail?: str
 
 const styles = StyleSheet.create({
   heading: { marginBottom: space.xs },
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: 52, paddingHorizontal: space.md, borderRadius: 12, gap: space.md },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    paddingHorizontal: space.md,
+    borderRadius: 12,
+    gap: space.md,
+  },
   label: { fontFamily: font.medium, fontSize: 16, color: color.soft },
   empty: { paddingHorizontal: space.md, paddingVertical: space.sm },
 });

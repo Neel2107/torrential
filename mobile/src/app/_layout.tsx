@@ -67,17 +67,53 @@ function Routes() {
 
   return (
     <QueryClientProvider client={client}>
-      <Stack screenOptions={{ headerShown: false, orientation: 'portrait_up', contentStyle: { backgroundColor: color.paper } }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          orientation: 'portrait_up',
+          contentStyle: { backgroundColor: color.paper },
+        }}
+      >
         <Stack.Protected guard={paired}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="title/[id]" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen
             name="play"
-            options={{ presentation: 'fullScreenModal', animation: 'fade', orientation: 'landscape', statusBarHidden: true, navigationBarHidden: true }}
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'fade',
+              orientation: 'landscape',
+              statusBarHidden: true,
+              navigationBarHidden: true,
+            }}
           />
-          <Stack.Screen name="tv" options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: [0.92], sheetCornerRadius: 28 }} />
-          <Stack.Screen name="add" options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents', sheetCornerRadius: 28 }} />
-          <Stack.Screen name="engine" options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents', sheetCornerRadius: 28 }} />
+          <Stack.Screen
+            name="tv"
+            options={{
+              presentation: 'formSheet',
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: [0.92],
+              sheetCornerRadius: 28,
+            }}
+          />
+          <Stack.Screen
+            name="add"
+            options={{
+              presentation: 'formSheet',
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: 'fitToContents',
+              sheetCornerRadius: 28,
+            }}
+          />
+          <Stack.Screen
+            name="engine"
+            options={{
+              presentation: 'formSheet',
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: 'fitToContents',
+              sheetCornerRadius: 28,
+            }}
+          />
         </Stack.Protected>
         <Stack.Protected guard={!paired}>
           <Stack.Screen name="pair" />

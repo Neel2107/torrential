@@ -50,15 +50,14 @@ export default function Title() {
   const banner = useAnimatedStyle(() => {
     const y = scrollY.value;
     return {
-      transform: [
-        { translateY: y < 0 ? y / 2 : -y * 0.5 },
-        { scale: y < 0 ? 1 + -y / bannerHeight : 1 },
-      ],
+      transform: [{ translateY: y < 0 ? y / 2 : -y * 0.5 }, { scale: y < 0 ? 1 + -y / bannerHeight : 1 }],
     };
   });
   const headerName = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [bannerHeight + 40, bannerHeight + 90], [0, 1], Extrapolation.CLAMP),
-    transform: [{ translateY: interpolate(scrollY.value, [bannerHeight + 40, bannerHeight + 90], [8, 0], Extrapolation.CLAMP) }],
+    transform: [
+      { translateY: interpolate(scrollY.value, [bannerHeight + 40, bannerHeight + 90], [8, 0], Extrapolation.CLAMP) },
+    ],
   }));
   const headerShade = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [bannerHeight - 120, bannerHeight - 40], [0, 1], Extrapolation.CLAMP),
@@ -68,7 +67,11 @@ export default function Title() {
     <View style={styles.screen}>
       <Animated.View style={[styles.banner, { height: bannerHeight }, banner]}>
         <Art id={id} kind="background" style={StyleSheet.absoluteFill} name={title.data?.name} />
-        <LinearGradient colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+        <LinearGradient
+          colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']}
+          locations={[0, 0.4, 1]}
+          style={StyleSheet.absoluteFill}
+        />
       </Animated.View>
 
       <Animated.ScrollView
@@ -112,7 +115,18 @@ export default function Title() {
           </Text>
           {title.data?.year ? <Text style={type.caption}>{title.data.year}</Text> : null}
         </Animated.View>
-        <Tap shrink={0.88} haptic onPress={() => router.push({ pathname: '/tv', params: title.data?.play_target ? { video: title.data.play_target.video } : {} })} accessibilityLabel="Play on TV" style={styles.round}>
+        <Tap
+          shrink={0.88}
+          haptic
+          onPress={() =>
+            router.push({
+              pathname: '/tv',
+              params: title.data?.play_target ? { video: title.data.play_target.video } : {},
+            })
+          }
+          accessibilityLabel="Play on TV"
+          style={styles.round}
+        >
           <Icon name={icons.cast} size={20} tint={color.ink} />
         </Tap>
       </View>
@@ -123,7 +137,11 @@ export default function Title() {
 function facts(page: Page): string[] {
   return [
     page.year ? String(page.year) : null,
-    page.kind === 'series' ? `${page.seasons.filter((s) => s.number > 0).length} seasons` : page.runtime_min ? minutes(page.runtime_min) : null,
+    page.kind === 'series'
+      ? `${page.seasons.filter((s) => s.number > 0).length} seasons`
+      : page.runtime_min
+        ? minutes(page.runtime_min)
+        : null,
     page.genres.slice(0, 2).join(', ') || null,
   ].filter((fact): fact is string => Boolean(fact));
 }
@@ -229,7 +247,10 @@ function SaveButton({ id, saved }: { id: string; saved: boolean }) {
       <Animated.View style={style}>
         <Icon name={icons.save} size={17} tint={saved ? color.actionInk : color.ink} filled={saved} />
       </Animated.View>
-      <Animated.Text layout={LinearTransition.duration(motion.quick)} style={[styles.saveText, { color: saved ? color.actionInk : color.ink }]}>
+      <Animated.Text
+        layout={LinearTransition.duration(motion.quick)}
+        style={[styles.saveText, { color: saved ? color.actionInk : color.ink }]}
+      >
         {saved ? 'Saved' : 'Save'}
       </Animated.Text>
     </Tap>
@@ -240,7 +261,13 @@ function Synopsis({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   const long = text.length > 170;
   return (
-    <Tap shrink={1} onPress={() => long && setOpen((o) => !o)} accessibilityLabel={text} accessibilityHint={long ? 'Shows all of it' : undefined} style={styles.block}>
+    <Tap
+      shrink={1}
+      onPress={() => long && setOpen((o) => !o)}
+      accessibilityLabel={text}
+      accessibilityHint={long ? 'Shows all of it' : undefined}
+      style={styles.block}
+    >
       <Animated.Text
         layout={LinearTransition.duration(motion.standard)}
         style={type.body}
@@ -256,7 +283,9 @@ function Synopsis({ text }: { text: string }) {
 function Episodes({ page, watched, current }: { page: Page; watched: Map<string, Watched>; current: string | null }) {
   const seasons = page.seasons.filter((s) => s.episodes.length > 0);
   const currentSeason = current ? findEpisode(page, current)?.season : undefined;
-  const [season, setSeason] = useState(() => currentSeason ?? seasons.find((s) => s.number > 0)?.number ?? seasons[0]?.number ?? 1);
+  const [season, setSeason] = useState(
+    () => currentSeason ?? seasons.find((s) => s.number > 0)?.number ?? seasons[0]?.number ?? 1,
+  );
 
   useEffect(() => {
     if (currentSeason !== undefined) setSeason(currentSeason);
@@ -286,13 +315,32 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
       </Animated.ScrollView>
       <View style={styles.rule} />
       {episodes.map((episode, index) => (
-        <EpisodeRow key={`${season}:${episode.episode}`} page={page} episode={episode} watched={watched.get(videoOf(page.id, episode))} index={index} current={current === videoOf(page.id, episode)} />
+        <EpisodeRow
+          key={`${season}:${episode.episode}`}
+          page={page}
+          episode={episode}
+          watched={watched.get(videoOf(page.id, episode))}
+          index={index}
+          current={current === videoOf(page.id, episode)}
+        />
       ))}
     </View>
   );
 }
 
-function EpisodeRow({ page, episode, watched, index, current }: { page: Page; episode: EpisodeInfo; watched?: Watched; index: number; current: boolean }) {
+function EpisodeRow({
+  page,
+  episode,
+  watched,
+  index,
+  current,
+}: {
+  page: Page;
+  episode: EpisodeInfo;
+  watched?: Watched;
+  index: number;
+  current: boolean;
+}) {
   const video = videoOf(page.id, episode);
   const progress = watched?.finished ? 1 : watched?.duration ? watched.position / watched.duration : null;
   const aired = episode.has_aired;
@@ -310,7 +358,14 @@ function EpisodeRow({ page, episode, watched, index, current }: { page: Page; ep
         <View style={styles.still}>
           <Text style={styles.stillNumber}>{episode.episode}</Text>
           {episode.thumbnail ? (
-            <Art id={page.id} kind="thumbnail" season={episode.season} episode={episode.episode} style={StyleSheet.absoluteFill} placeholder={false} />
+            <Art
+              id={page.id}
+              kind="thumbnail"
+              season={episode.season}
+              episode={episode.episode}
+              style={StyleSheet.absoluteFill}
+              placeholder={false}
+            />
           ) : null}
           <View style={styles.stillPlay}>
             <Icon name={icons.play} size={14} tint={color.ink} filled />
@@ -326,7 +381,9 @@ function EpisodeRow({ page, episode, watched, index, current }: { page: Page; ep
             {episode.episode}. {episodeName(episode)}
           </Text>
           <Text style={type.caption}>
-            {[episode.aired ? day(episode.aired) : null, watched?.finished ? 'Watched' : null].filter(Boolean).join(' · ')}
+            {[episode.aired ? day(episode.aired) : null, watched?.finished ? 'Watched' : null]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
           {episode.overview ? (
             <Text style={[type.caption, { color: color.soft }]} numberOfLines={2}>
@@ -367,9 +424,20 @@ const styles = StyleSheet.create({
     paddingBottom: space.sm,
     gap: space.md,
   },
-  headerShade: { backgroundColor: 'rgba(20,18,15,0.96)', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.rule },
+  headerShade: {
+    backgroundColor: 'rgba(20,18,15,0.96)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.rule,
+  },
   headerTitle: { flex: 1 },
-  round: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(20,18,15,0.6)' },
+  round: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20,18,15,0.6)',
+  },
   sheet: { backgroundColor: color.paper, paddingHorizontal: space.page, minHeight: 600 },
   identity: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: -64 },
   posterWrap: {
@@ -383,7 +451,15 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   poster: { width: 112, height: 168, borderRadius: radius.md },
-  save: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, paddingHorizontal: 18, borderRadius: radius.pill, marginBottom: space.xs },
+  save: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 38,
+    paddingHorizontal: 18,
+    borderRadius: radius.pill,
+    marginBottom: space.xs,
+  },
   saveOff: { borderWidth: 1, borderColor: color.rule },
   saveOn: { backgroundColor: color.ink },
   saveText: { fontFamily: font.bold, fontSize: 15 },
@@ -391,16 +467,55 @@ const styles = StyleSheet.create({
   facts: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.sm, flexWrap: 'wrap' },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
-  squareButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: color.rule },
+  squareButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: color.rule,
+  },
   playDetail: { gap: space.sm, marginTop: space.md },
   seasons: { gap: space.sm, paddingBottom: space.md },
-  chip: { height: 36, paddingHorizontal: 16, borderRadius: radius.pill, borderWidth: 1, borderColor: color.rule, justifyContent: 'center' },
+  chip: {
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.rule,
+    justifyContent: 'center',
+  },
   chipOn: { backgroundColor: color.ink, borderColor: color.ink },
   chipText: { fontFamily: font.semibold, fontSize: 14, color: color.soft },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.rule, marginHorizontal: -space.page },
-  episode: { flexDirection: 'row', gap: space.md, paddingVertical: space.md, marginHorizontal: -space.page, paddingHorizontal: space.page },
+  episode: {
+    flexDirection: 'row',
+    gap: space.md,
+    paddingVertical: space.md,
+    marginHorizontal: -space.page,
+    paddingHorizontal: space.page,
+  },
   still: { width: 136, height: 77, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: color.raised },
-  stillNumber: { position: 'absolute', right: 10, bottom: 2, fontFamily: font.bold, fontSize: 40, letterSpacing: -1.5, color: color.lifted },
-  stillPlay: { position: 'absolute', top: 6, left: 6, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: color.scrim },
+  stillNumber: {
+    position: 'absolute',
+    right: 10,
+    bottom: 2,
+    fontFamily: font.bold,
+    fontSize: 40,
+    letterSpacing: -1.5,
+    color: color.lifted,
+  },
+  stillPlay: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.scrim,
+  },
   stillMeter: { position: 'absolute', left: 6, right: 6, bottom: 6 },
 });

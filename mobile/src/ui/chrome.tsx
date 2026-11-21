@@ -1,10 +1,5 @@
 import { createContext, use, useEffect, useMemo, type ReactNode } from 'react';
-import {
-  useAnimatedScrollHandler,
-  useSharedValue,
-  withSpring,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { useAnimatedScrollHandler, useSharedValue, withSpring, type SharedValue } from 'react-native-reanimated';
 
 import { motion } from '@/theme';
 

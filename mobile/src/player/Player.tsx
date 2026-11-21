@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   FadeIn,
   FadeOut,
   useAnimatedStyle,
@@ -17,7 +18,15 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { episodeCode, episodeName } from '@web/titles/words';
-import { SAVE_EVERY_MS, type EpisodeInfo, type MediaInfo, type PlayInfo, type Position, type Release, type TitleCard } from '@web/wire';
+import {
+  SAVE_EVERY_MS,
+  type EpisodeInfo,
+  type MediaInfo,
+  type PlayInfo,
+  type Position,
+  type Release,
+  type TitleCard,
+} from '@web/wire';
 
 import { authHeaders, get, post } from '@/engine/client';
 import { useLink } from '@/engine/session';
@@ -59,7 +68,10 @@ export function Player({
     {
       uri: source,
       headers: authHeaders(link),
-      metadata: { title: title?.name ?? play.name, artist: episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : undefined },
+      metadata: {
+        title: title?.name ?? play.name,
+        artist: episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : undefined,
+      },
     },
     (p) => {
       p.timeUpdateEventInterval = 0.25;
@@ -71,9 +83,19 @@ export function Player({
     },
   );
 
-  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
-  const { status, error } = useEvent(player, 'statusChange', { status: player.status, error: undefined });
-  const time = useEvent(player, 'timeUpdate', { currentTime: player.currentTime, bufferedPosition: player.bufferedPosition, currentLiveTimestamp: null, currentOffsetFromLive: null });
+  const { isPlaying } = useEvent(player, 'playingChange', {
+    isPlaying: player.playing,
+  });
+  const { status, error } = useEvent(player, 'statusChange', {
+    status: player.status,
+    error: undefined,
+  });
+  const time = useEvent(player, 'timeUpdate', {
+    currentTime: player.currentTime,
+    bufferedPosition: player.bufferedPosition,
+    currentLiveTimestamp: null,
+    currentOffsetFromLive: null,
+  });
   const [duration, setDuration] = useState(0);
   const [media, setMedia] = useState<MediaInfo | null>(null);
   const [visible, setVisible] = useState(true);
@@ -82,13 +104,19 @@ export function Player({
   const claimed = useRef(false);
   const [subtitleFile, setSubtitleFile] = useState<SubtitleFile | null>(null);
   const cues = useSubtitleFile(play.id, subtitleFile);
-  const subtitleFiles: SubtitleFile[] = play.subtitles.map((file) => ({ index: file.index, name: file.path.split('/').pop() ?? file.path }));
+  const subtitleFiles: SubtitleFile[] = play.subtitles.map((file) => ({
+    index: file.index,
+    name: file.path.split('/').pop() ?? file.path,
+  }));
 
   useEventListener(player, 'sourceLoad', (event) => setDuration(event.duration));
 
   useEffect(() => {
     const controller = new AbortController();
-    get<MediaInfo>(link, `/api/media?id=${play.id}&file=${play.video.index}`, controller.signal).then(setMedia, () => {});
+    get<MediaInfo>(link, `/api/media?id=${play.id}&file=${play.video.index}`, controller.signal).then(
+      setMedia,
+      () => {},
+    );
     return () => controller.abort();
   }, [link, play.id, play.video.index]);
 
@@ -96,7 +124,14 @@ export function Player({
     const position = player.currentTime;
     const length = player.duration || duration || null;
     if (!video || !length || position < 1) return;
-    const body: Position = { video, position: Math.min(position, length), duration: length, release: release.id, tab: TAB, starts: !claimed.current };
+    const body: Position = {
+      video,
+      position: Math.min(position, length),
+      duration: length,
+      release: release.id,
+      tab: TAB,
+      starts: !claimed.current,
+    };
     claimed.current = true;
     post(link, '/api/watched', body).catch(() => {});
   }, [duration, link, player, release.id, video]);
@@ -149,117 +184,195 @@ export function Player({
     .maxDelay(240)
     .runOnJS(true)
     .onEnd((event) => skip(event.x < width / 2 ? -SKIP : SKIP));
-  const taps = Gesture.Exclusive(doubleTap, tap);
+  const drop = useSharedValue(0);
+  const close = () => router.back();
+  const pullDown = Gesture.Pan()
+    .activeOffsetY(18)
+    .failOffsetX([-24, 24])
+    .onUpdate((event) => {
+      drop.value = Math.max(0, event.translationY);
+    })
+    .onEnd((event) => {
+      if (event.translationY > 100 || event.velocityY > 800) {
+        drop.value = withTiming(600, { duration: 180, easing: motion.out });
+        runOnJS(close)();
+      } else {
+        drop.value = withSpring(0, motion.settle);
+      }
+    });
+  const taps = Gesture.Race(pullDown, Gesture.Exclusive(doubleTap, tap));
+  const dropStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: drop.value * 0.8 }, { scale: 1 - Math.min(drop.value, 400) / 2400 }],
+    borderRadius: Math.min(drop.value / 6, 24),
+    opacity: 1 - Math.min(drop.value, 600) / 1200,
+  }));
 
   const leftStyle = useAnimatedStyle(() => ({ opacity: leftSkip.value }));
   const rightStyle = useAnimatedStyle(() => ({ opacity: rightSkip.value }));
 
-  const buffering = status === 'loading' || (isPlaying && time.bufferedPosition >= 0 && time.bufferedPosition < time.currentTime + 0.5 && status !== 'readyToPlay');
+  const buffering =
+    status === 'loading' ||
+    (isPlaying &&
+      time.bufferedPosition >= 0 &&
+      time.bufferedPosition < time.currentTime + 0.5 &&
+      status !== 'readyToPlay');
   const heading = title?.name ?? play.name;
-  const subheading = episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : title?.year ? String(title.year) : release.name;
+  const subheading = episode
+    ? `${episodeCode(episode)} · ${episodeName(episode)}`
+    : title?.year
+      ? String(title.year)
+      : release.name;
 
   return (
-    <View style={styles.screen} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-      <VideoView
-        player={player}
-        style={StyleSheet.absoluteFill}
-        nativeControls={false}
-        contentFit="contain"
-        allowsPictureInPicture
-        startsPictureInPictureAutomatically
-      />
-      <GestureDetector gesture={taps}>
-        <View style={StyleSheet.absoluteFill}>
-          <Animated.View style={[styles.skip, styles.skipLeft, leftStyle]} pointerEvents="none">
-            <Icon name={icons.rewind} size={30} tint={color.ink} />
-            <Text style={styles.skipText}>{SKIP} s</Text>
-          </Animated.View>
-          <Animated.View style={[styles.skip, styles.skipRight, rightStyle]} pointerEvents="none">
-            <Icon name={icons.forward} size={30} tint={color.ink} />
-            <Text style={styles.skipText}>{SKIP} s</Text>
-          </Animated.View>
-        </View>
-      </GestureDetector>
-
-      {buffering && !visible ? <ActivityIndicator style={styles.center} size="large" color={color.ink} /> : null}
-
-      {status === 'error' ? (
-        <View style={[styles.center, styles.errorBox]}>
-          <Icon name={icons.warning} size={28} tint={color.error} />
-          <Text style={styles.errorText}>{error?.message ?? 'This video does not play on this phone.'}</Text>
-        </View>
-      ) : null}
-
-      {visible ? (
-        <Animated.View
-          entering={FadeIn.duration(motion.quick)}
-          exiting={FadeOut.duration(motion.quick)}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="box-none"
-        >
-          <View style={styles.scrim} pointerEvents="none" />
-          <View
-            style={[styles.top, { paddingTop: Math.max(insets.top, space.lg), paddingLeft: insets.left + space.lg, paddingRight: insets.right + space.lg }]}
-          >
-            <Tap shrink={0.88} onPress={() => router.back()} accessibilityLabel="Close the player" style={styles.round}>
-              <Icon name={icons.back} size={24} tint={color.ink} />
-            </Tap>
-            <View style={styles.heading}>
-              <Text style={styles.title} numberOfLines={1}>
-                {heading}
-              </Text>
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {subheading}
-              </Text>
-            </View>
-            <Tap shrink={0.88} onPress={() => setTracksOpen(true)} accessibilityLabel="Subtitles and audio" style={styles.round}>
-              <Icon name={icons.subtitles} size={22} tint={color.ink} />
-            </Tap>
-            <Tap shrink={0.88} onPress={() => router.push({ pathname: '/tv', params: video ? { video } : { ref: play.id, file: String(play.video.index) } })} accessibilityLabel="Play on TV" style={styles.round}>
-              <Icon name={icons.cast} size={22} tint={color.ink} />
-            </Tap>
-          </View>
-
-          <View style={styles.middle} pointerEvents="box-none">
-            <Tap shrink={0.86} onPress={() => skip(-SKIP)} accessibilityLabel={`Back ${SKIP} seconds`} style={styles.side}>
-              <Icon name={icons.rewind} size={30} tint={color.ink} />
-            </Tap>
-            <PlayButton playing={isPlaying} buffering={buffering} onPress={toggle} />
-            <Tap shrink={0.86} onPress={() => skip(SKIP)} accessibilityLabel={`Forward ${SKIP} seconds`} style={styles.side}>
-              <Icon name={icons.forward} size={30} tint={color.ink} />
-            </Tap>
-          </View>
-
-          <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom, space.lg), paddingLeft: insets.left + space.xl, paddingRight: insets.right + space.xl }]}>
-            <SeekBar
-              position={time.currentTime}
-              duration={duration || player.duration || 0}
-              buffered={time.bufferedPosition}
-              download={download}
-              onScrubbing={setScrubbing}
-              onSeek={(seconds) => {
-                player.currentTime = seconds;
-              }}
-            />
-          </View>
-        </Animated.View>
-      ) : null}
-
-      <SubtitleOverlay cues={cues} time={time.currentTime} lifted={visible} />
-
-      {tracksOpen ? (
-        <TracksSheet
+    <View style={styles.backdrop}>
+      <Animated.View style={[styles.screen, dropStyle]} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+        <VideoView
           player={player}
-          media={media}
-          files={subtitleFiles}
-          file={subtitleFile}
-          onFile={(file) => {
-            setSubtitleFile(file);
-            if (file) player.subtitleTrack = null;
-          }}
-          onClose={() => setTracksOpen(false)}
+          style={StyleSheet.absoluteFill}
+          nativeControls={false}
+          contentFit="contain"
+          allowsPictureInPicture
+          startsPictureInPictureAutomatically
         />
-      ) : null}
+        <GestureDetector gesture={taps}>
+          <View style={StyleSheet.absoluteFill}>
+            <Animated.View style={[styles.skip, styles.skipLeft, leftStyle]} pointerEvents="none">
+              <Icon name={icons.rewind} size={30} tint={color.ink} />
+              <Text style={styles.skipText}>{SKIP} s</Text>
+            </Animated.View>
+            <Animated.View style={[styles.skip, styles.skipRight, rightStyle]} pointerEvents="none">
+              <Icon name={icons.forward} size={30} tint={color.ink} />
+              <Text style={styles.skipText}>{SKIP} s</Text>
+            </Animated.View>
+          </View>
+        </GestureDetector>
+
+        {buffering && !visible ? <ActivityIndicator style={styles.center} size="large" color={color.ink} /> : null}
+
+        {status === 'error' ? (
+          <View style={[styles.center, styles.errorBox]}>
+            <Icon name={icons.warning} size={28} tint={color.error} />
+            <Text style={styles.errorText}>{error?.message ?? 'This video does not play on this phone.'}</Text>
+          </View>
+        ) : null}
+
+        {visible ? (
+          <Animated.View
+            entering={FadeIn.duration(motion.quick)}
+            exiting={FadeOut.duration(motion.quick)}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="box-none"
+          >
+            <View style={styles.scrim} pointerEvents="none" />
+            <View
+              style={[
+                styles.top,
+                {
+                  paddingTop: Math.max(insets.top, space.lg),
+                  paddingLeft: insets.left + space.lg,
+                  paddingRight: insets.right + space.lg,
+                },
+              ]}
+            >
+              <Tap
+                shrink={0.88}
+                onPress={() => router.back()}
+                accessibilityLabel="Close the player"
+                style={styles.round}
+              >
+                <Icon name={icons.back} size={24} tint={color.ink} />
+              </Tap>
+              <View style={styles.heading}>
+                <Text style={styles.title} numberOfLines={1}>
+                  {heading}
+                </Text>
+                <Text style={styles.subtitle} numberOfLines={1}>
+                  {subheading}
+                </Text>
+              </View>
+              <Tap
+                shrink={0.88}
+                onPress={() => setTracksOpen(true)}
+                accessibilityLabel="Subtitles and audio"
+                style={styles.round}
+              >
+                <Icon name={icons.subtitles} size={22} tint={color.ink} />
+              </Tap>
+              <Tap
+                shrink={0.88}
+                onPress={() =>
+                  router.push({
+                    pathname: '/tv',
+                    params: video ? { video } : { ref: play.id, file: String(play.video.index) },
+                  })
+                }
+                accessibilityLabel="Play on TV"
+                style={styles.round}
+              >
+                <Icon name={icons.cast} size={22} tint={color.ink} />
+              </Tap>
+            </View>
+
+            <View style={styles.middle} pointerEvents="box-none">
+              <Tap
+                shrink={0.86}
+                onPress={() => skip(-SKIP)}
+                accessibilityLabel={`Back ${SKIP} seconds`}
+                style={styles.side}
+              >
+                <Icon name={icons.rewind} size={30} tint={color.ink} />
+              </Tap>
+              <PlayButton playing={isPlaying} buffering={buffering} onPress={toggle} />
+              <Tap
+                shrink={0.86}
+                onPress={() => skip(SKIP)}
+                accessibilityLabel={`Forward ${SKIP} seconds`}
+                style={styles.side}
+              >
+                <Icon name={icons.forward} size={30} tint={color.ink} />
+              </Tap>
+            </View>
+
+            <View
+              style={[
+                styles.bottom,
+                {
+                  paddingBottom: Math.max(insets.bottom, space.lg),
+                  paddingLeft: insets.left + space.xl,
+                  paddingRight: insets.right + space.xl,
+                },
+              ]}
+            >
+              <SeekBar
+                position={time.currentTime}
+                duration={duration || player.duration || 0}
+                buffered={time.bufferedPosition}
+                download={download}
+                onScrubbing={setScrubbing}
+                onSeek={(seconds) => {
+                  player.currentTime = seconds;
+                }}
+              />
+            </View>
+          </Animated.View>
+        ) : null}
+
+        <SubtitleOverlay cues={cues} time={time.currentTime} lifted={visible} />
+
+        {tracksOpen ? (
+          <TracksSheet
+            player={player}
+            media={media}
+            files={subtitleFiles}
+            file={subtitleFile}
+            onFile={(file) => {
+              setSubtitleFile(file);
+              if (file) player.subtitleTrack = null;
+            }}
+            onClose={() => setTracksOpen(false)}
+          />
+        ) : null}
+      </Animated.View>
     </View>
   );
 }
@@ -285,15 +398,44 @@ function PlayButton({ playing, buffering, onPress }: { playing: boolean; bufferi
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#000' },
+  backdrop: { flex: 1, backgroundColor: color.paper },
+  screen: { flex: 1, backgroundColor: '#000', overflow: 'hidden' },
   scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
   top: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   heading: { flex: 1, paddingHorizontal: space.sm },
-  title: { fontFamily: font.bold, fontSize: 17, color: color.ink, letterSpacing: -0.2 },
-  subtitle: { fontFamily: font.regular, fontSize: 13, color: color.soft, marginTop: 1 },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  middle: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 56 },
-  side: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  title: {
+    fontFamily: font.bold,
+    fontSize: 17,
+    color: color.ink,
+    letterSpacing: -0.2,
+  },
+  subtitle: {
+    fontFamily: font.regular,
+    fontSize: 13,
+    color: color.soft,
+    marginTop: 1,
+  },
+  round: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  middle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 56,
+  },
+  side: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   playButton: {
     width: 76,
     height: 76,
@@ -304,10 +446,39 @@ const styles = StyleSheet.create({
   },
   bottom: { paddingTop: space.sm },
   center: { position: 'absolute', alignSelf: 'center', top: '45%' },
-  errorBox: { alignItems: 'center', gap: space.sm, maxWidth: 360, padding: space.lg, top: '38%' },
-  errorText: { fontFamily: font.medium, fontSize: 15, color: color.ink, textAlign: 'center' },
-  skip: { position: 'absolute', top: 0, bottom: 0, width: '38%', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  skipLeft: { left: 0, borderTopRightRadius: 400, borderBottomRightRadius: 400, backgroundColor: 'rgba(240,233,220,0.08)' },
-  skipRight: { right: 0, borderTopLeftRadius: 400, borderBottomLeftRadius: 400, backgroundColor: 'rgba(240,233,220,0.08)' },
+  errorBox: {
+    alignItems: 'center',
+    gap: space.sm,
+    maxWidth: 360,
+    padding: space.lg,
+    top: '38%',
+  },
+  errorText: {
+    fontFamily: font.medium,
+    fontSize: 15,
+    color: color.ink,
+    textAlign: 'center',
+  },
+  skip: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: '38%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  skipLeft: {
+    left: 0,
+    borderTopRightRadius: 400,
+    borderBottomRightRadius: 400,
+    backgroundColor: 'rgba(240,233,220,0.08)',
+  },
+  skipRight: {
+    right: 0,
+    borderTopLeftRadius: 400,
+    borderBottomLeftRadius: 400,
+    backgroundColor: 'rgba(240,233,220,0.08)',
+  },
   skipText: { fontFamily: font.semibold, fontSize: 14, color: color.ink },
 });

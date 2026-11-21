@@ -72,7 +72,10 @@ export default function Pair() {
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.brand}>
@@ -82,10 +85,15 @@ export default function Pair() {
         <Text style={type.display}>Connect to your computer</Text>
         <Text style={type.body}>
           On the computer running torrential, open <Text style={styles.strong}>Devices</Text> and choose{' '}
-          <Text style={styles.strong}>Add a device</Text>, or run <Text style={styles.code}>torrential devices add</Text>.
+          <Text style={styles.strong}>Add a device</Text>, or run{' '}
+          <Text style={styles.code}>torrential devices add</Text>.
         </Text>
 
-        {mode === 'scan' ? <Scanner onScan={onScan} busy={busy} /> : <Typed {...{ address, setAddress, code, setCode, submit, busy }} />}
+        {mode === 'scan' ? (
+          <Scanner onScan={onScan} busy={busy} />
+        ) : (
+          <Typed {...{ address, setAddress, code, setCode, submit, busy }} />
+        )}
 
         {problem ? (
           <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.problem} accessibilityLiveRegion="assertive">

@@ -54,4 +54,3 @@ export function Tap({
     </AnimatedPressable>
   );
 }
-

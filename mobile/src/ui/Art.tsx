@@ -1,6 +1,6 @@
 import { Image, type ImageContentFit } from 'expo-image';
 import { useState } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
@@ -32,6 +32,9 @@ export function Art({
   placeholder?: boolean;
 }) {
   const link = useLink();
+  // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
+  const { width, height } = useWindowDimensions();
+  const orientation = width > height ? 'landscape' : 'portrait';
   const [failed, setFailed] = useState(false);
   const uri = url(link, '/api/title/art', { id, kind, season, episode });
 
@@ -46,6 +49,7 @@ export function Art({
       ) : null}
       {failed ? null : (
         <Image
+          key={orientation}
           source={{ uri, headers: authHeaders(link) }}
           style={StyleSheet.absoluteFill}
           contentFit={fit}

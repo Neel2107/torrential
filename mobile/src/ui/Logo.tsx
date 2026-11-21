@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
@@ -9,6 +9,9 @@ import { color, font } from '@/theme';
 /** A title's logo art over its picture, or its name set in type when it has no logo. */
 export function Logo({ id, name, style }: { id: string; name: string; style?: StyleProp<ViewStyle> }) {
   const link = useLink();
+  // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
+  const { width, height } = useWindowDimensions();
+  const orientation = width > height ? 'landscape' : 'portrait';
   const [missing, setMissing] = useState(false);
 
   return (
@@ -19,6 +22,7 @@ export function Logo({ id, name, style }: { id: string; name: string; style?: St
         </Text>
       ) : (
         <Image
+          key={orientation}
           source={{ uri: url(link, '/api/title/art', { id, kind: 'logo' }), headers: authHeaders(link) }}
           style={StyleSheet.absoluteFill}
           contentFit="contain"

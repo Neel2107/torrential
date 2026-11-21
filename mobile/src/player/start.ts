@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import { PixelRatio, useWindowDimensions } from 'react-native';
 
-import type { Check, EpisodeInfo, Error as WireError, PlayInfo, PlayTitle, Release, TitleCard, Tried, Viewer } from '@web/wire';
+import type {
+  Check,
+  EpisodeInfo,
+  Error as WireError,
+  PlayInfo,
+  PlayTitle,
+  Release,
+  TitleCard,
+  Tried,
+  Viewer,
+} from '@web/wire';
 
 import { EngineError, post, stream } from '@/engine/client';
 import { useLink } from '@/engine/session';
@@ -18,9 +28,32 @@ type PlayMessage =
 /** What starting a play looks like from the phone, one step at a time. */
 export type Start =
   | { phase: 'finding'; title: TitleCard | null; episode: EpisodeInfo | null }
-  | { phase: 'trying'; title: TitleCard | null; episode: EpisodeInfo | null; rank: number; of: number; release: Release; check: Check | null; found: number }
-  | { phase: 'ready'; title: TitleCard | null; episode: EpisodeInfo | null; release: Release; play: PlayInfo; resumeAt: number | null }
-  | { phase: 'failed'; title: TitleCard | null; episode: EpisodeInfo | null; message: string; hint: string | null; tried: number };
+  | {
+      phase: 'trying';
+      title: TitleCard | null;
+      episode: EpisodeInfo | null;
+      rank: number;
+      of: number;
+      release: Release;
+      check: Check | null;
+      found: number;
+    }
+  | {
+      phase: 'ready';
+      title: TitleCard | null;
+      episode: EpisodeInfo | null;
+      release: Release;
+      play: PlayInfo;
+      resumeAt: number | null;
+    }
+  | {
+      phase: 'failed';
+      title: TitleCard | null;
+      episode: EpisodeInfo | null;
+      message: string;
+      hint: string | null;
+      tried: number;
+    };
 
 /**
  * The phone's screen and decoders, so the engine ranks sources for what this phone plays well. Phones
@@ -63,16 +96,39 @@ export function useTitlePlay(video: string, attempt: number): Start {
           found = message.found;
           break;
         case 'trying':
-          setStart({ phase: 'trying', title, episode, rank: message.rank, of: message.of, release: message.release, check: null, found });
+          setStart({
+            phase: 'trying',
+            title,
+            episode,
+            rank: message.rank,
+            of: message.of,
+            release: message.release,
+            check: null,
+            found,
+          });
           break;
         case 'check':
           setStart((previous) => (previous.phase === 'trying' ? { ...previous, check: message.check } : previous));
           break;
         case 'playing':
-          setStart({ phase: 'ready', title, episode, release: message.release, play: message.play, resumeAt: message.resume_at });
+          setStart({
+            phase: 'ready',
+            title,
+            episode,
+            release: message.release,
+            play: message.play,
+            resumeAt: message.resume_at,
+          });
           break;
         case 'failed':
-          setStart({ phase: 'failed', title, episode, message: message.error.message, hint: message.error.hint ?? null, tried: message.tried.length });
+          setStart({
+            phase: 'failed',
+            title,
+            episode,
+            message: message.error.message,
+            hint: message.error.hint ?? null,
+            tried: message.tried.length,
+          });
           break;
       }
     }).catch((error: unknown) => {
@@ -82,7 +138,7 @@ export function useTitlePlay(video: string, attempt: number): Start {
         phase: 'failed',
         title,
         episode,
-        message: engine ? error.message : "Lost the engine while starting the video.",
+        message: engine ? error.message : 'Lost the engine while starting the video.',
         hint: engine ? error.hint : null,
         tried: 0,
       });

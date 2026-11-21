@@ -30,7 +30,13 @@ const TABS: Record<string, { icon: LucideIcon; label: string }> = {
  * Icons only, filled when selected, on a bar that slides away while the feed scrolls down. Tapping
  * the selected tab again scrolls its feed to the top.
  */
-export function TabBar({ state, emitter, navigateToTab, insets, badges }: BottomTabBarProps & { badges: Record<string, boolean> }) {
+export function TabBar({
+  state,
+  emitter,
+  navigateToTab,
+  insets,
+  badges,
+}: BottomTabBarProps & { badges: Record<string, boolean> }) {
   const { hidden } = useChrome();
   const height = TAB_BAR_HEIGHT + insets.bottom;
 
@@ -104,7 +110,13 @@ function TabButton({
       accessibilityState={{ selected: focused }}
     >
       <Animated.View style={pop}>
-        <Icon name={icon} size={26} filled={focused && icon !== icons.search} weight={focused ? 2.6 : 1.8} tint={focused ? color.ink : color.soft} />
+        <Icon
+          name={icon}
+          size={26}
+          filled={focused && icon !== icons.search}
+          weight={focused ? 2.6 : 1.8}
+          tint={focused ? color.ink : color.soft}
+        />
         {badge ? <View style={styles.badge} /> : null}
       </Animated.View>
     </Pressable>

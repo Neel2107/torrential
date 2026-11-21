@@ -1,12 +1,6 @@
-import { useEffect, type ReactNode } from "react";
-import {
-  BackHandler,
-  Pressable,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useEffect, type ReactNode } from 'react';
+import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
   runOnJS,
@@ -14,12 +8,12 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-} from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { color, motion, radius, space } from "@/theme";
+import { color, motion, radius, space } from '@/theme';
 
-import { Portal } from "./Portal";
+import { Portal } from './Portal';
 
 /**
  * A sheet over the current screen, as X shows its menus: it springs up from the bottom, follows the
@@ -49,20 +43,16 @@ export function Sheet({
   };
 
   useEffect(() => {
-    const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
-      () => {
-        close();
-        return true;
-      },
-    );
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      close();
+      return true;
+    });
     return () => subscription.remove();
   });
 
   const drag = Gesture.Pan()
     .onUpdate((event) => {
-      offset.value =
-        event.translationY > 0 ? event.translationY : event.translationY * 0.15;
+      offset.value = event.translationY > 0 ? event.translationY : event.translationY * 0.15;
     })
     .onEnd((event) => {
       if (event.translationY > height.value / 3 || event.velocityY > 900) {
@@ -86,21 +76,14 @@ export function Sheet({
   return (
     <Portal>
       <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
-        <Animated.View
-          style={[StyleSheet.absoluteFill, styles.backdrop, backdrop]}
-        >
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={close}
-            accessibilityLabel="Close"
-          />
+        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdrop]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
         </Animated.View>
         <GestureDetector gesture={drag}>
           <Animated.View
             onLayout={(event) => {
               height.value = event.nativeEvent.layout.height;
-              if (offset.value >= screen)
-                offset.value = withSpring(0, motion.settle);
+              if (offset.value >= screen) offset.value = withSpring(0, motion.settle);
             }}
             style={[
               styles.sheet,
@@ -122,18 +105,18 @@ export function Sheet({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { backgroundColor: "rgba(0,0,0,0.55)" },
+  backdrop: { backgroundColor: 'rgba(0,0,0,0.55)' },
   sheet: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
-    maxHeight: "88%",
+    maxHeight: '88%',
     backgroundColor: color.raised,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     paddingTop: space.sm,
   },
   grabber: {
-    alignSelf: "center",
+    alignSelf: 'center',
     width: 36,
     height: 4,
     borderRadius: 2,
