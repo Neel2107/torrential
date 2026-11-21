@@ -138,7 +138,7 @@ export default function Engine() {
           ? 'Removing it stops watching from this phone’s engine. What it downloaded stays until the app is removed.'
           : 'Removing it forgets this computer on the phone. To stop the computer trusting this phone, remove it under Devices on the computer.'}
       </Text>
-      <Button label={`Remove ${current?.name ?? 'this engine'}`} kind="secondary" onPress={forget} />
+      <Button label={`Remove ${current?.name ?? 'this engine'}`} kind="secondary" onPress={() => forget()} />
     </ScrollView>
   );
 }

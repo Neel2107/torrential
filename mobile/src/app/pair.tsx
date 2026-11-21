@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -82,6 +82,17 @@ export default function Pair() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
+        {router.canGoBack() ? (
+          <Button
+            kind="quiet"
+            label="Cancel"
+            onPress={() => {
+              Keyboard.dismiss();
+              router.back();
+            }}
+            style={{ alignSelf: 'flex-start' }}
+          />
+        ) : null}
         <View style={styles.brand}>
           <Mark size={40} />
           <Text style={styles.wordmark}>torrential</Text>
@@ -182,7 +193,12 @@ function Typed({
       <Text style={type.label}>Address</Text>
       <TextInput
         value={address}
-        onChangeText={setAddress}
+        onChangeText={(text) => {
+          setAddress(text);
+          // A pasted pairing link carries its code too.
+          const pasted = parsePairing(text)?.code;
+          if (pasted) setCode(pasted);
+        }}
         placeholder="mac.local or 192.168.1.20"
         placeholderTextColor={color.pencil}
         autoCapitalize="none"
@@ -205,7 +221,6 @@ function Typed({
         autoComplete="one-time-code"
         returnKeyType="go"
         onSubmitEditing={submit}
-        maxLength={6}
         style={[styles.input, styles.codeInput]}
         accessibilityLabel="Six-digit code"
       />

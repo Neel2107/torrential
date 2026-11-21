@@ -44,7 +44,7 @@ class EngineService : Service() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       manager.createNotificationChannel(
         NotificationChannel(CHANNEL, "Engine", NotificationManager.IMPORTANCE_LOW).apply {
-          description = "Shown while torrential downloads on this phone"
+          description = "Shown while the engine runs on this phone"
         }
       )
     }
@@ -54,7 +54,7 @@ class EngineService : Service() {
     val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
     return builder
       .setContentTitle("torrential")
-      .setContentText("Downloading on this phone")
+      .setContentText("Engine running on this phone")
       .setSmallIcon(android.R.drawable.stat_sys_download)
       .setOngoing(true)
       .setContentIntent(open)

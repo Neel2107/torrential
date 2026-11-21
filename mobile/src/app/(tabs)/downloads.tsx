@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { ago, bytes, percent, rate, sentence, span } from '@web/lib/format';
+import { ago, bytes, percent, rate, sentence } from '@web/lib/format';
 import type { Job } from '@web/wire';
 
 import { post } from '@/engine/client';
@@ -124,6 +124,14 @@ export default function Downloads() {
   );
 }
 
+/** Time left in the unit that matters, so it reads calmly as each second's estimate moves. */
+function roughly(seconds: number): string {
+  if (seconds >= 86400) return `about ${Math.round(seconds / 86400)}d`;
+  if (seconds >= 5400) return `about ${Math.round(seconds / 3600)}h`;
+  if (seconds >= 120) return `${Math.round(seconds / 60)} min`;
+  return 'under 2 min';
+}
+
 function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () => void }) {
   const name = useJobName(job);
   const copy = useCopy(job.id);
@@ -139,10 +147,10 @@ function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () =>
       : job.state === 'error'
         ? [sentence(job.error.message)]
         : [
-            STATE[job.state],
+            job.waiting_for ? `Waiting for ${job.waiting_for}` : STATE[job.state],
             size ? `${bytes(job.progress.verified)} of ${bytes(size)}` : null,
-            downloading && job.progress.down_rate > 0 ? rate(job.progress.down_rate) : null,
-            downloading && job.progress.eta ? `${span(job.progress.eta)} left` : null,
+            downloading && !job.waiting_for && job.progress.down_rate > 0 ? rate(job.progress.down_rate) : null,
+            downloading && !job.waiting_for && job.progress.eta ? `${roughly(job.progress.eta)} left` : null,
           ];
 
   return (
@@ -298,7 +306,7 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
               onClose();
             }}
           />
-        ) : job.state === 'done' ? (
+        ) : job.state === 'done' && !onPhone ? (
           <MenuRow
             icon={icons.phone}
             label="Save to phone"

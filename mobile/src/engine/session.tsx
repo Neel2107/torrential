@@ -31,8 +31,8 @@ type SessionApi = {
   switchTo: (id: string) => Promise<void>;
   /** Points the current engine at its new address, keeping its token: it moved networks, not the pairing. */
   relocate: (base: string) => Promise<void>;
-  /** Forgets the current engine and watches from the next one, if any. */
-  forget: () => Promise<void>;
+  /** Forgets engine `id`, the current one by default, and watches from the next one, if any. */
+  forget: (id?: string) => Promise<void>;
 };
 
 const Context = createContext<SessionApi | null>(null);
@@ -141,10 +141,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           engines: now.engines.map((e) => (e.id === engine.id ? { ...e, name: computerName(base), link } : e)),
         }));
       },
-      forget: () =>
+      forget: (id) =>
         change((now) => {
-          const rest = now.engines.filter((e) => e.id !== now.active);
-          return { engines: rest, active: rest[0]?.id ?? null };
+          const gone = id ?? now.active;
+          if (!now.engines.some((e) => e.id === gone)) return now;
+          const rest = now.engines.filter((e) => e.id !== gone);
+          return { engines: rest, active: now.active === gone ? (rest[0]?.id ?? null) : now.active };
         }),
     };
   }, [session, engines, engine, change]);

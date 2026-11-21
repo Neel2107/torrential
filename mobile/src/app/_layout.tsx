@@ -37,6 +37,9 @@ const theme = {
   },
 };
 
+/** A link opened from outside, such as a magnet, lands with Home under it, so Back has somewhere to go. */
+export const unstable_settings = { anchor: '(tabs)' };
+
 function Routes() {
   const { session, forget } = useSession();
   // One cache per engine and pairing: nothing from a removed or different engine survives a new pairing.
@@ -60,14 +63,17 @@ function Routes() {
     if (session.state !== 'loading') SplashScreen.hideAsync();
   }, [session.state]);
 
+  // An engine that no longer knows this phone is forgotten: that one, even if the person has
+  // switched since, and only once however many requests it refused.
+  const engineId = session.state === 'paired' ? session.engine.id : null;
   useEffect(
     () =>
       client.getQueryCache().subscribe((event) => {
-        if (event.type !== 'updated' || event.action.type !== 'error') return;
+        if (event.type !== 'updated' || event.action.type !== 'error' || !engineId) return;
         const error = event.action.error;
-        if (error instanceof EngineError && error.unpaired) forget();
+        if (error instanceof EngineError && error.unpaired) forget(engineId);
       }),
-    [client, forget],
+    [client, forget, engineId],
   );
 
   if (session.state === 'loading') return null;

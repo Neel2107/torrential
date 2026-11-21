@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   FadeIn,
   useAnimatedStyle,
@@ -32,14 +33,28 @@ export function Ended({
 }) {
   const reduced = useReducedMotion();
   const [left, setLeft] = useState<number | null>(next ? UP_NEXT_SECONDS : null);
+  const [cancelled, setCancelled] = useState(false);
   const progress = useSharedValue(0);
-
+  const go = useRef(onNext);
   useEffect(() => {
-    if (left === null) return;
-    if (left === 0) return onNext();
-    const timer = setTimeout(() => setLeft(left - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [left, onNext]);
+    go.current = onNext;
+  }, [onNext]);
+
+  // One deadline for the next episode, so the count and the bar agree however often the player
+  // around it renders.
+  useEffect(() => {
+    if (!next || cancelled) return;
+    const deadline = Date.now() + UP_NEXT_SECONDS * 1000;
+    const tick = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setLeft(remaining);
+      if (remaining === 0) {
+        clearInterval(tick);
+        go.current();
+      }
+    }, 250);
+    return () => clearInterval(tick);
+  }, [next, cancelled]);
 
   useEffect(() => {
     if (next && !reduced) progress.value = withTiming(1, { duration: UP_NEXT_SECONDS * 1000, easing: Easing.linear });
@@ -69,7 +84,15 @@ export function Ended({
       <View style={styles.actions}>
         {next ? <Button label="Play now" icon={icons.play} onPress={onNext} /> : null}
         {left !== null ? (
-          <Button label="Cancel" kind="secondary" onPress={() => setLeft(null)} />
+          <Button
+            label="Cancel"
+            kind="secondary"
+            onPress={() => {
+              setCancelled(true);
+              setLeft(null);
+              cancelAnimation(progress);
+            }}
+          />
         ) : (
           <Button label="Watch again" kind={next ? 'secondary' : 'primary'} icon={icons.rewind} onPress={onReplay} />
         )}

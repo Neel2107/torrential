@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Keyboard, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   FadeIn,
@@ -100,7 +100,10 @@ export default function Search() {
         downloads={pickup.downloads}
         more={pickup.more}
         searches={recents.recent}
-        onPick={setText}
+        onPick={(query) => {
+          Keyboard.dismiss();
+          setText(query);
+        }}
         onForget={recents.forget}
         onClear={recents.clear}
       />
@@ -145,6 +148,22 @@ function SearchHeader({
   const insets = useSafeAreaInsets();
   const { hidden } = useChrome();
   const input = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const empty = useRef(true);
+  useEffect(() => {
+    empty.current = text.length === 0;
+  }, [text]);
+
+  // Arriving at an empty search means typing comes next, so the keyboard opens with it; coming back
+  // to results keeps them in view. Leaving puts the keyboard away before the next screen shows.
+  useFocusEffect(
+    useCallback(() => {
+      const timer = empty.current ? setTimeout(() => input.current?.focus(), 120) : undefined;
+      return () => {
+        clearTimeout(timer);
+        Keyboard.dismiss();
+      };
+    }, []),
+  );
   const focus = useSharedValue(0);
   const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.value * BAR_HEIGHT }] }));
   const field = useAnimatedStyle(() => ({
@@ -308,7 +327,9 @@ function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; o
         highlight
         onPress={() => {
           onOpen();
-          router.push({ pathname: '/title/[id]', params: { id: title.id } });
+          Keyboard.dismiss();
+          // navigate, not push: a quick second tap reuses the page instead of stacking another.
+          router.navigate({ pathname: '/title/[id]', params: { id: title.id } });
         }}
         accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
         style={styles.row}
@@ -452,7 +473,15 @@ function Torrents({
           ) : undefined
         }
         renderItem={({ item, index }) => (
-          <ReleaseRow release={item} index={index} onOpen={onOpen} onNotVideo={() => setNotVideo(item)} />
+          <ReleaseRow
+            release={item}
+            index={index}
+            onOpen={onOpen}
+            onNotVideo={() => {
+              Keyboard.dismiss();
+              setNotVideo(item);
+            }}
+          />
         )}
       />
       {notVideo ? <NotVideo release={notVideo} onClose={() => setNotVideo(null)} /> : null}
@@ -575,6 +604,7 @@ function ReleaseRow({
         highlight
         onPress={() => {
           onOpen();
+          Keyboard.dismiss();
           if (playable) router.push({ pathname: '/play', params: { ref: release.magnet ?? release.id } });
           else onNotVideo();
         }}

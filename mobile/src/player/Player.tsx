@@ -198,8 +198,11 @@ export function Player({
     return () => controller.abort();
   }, [link, play.id, play.video.index]);
 
+  // The timeline is a new object each render but its clock is stable; depending on the clock alone
+  // keeps `save` the same function, so the effects below run when they mean to, not on every tick.
+  const now = timeline.now;
   const save = useCallback(() => {
-    const at = timeline.now();
+    const at = now();
     const length = duration || null;
     if (!video || !length || at < 1) return Promise.resolve();
     const body: Position = {
@@ -215,7 +218,7 @@ export function Player({
       () => {},
       () => {},
     );
-  }, [duration, link, timeline, release.id, video]);
+  }, [duration, link, now, release.id, video]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -552,8 +555,9 @@ export function Player({
                 setSheet(null);
                 player.pause();
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                // Saved first, so the place is the engine's too if this screen is gone before the next starts.
-                save().then(() => router.replace({ pathname: '/play', params: { video, source: source.id, at } }));
+                // The next screen starts at once from `at`; the save finishes on its own.
+                save().catch(() => {});
+                router.replace({ pathname: '/play', params: { video, source: source.id, at } });
               }}
               onClose={() => setSheet(null)}
             />

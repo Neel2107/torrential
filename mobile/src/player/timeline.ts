@@ -122,7 +122,8 @@ export function useTimeline({
   }, [player]);
 
   const switchTo = useCallback(
-    async (next: Mode, at: number) => {
+    // `resume` is whether to play once the new source loads: a seek while paused stays paused.
+    async (next: Mode, at: number, resume = true) => {
       if (next.kind === 'stream' && media && !(await readyFfmpeg(link, media))) {
         // An engine inside a phone app has no ffmpeg, so a file the player cannot read stays unplayable here.
         setProblem(
@@ -140,7 +141,7 @@ export function useTimeline({
       if (!source) return;
       await player.replaceAsync(source);
       if (next.kind === 'direct' && at > 0) player.currentTime = at;
-      player.play();
+      if (resume) player.play();
     },
     [link, media, metadata, play, player],
   );
@@ -193,7 +194,7 @@ export function useTimeline({
     (seconds: number) => {
       const current = modeRef.current;
       const target = Math.max(0, seconds);
-      if (current.kind === 'stream') switchTo({ ...current, from: target }, target);
+      if (current.kind === 'stream') switchTo({ ...current, from: target }, target, player.playing);
       else player.currentTime = target;
     },
     [player, switchTo],
@@ -203,10 +204,11 @@ export function useTimeline({
     (track: number) => {
       const current = modeRef.current;
       const from = now();
-      if (current.kind === 'stream') switchTo({ ...current, from, audio: track }, from);
-      else switchTo({ kind: 'stream', video: 'copy', from, audio: track, reason: 'audio' }, from);
+      const playing = player.playing;
+      if (current.kind === 'stream') switchTo({ ...current, from, audio: track }, from, playing);
+      else switchTo({ kind: 'stream', video: 'copy', from, audio: track, reason: 'audio' }, from, playing);
     },
-    [now, switchTo],
+    [now, player, switchTo],
   );
 
   const duration = mode.kind === 'stream' ? (media?.duration ?? 0) : player.duration || loadedDuration;

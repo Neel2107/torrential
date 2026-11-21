@@ -102,7 +102,8 @@ export function TracksSheet({
                 label={track.title || languageName(track.language) || `Audio ${index + 1}`}
                 detail={`${track.codec.toUpperCase()} · ${channels(track.channels)} · converted by the engine`}
                 selected={
-                  streamAudio.selected === null ? track.default || index === 0 : streamAudio.selected === track.stream
+                  track.stream ===
+                  (streamAudio.selected ?? (streamAudio.tracks.find((t) => t.default) ?? streamAudio.tracks[0])?.stream)
                 }
                 onPress={() => streamAudio.onSelect(track.stream)}
               />

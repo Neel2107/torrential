@@ -12,9 +12,10 @@ import { Icon, icons } from './Icon';
 
 /** What went wrong talking to the engine, in words, with the one thing worth trying next. */
 export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () => void }) {
-  const { session } = useSession();
+  const { session, usePhone } = useSession();
   const engine = error instanceof EngineError;
   const base = session.state === 'paired' ? session.link.base.replace(/^https?:\/\//, '') : '';
+  const onPhone = session.state === 'paired' && session.engine.kind === 'phone';
 
   return (
     <View style={styles.wrap} accessibilityLiveRegion="polite">
@@ -23,12 +24,23 @@ export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () =>
       <Text style={[type.body, styles.center]}>
         {engine
           ? sentence(error.message)
-          : `Make sure the computer running torrential at ${base} is awake and on the same network as this phone.`}
+          : onPhone
+            ? 'The engine on this phone stopped. Starting it again usually fixes this.'
+            : `Make sure the computer running torrential at ${base} is awake and on the same network as this phone.`}
       </Text>
       {engine && error.hint ? <Text style={[type.caption, styles.center]}>{sentence(error.hint)}</Text> : null}
       <View style={styles.actions}>
-        <Button label="Try again" icon={icons.refresh} onPress={onRetry} />
-        {engine ? null : <Button label="Change address" kind="quiet" onPress={() => router.push('/relocate')} />}
+        <Button
+          label={onPhone && !engine ? 'Start it again' : 'Try again'}
+          icon={icons.refresh}
+          onPress={async () => {
+            if (onPhone) await usePhone().catch(() => {});
+            onRetry();
+          }}
+        />
+        {engine || onPhone ? null : (
+          <Button label="Change address" kind="quiet" onPress={() => router.push('/relocate')} />
+        )}
       </View>
     </View>
   );

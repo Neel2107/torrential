@@ -110,6 +110,7 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
     let title: TitleCard | null = null;
     let episode: EpisodeInfo | null = null;
     let found = 0;
+    let ended = false;
     setStart({ phase: 'finding', title, episode });
 
     const body: PlayTitle = source ? { video, viewer, source } : { video, viewer };
@@ -139,6 +140,7 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
           setStart((previous) => (previous.phase === 'trying' ? { ...previous, check: message.check } : previous));
           break;
         case 'playing':
+          ended = true;
           setStart({
             phase: 'ready',
             title,
@@ -149,6 +151,7 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
           });
           break;
         case 'failed':
+          ended = true;
           setStart({
             phase: 'failed',
             title,
@@ -159,18 +162,31 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
           });
           break;
       }
-    }).catch((error: unknown) => {
-      if (controller.signal.aborted) return;
-      const engine = error instanceof EngineError;
-      setStart({
-        phase: 'failed',
-        title,
-        episode,
-        message: engine ? error.message : 'Lost the engine while starting the video.',
-        hint: engine ? error.hint : null,
-        tried: 0,
+    })
+      .then(() => {
+        // The engine closed the answer without saying how it ended: it stopped or restarted.
+        if (ended || controller.signal.aborted) return;
+        setStart({
+          phase: 'failed',
+          title,
+          episode,
+          message: 'The engine stopped answering before a source played.',
+          hint: null,
+          tried: 0,
+        });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        const engine = error instanceof EngineError;
+        setStart({
+          phase: 'failed',
+          title,
+          episode,
+          message: engine ? error.message : 'Lost the engine while starting the video.',
+          hint: engine ? error.hint : null,
+          tried: 0,
+        });
       });
-    });
 
     return () => controller.abort();
     // The viewer is read once per attempt; rotating the phone mid-start should not restart it.

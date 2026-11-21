@@ -56,10 +56,13 @@ export default function Add() {
     if (!payload) return;
     if (payload.shareType === 'text' || payload.shareType === 'url') {
       setText(payload.value);
+      clearSharedPayloads();
     } else if (payload.value) {
-      readFile(payload.value);
+      // Clearing deletes the shared copy, so only once it has been read.
+      readFile(payload.value).finally(() => clearSharedPayloads());
+    } else {
+      clearSharedPayloads();
     }
-    clearSharedPayloads();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [share.sharedPayloads]);
 
