@@ -4,9 +4,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { LucideIcon } from 'lucide-react-native';
+
 import { color, font, motion, space } from '@/theme';
 
 import { useChrome } from './chrome';
+import { Glass, LIQUID_GLASS } from './Glass';
+import { Icon } from './Icon';
+import { Tap } from './Tap';
 
 export const BAR_HEIGHT = 52;
 export const TABS_HEIGHT = 48;
@@ -59,6 +64,28 @@ export function TopBar({
       </Animated.View>
       <View style={[styles.statusShade, { height: insets.top }]} pointerEvents="none" />
     </>
+  );
+}
+
+export type Action = { icon: LucideIcon; label: string; onPress: () => void };
+
+/** The bar's buttons, grouped on one capsule of glass on iOS 26 as the system's own bars group theirs. */
+export function Actions({ actions }: { actions: Action[] }) {
+  return (
+    <Glass interactive style={styles.actions} fallback="transparent">
+      {actions.map((action) => (
+        <Tap
+          key={action.label}
+          haptic
+          shrink={0.9}
+          onPress={action.onPress}
+          accessibilityLabel={action.label}
+          style={styles.action}
+        >
+          <Icon name={action.icon} size={LIQUID_GLASS ? 20 : 22} tint={color.ink} />
+        </Tap>
+      ))}
+    </Glass>
   );
 }
 
@@ -124,7 +151,9 @@ const styles = StyleSheet.create({
   },
   statusShade: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 11, backgroundColor: color.paper },
   row: { height: BAR_HEIGHT, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg },
-  side: { width: 64, flexDirection: 'row', alignItems: 'center' },
+  side: { minWidth: 64, flexDirection: 'row', alignItems: 'center' },
+  actions: { flexDirection: 'row', borderRadius: 20, paddingHorizontal: LIQUID_GLASS ? 2 : 0 },
+  action: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   end: { justifyContent: 'flex-end' },
   middle: { flex: 1, alignItems: 'center' },
   title: { fontFamily: font.bold, fontSize: 19, letterSpacing: -0.4, color: color.ink },

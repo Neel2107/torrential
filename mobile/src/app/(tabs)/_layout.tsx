@@ -8,11 +8,12 @@ import { TAB_BAR_HEIGHT, TabBar } from '@/ui/TabBar';
 import { color, space } from '@/theme';
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   const { jobs } = useJobs();
   const downloading = jobs.some((job) => job.state === 'downloading' || job.state === 'metadata');
 
   return (
-    <ChromeProvider>
+    <ChromeProvider bar={insets.bottom + TAB_BAR_HEIGHT}>
       <Tabs
         tabBar={(props) => <TabBar {...props} badges={{ downloads: downloading }} />}
         screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: color.paper }, animation: 'fade' }}

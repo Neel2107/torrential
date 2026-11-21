@@ -36,12 +36,12 @@ import { useLink } from '@/engine/session';
 import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineProblem } from '@/ui/EngineProblem';
+import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
 import { MenuRow } from '@/ui/MenuRow';
 import { Meter } from '@/ui/Meter';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
-import { TAB_BAR_HEIGHT } from '@/ui/TabBar';
 import { Tap } from '@/ui/Tap';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
@@ -138,6 +138,7 @@ function SearchHeader({
       <Animated.View style={[styles.header, { paddingTop: insets.top }, slide]}>
         <View style={styles.fieldRow}>
           <Animated.View style={[styles.field, field]}>
+            <Glass style={styles.fieldGlass} />
             <Icon name={icons.search} size={18} tint={color.pencil} />
             <TextInput
               ref={input}
@@ -222,9 +223,8 @@ function Titles({
   idle: ReactElement | null;
   onOpen: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   const onScroll = useChromeScroll();
-  const { docked } = useChrome();
+  const { bottom } = useChrome();
   const result = useTitleSearch(query);
   const titles = result.data?.titles ?? [];
 
@@ -236,7 +236,7 @@ function Titles({
       scrollEventThrottle={16}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl + docked }}
+      contentContainerStyle={{ paddingTop: top, paddingBottom: bottom + space.xl }}
       ListHeaderComponent={
         result.isFetching && query ? (
           <ActivityIndicator style={{ marginTop: space.lg }} color={color.soft} />
@@ -317,9 +317,8 @@ function Torrents({
   onOpen: () => void;
 }) {
   const link = useLink();
-  const insets = useSafeAreaInsets();
   const onScroll = useChromeScroll();
-  const { docked } = useChrome();
+  const { bottom } = useChrome();
   const [state, setState] = useState<{ releases: Release[]; pending: string[]; done: boolean; error: string | null }>({
     releases: [],
     pending: [],
@@ -360,7 +359,7 @@ function Torrents({
         scrollEventThrottle={16}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl + docked }}
+        contentContainerStyle={{ paddingTop: top, paddingBottom: bottom + space.xl }}
         ListHeaderComponent={
           query ? (
             <View>
@@ -748,9 +747,9 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radius.pill,
     paddingHorizontal: 14,
-    backgroundColor: color.lifted,
     borderWidth: 1,
   },
+  fieldGlass: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius.pill },
   input: { flex: 1, fontFamily: font.regular, fontSize: 16, color: color.ink, paddingVertical: 0 },
   clear: {
     width: 20,

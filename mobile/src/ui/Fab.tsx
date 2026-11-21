@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import Animated, { interpolate, LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { color, motion, space } from '@/theme';
 
@@ -10,19 +9,25 @@ import { Icon } from './Icon';
 import { TAB_BAR_HEIGHT } from './TabBar';
 import { Tap } from './Tap';
 
+/** The system tab bar on iOS keeps Search in the corner the floating button takes, so there it sits in the top bar. */
+export const ADD_IN_TOP_BAR = Platform.OS === 'ios';
+
+/** The room a feed with the floating button leaves past its last row, so the button never covers it. */
+export const FAB_ROOM = ADD_IN_TOP_BAR ? space.xl : 96;
+
 /** The floating button in the corner. It turns see-through while the feed scrolls, as X's does. */
 export function Fab({ icon, label, onPress }: { icon: LucideIcon; label: string; onPress: () => void }) {
-  const insets = useSafeAreaInsets();
-  const { hidden, docked } = useChrome();
+  const { hidden, bottom } = useChrome();
   const fade = useAnimatedStyle(() => ({
     opacity: interpolate(hidden.value, [0, 1], [1, 0.45]),
     transform: [{ translateY: hidden.value * (TAB_BAR_HEIGHT * 0.6) }],
   }));
 
+  if (ADD_IN_TOP_BAR) return null;
   return (
     <Animated.View
       layout={LinearTransition.duration(motion.standard).easing(motion.out)}
-      style={[styles.wrap, { bottom: insets.bottom + TAB_BAR_HEIGHT + space.lg + docked }, fade]}
+      style={[styles.wrap, { bottom: bottom + space.lg }, fade]}
     >
       <Tap haptic shrink={0.92} onPress={onPress} accessibilityLabel={label} style={styles.fab}>
         <Icon name={icon} size={26} tint={color.actionInk} weight={2.4} />

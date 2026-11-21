@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useVersion } from '@/engine/queries';
 import { color } from '@/theme';
 
+import { Glass, LIQUID_GLASS } from './Glass';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
 
@@ -21,7 +22,9 @@ export function EngineAvatar() {
       accessibilityLabel={`Engine, ${state}`}
       style={styles.avatar}
     >
-      <Icon name={HardDrive} size={18} tint={color.soft} />
+      <Glass interactive style={styles.disc}>
+        <Icon name={HardDrive} size={18} tint={color.soft} />
+      </Glass>
       <View
         style={[
           styles.dot,
@@ -33,14 +36,8 @@ export function EngineAvatar() {
 }
 
 const styles = StyleSheet.create({
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: color.lifted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  avatar: { width: LIQUID_GLASS ? 38 : 34, height: LIQUID_GLASS ? 38 : 34 },
+  disc: { flex: 1, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   dot: {
     position: 'absolute',
     right: -1,

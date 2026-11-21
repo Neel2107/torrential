@@ -9,7 +9,6 @@ import Animated, {
   useDerivedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ago, bytes, percent, rate, sentence, span } from '@web/lib/format';
 import type { Job } from '@web/wire';
@@ -21,24 +20,22 @@ import { useLink } from '@/engine/session';
 import { cancel, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
-import { Fab } from '@/ui/Fab';
+import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { MenuRow } from '@/ui/MenuRow';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
-import { TAB_BAR_HEIGHT } from '@/ui/TabBar';
 import { Tap } from '@/ui/Tap';
-import { TopBar, useTopInset } from '@/ui/TopBar';
+import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { color, font, motion, space, type } from '@/theme';
 
 const ACTIVE = new Set<Job['state']>(['queued', 'metadata', 'checking', 'downloading', 'paused', 'error']);
 
 export default function Downloads() {
   const { jobs, live } = useJobs();
-  const insets = useSafeAreaInsets();
   const top = useTopInset(true);
   const onScroll = useChromeScroll();
-  const { docked } = useChrome();
+  const { bottom: chromeBottom } = useChrome();
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState<Job | null>(null);
   const [copyMenu, setCopyMenu] = useState<string | null>(null);
@@ -47,7 +44,7 @@ export default function Downloads() {
   const active = jobs.filter((job) => ACTIVE.has(job.state));
   const finished = jobs.filter((job) => !ACTIVE.has(job.state));
   const shown = tab === 0 ? active : finished;
-  const bottom = insets.bottom + TAB_BAR_HEIGHT + 96 + docked;
+  const bottom = chromeBottom + FAB_ROOM;
 
   return (
     <View style={styles.screen}>
@@ -108,6 +105,11 @@ export default function Downloads() {
       <TopBar
         left={<EngineAvatar />}
         title="Downloads"
+        right={
+          ADD_IN_TOP_BAR ? (
+            <Actions actions={[{ icon: icons.add, label: 'Add a magnet link', onPress: () => router.push('/add') }]} />
+          ) : undefined
+        }
         tabs={{
           labels: [`Active${active.length ? ` · ${active.length}` : ''}`, 'Finished', 'On this phone'],
           index: tab,

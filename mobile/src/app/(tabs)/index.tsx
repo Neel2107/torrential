@@ -11,7 +11,6 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Continue } from '@web/wire';
 
@@ -20,7 +19,7 @@ import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { EngineProblem } from '@/ui/EngineProblem';
-import { Fab } from '@/ui/Fab';
+import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { Logo } from '@/ui/Logo';
 import { Mark } from '@/ui/Mark';
@@ -28,19 +27,17 @@ import { Meter } from '@/ui/Meter';
 import { PosterGrid } from '@/ui/PosterGrid';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
-import { TAB_BAR_HEIGHT } from '@/ui/TabBar';
 import { Tap } from '@/ui/Tap';
-import { TopBar, useTopInset } from '@/ui/TopBar';
+import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { Button } from '@/ui/Button';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { color, radius, space, type } from '@/theme';
 
 export default function Home() {
   const home = useHome();
-  const insets = useSafeAreaInsets();
   const top = useTopInset(false);
   const onScroll = useChromeScroll();
-  const { docked } = useChrome();
+  const { bottom } = useChrome();
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = async () => {
@@ -56,7 +53,7 @@ export default function Home() {
         scrollEventThrottle={16}
         contentContainerStyle={{
           paddingTop: top + space.md,
-          paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 96 + docked,
+          paddingBottom: bottom + FAB_ROOM,
         }}
         refreshControl={
           <RefreshControl
@@ -91,15 +88,14 @@ export default function Home() {
         left={<EngineAvatar />}
         title={<Mark size={30} />}
         right={
-          <Tap
-            haptic
-            shrink={0.9}
-            onPress={() => router.push('/tv')}
-            accessibilityLabel="Play on TV"
-            style={styles.iconButton}
-          >
-            <Icon name={icons.cast} size={22} tint={color.ink} />
-          </Tap>
+          <Actions
+            actions={[
+              { icon: icons.cast, label: 'Play on TV', onPress: () => router.push('/tv') },
+              ...(ADD_IN_TOP_BAR
+                ? [{ icon: icons.add, label: 'Add a magnet link', onPress: () => router.push('/add') }]
+                : []),
+            ]}
+          />
         }
       />
       <Fab icon={icons.add} label="Add a magnet link" onPress={() => router.push('/add')} />
@@ -255,7 +251,6 @@ function Loading() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.paper },
-  iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   carousel: { gap: space.md },
   section: { marginTop: space.xxl, gap: space.md },
   sectionTitle: { paddingHorizontal: space.page },

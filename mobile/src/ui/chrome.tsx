@@ -8,21 +8,24 @@ const TRAVEL = 72;
 
 type Chrome = {
   hidden: SharedValue<number>;
-  /** How much of the bottom the cast bar covers, in points, so feeds and the floating button make room. */
+  /** How much of the bottom the cast bar covers, in points. */
   docked: number;
   setDocked: (height: number) => void;
+  /** The room a feed leaves at its bottom, and the floating button keeps above: the bars and the cast bar. */
+  bottom: number;
 };
 
 const Context = createContext<Chrome | null>(null);
 
 /**
- * The bars around a feed: 0 is fully shown, 1 fully hidden. Scrolling moves them with the finger,
+ * The bars around a feed: 0 is fully shown, 1 fully hidden. `bar` is the room the tab bar takes at
+ * the bottom, which each feed leaves. Scrolling moves them with the finger,
  * as X does, and they settle open or shut when the finger lets go.
  */
-export function ChromeProvider({ children }: { children: ReactNode }) {
+export function ChromeProvider({ bar, children }: { bar: number; children: ReactNode }) {
   const hidden = useSharedValue(0);
   const [docked, setDocked] = useState(0);
-  const value = useMemo(() => ({ hidden, docked, setDocked }), [hidden, docked]);
+  const value = useMemo(() => ({ hidden, docked, setDocked, bottom: bar + docked }), [hidden, docked, bar]);
   return <Context value={value}>{children}</Context>;
 }
 
