@@ -154,9 +154,8 @@ function Routes() {
               }}
             />
           </Stack.Protected>
-          <Stack.Protected guard={!paired}>
-            <Stack.Screen name="pair" />
-          </Stack.Protected>
+          {/* Unpaired, it is the only screen; paired, it adds another computer from the engine sheet. */}
+          <Stack.Screen name="pair" />
         </Stack>
         <HeroLayer />
       </MaybeJobs>

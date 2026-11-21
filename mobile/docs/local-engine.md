@@ -49,3 +49,8 @@ listening on loopback.
   Big Buck Bunny at about 320 KB/s from 2 peers. The platform certificate verifier panics on
   Android without the app's Java context, so Android trusts Mozilla's roots
   (`torrential_search::client_builder`).
+- 2026-11-22: Step 4 on Android. `modules/torrential-engine` loads the library and runs it in a
+  foreground service (dataSync) on port 47929. The session is now a list of engines with one active;
+  the engine sheet lists them, switches, runs the engine on the phone, and adds a computer. On the
+  F6, "Run the engine on this phone" switched the app to it, and Big Buck Bunny played while it
+  downloaded into the app's storage.

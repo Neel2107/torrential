@@ -3,57 +3,124 @@ import { createContext, use, useCallback, useEffect, useMemo, useState, type Rea
 
 import type { Me } from '@web/wire';
 
+import { LocalEngine } from '../../modules/torrential-engine';
 import { get, pair as pairWithCode, PORT, type Link } from './client';
 
-const KEY = 'engine-link';
+/** Every engine this phone knows, and which one it watches from. */
+const KEY = 'engines';
+/** Where a phone that knew only one engine kept it. */
+const OLD_KEY = 'engine-link';
 
-type Session = { state: 'loading' } | { state: 'unpaired' } | { state: 'paired'; link: Link };
+/** An engine this phone can watch from: a computer it paired with, or the one inside this app. */
+export type Engine = { id: string; name: string; kind: 'computer' | 'phone'; link: Link };
+type Saved = { engines: Engine[]; active: string | null };
+
+type Session = { state: 'loading' } | { state: 'unpaired' } | { state: 'paired'; link: Link; engine: Engine };
 
 type SessionApi = {
   session: Session;
-  /** Pairs with the engine at `base` using the code the Mac shows, and keeps the link. */
+  engines: Engine[];
+  /** Pairs with the engine at `base` using the code the computer shows, and watches from it. */
   pair: (base: string, code: string) => Promise<void>;
   /** Uses an engine reached over loopback, which trusts the caller without pairing (USB during development). */
   useLoopback: () => Promise<void>;
-  /** Points a paired phone at the engine's new address, keeping its token: the engine moved networks, not the pairing. */
+  /** Starts the engine inside this app and watches from it. */
+  usePhone: () => Promise<void>;
+  /** Watches from another known engine. */
+  switchTo: (id: string) => Promise<void>;
+  /** Points the current engine at its new address, keeping its token: it moved networks, not the pairing. */
   relocate: (base: string) => Promise<void>;
+  /** Forgets the current engine and watches from the next one, if any. */
   forget: () => Promise<void>;
 };
 
 const Context = createContext<SessionApi | null>(null);
 
+/** A computer's name for the list: its host, or USB for the development loopback. */
+function computerName(base: string): string {
+  const host = new URL(base).hostname;
+  return host === '127.0.0.1' || host === 'localhost' ? 'Computer over USB' : host;
+}
+
+async function load(): Promise<Saved> {
+  const saved = await SecureStore.getItemAsync(KEY);
+  if (saved) return JSON.parse(saved) as Saved;
+  const old = await SecureStore.getItemAsync(OLD_KEY);
+  if (!old) return { engines: [], active: null };
+  const link = JSON.parse(old) as Link;
+  const engine: Engine = { id: link.base, name: computerName(link.base), kind: 'computer', link };
+  return { engines: [engine], active: engine.id };
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session>({ state: 'loading' });
+  const [saved, setSaved] = useState<Saved | null>(null);
 
   useEffect(() => {
-    SecureStore.getItemAsync(KEY)
-      .then((saved) => setSession(saved ? { state: 'paired', link: JSON.parse(saved) as Link } : { state: 'unpaired' }))
-      .catch(() => setSession({ state: 'unpaired' }));
+    load()
+      .then(setSaved)
+      .catch(() => setSaved({ engines: [], active: null }));
   }, []);
 
-  const keep = useCallback(async (link: Link) => {
-    await SecureStore.setItemAsync(KEY, JSON.stringify(link));
-    setSession({ state: 'paired', link });
+  const keep = useCallback(async (next: Saved) => {
+    await SecureStore.setItemAsync(KEY, JSON.stringify(next));
+    await SecureStore.deleteItemAsync(OLD_KEY);
+    setSaved(next);
   }, []);
 
-  const api = useMemo<SessionApi>(
-    () => ({
+  const { engines, engine, session } = useMemo(() => {
+    const engines = saved?.engines ?? [];
+    const engine = engines.find((e) => e.id === saved?.active) ?? null;
+    const session: Session = !saved
+      ? { state: 'loading' }
+      : engine
+        ? { state: 'paired', link: engine.link, engine }
+        : { state: 'unpaired' };
+    return { engines, engine, session };
+  }, [saved]);
+
+  // The phone's engine runs in the app's process, so it starts again each time the app does.
+  useEffect(() => {
+    if (engine?.kind === 'phone') LocalEngine?.start().catch(() => {});
+  }, [engine?.kind]);
+
+  const api = useMemo<SessionApi>(() => {
+    const add = (next: Engine) =>
+      keep({ engines: [...engines.filter((e) => e.id !== next.id), next], active: next.id });
+    return {
       session,
-      pair: async (base, code) => keep({ base, token: await pairWithCode(base, code) }),
-      useLoopback: () => keep({ base: `http://127.0.0.1:${PORT}`, token: null }),
+      engines,
+      pair: async (base, code) => {
+        const link = { base, token: await pairWithCode(base, code) };
+        await add({ id: base, name: computerName(base), kind: 'computer', link });
+      },
+      useLoopback: () => {
+        const base = `http://127.0.0.1:${PORT}`;
+        return add({ id: base, name: computerName(base), kind: 'computer', link: { base, token: null } });
+      },
+      usePhone: async () => {
+        if (!LocalEngine) throw new Error('This build cannot run the engine on the phone');
+        const port = await LocalEngine.start();
+        const base = `http://127.0.0.1:${port}`;
+        await add({ id: 'phone', name: 'This phone', kind: 'phone', link: { base, token: null } });
+      },
+      switchTo: async (id) => {
+        if (engines.some((e) => e.id === id)) await keep({ engines, active: id });
+      },
       relocate: async (base) => {
-        if (session.state !== 'paired') return;
-        const link = { base, token: session.link.token };
+        if (!engine) return;
+        const link = { base, token: engine.link.token };
         await get<Me>(link, '/api/me');
-        await keep(link);
+        await keep({
+          engines: engines.map((e) => (e.id === engine.id ? { ...e, name: computerName(base), link } : e)),
+          active: engine.id,
+        });
       },
       forget: async () => {
-        await SecureStore.deleteItemAsync(KEY);
-        setSession({ state: 'unpaired' });
+        const rest = engines.filter((e) => e.id !== engine?.id);
+        await keep({ engines: rest, active: rest[0]?.id ?? null });
       },
-    }),
-    [session, keep],
-  );
+    };
+  }, [session, engines, engine, keep]);
 
   return <Context value={api}>{children}</Context>;
 }

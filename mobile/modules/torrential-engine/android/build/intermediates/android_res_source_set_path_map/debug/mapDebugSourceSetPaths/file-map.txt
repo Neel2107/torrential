@@ -1,0 +1,9 @@
+expo.modules.torrentialengine.torrential-engine-pngs-0 /Users/neel/Desktop/experiments/torrential/mobile/modules/torrential-engine/android/build/generated/res/pngs/debug
+expo.modules.torrentialengine.torrential-engine-updated_navigation_xml-1 /Users/neel/Desktop/experiments/torrential/mobile/modules/torrential-engine/android/build/generated/updated_navigation_xml/debug
+expo.modules.torrentialengine.torrential-engine-mergeDebugResources-2 /Users/neel/Desktop/experiments/torrential/mobile/modules/torrential-engine/android/build/intermediates/incremental/debug/mergeDebugResources/merged.dir
+expo.modules.torrentialengine.torrential-engine-mergeDebugResources-3 /Users/neel/Desktop/experiments/torrential/mobile/modules/torrential-engine/android/build/intermediates/incremental/debug/mergeDebugResources/stripped.dir
+expo.modules.torrentialengine.torrential-engine-debug-4 /Users/neel/Desktop/experiments/torrential/mobile/modules/torrential-engine/android/build/intermediates/merged_res/debug/mergeDebugResources
+expo.modules.torrentialengine.torrential-engine-debug-5 /Users/neel/Desktop/experiments/torrential/mobile/modules/torrential-engine/android/build/intermediates/packaged_res/debug/packageDebugResources
+expo.modules.torrentialengine.torrential-engine-debug-6 /Users/neel/Desktop/experiments/torrential/mobile/modules/torrential-engine/android/src/debug/res
+expo.modules.torrentialengine.torrential-engine-main-7 /Users/neel/Desktop/experiments/torrential/mobile/modules/torrential-engine/android/src/main/res
+gradleHome-0 /Users/neel/.gradle

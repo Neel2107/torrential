@@ -1,11 +1,14 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { sentence } from '@web/lib/format';
+
+import { CAN_RUN_LOCALLY } from '../../modules/torrential-engine';
 
 import { EngineError } from '@/engine/client';
 import { parsePairing, useSession } from '@/engine/session';
@@ -28,7 +31,7 @@ function explain(error: unknown): string {
 }
 
 export default function Pair() {
-  const { pair, useLoopback } = useSession();
+  const { pair, useLoopback, usePhone } = useSession();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('scan');
   const [address, setAddress] = useState('');
@@ -43,6 +46,8 @@ export default function Pair() {
     try {
       await pair(base, pairingCode);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Added from the engine sheet while watching from another engine: back to the app.
+      if (router.canGoBack()) router.dismissTo('/');
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setProblem(explain(error));
@@ -110,6 +115,16 @@ export default function Pair() {
             setMode(mode === 'scan' ? 'type' : 'scan');
           }}
         />
+        {CAN_RUN_LOCALLY ? (
+          <Button
+            kind="quiet"
+            label="Download on this phone instead"
+            onPress={async () => {
+              await usePhone();
+              if (router.canGoBack()) router.dismissTo('/');
+            }}
+          />
+        ) : null}
         {__DEV__ ? <Button kind="quiet" label="Use the USB connection (development)" onPress={useLoopback} /> : null}
       </ScrollView>
     </KeyboardAvoidingView>
