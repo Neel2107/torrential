@@ -10,7 +10,8 @@ import { readable } from '@web/lib/release';
 import type { Job } from '@web/wire';
 
 import { post } from '@/engine/client';
-import { useJobs } from '@/engine/queries';
+import { useJobs, useTitle } from '@/engine/queries';
+import { Art } from '@/ui/Art';
 import { useLink } from '@/engine/session';
 import { useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
@@ -89,8 +90,19 @@ function open(job: Job) {
   else router.push({ pathname: '/play', params: { ref: job.id } });
 }
 
+/** A download the engine tied to a film or show reads as that title, with its poster. */
+function useJobName(job: Job): { title: string; tags: string; poster: string | null } {
+  const page = useTitle(job.title?.title ?? '', Boolean(job.title));
+  const fromName = readable(job.name ?? job.id);
+  if (job.title && page.data) {
+    const span = job.title.span === 'film' ? (page.data.year ? String(page.data.year) : '') : job.title.span.toUpperCase();
+    return { title: page.data.name, tags: span, poster: job.title.title };
+  }
+  return { ...fromName, poster: null };
+}
+
 function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () => void }) {
-  const name = readable(job.name ?? job.id);
+  const name = useJobName(job);
   const size = job.progress.size;
   const fraction = size ? job.progress.verified / size : 0;
   const downloading = job.state === 'downloading';
@@ -121,6 +133,19 @@ function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () =>
         accessibilityHint="Long press for pause, resume and remove."
         style={styles.row}
       >
+        {name.poster ? (
+          <View>
+            <Art id={name.poster} kind="poster" name={name.title} style={styles.poster} />
+            <View style={[styles.miniBadge, job.state === 'error' && { backgroundColor: color.error }]}>
+              <Icon
+                name={job.state === 'done' ? icons.check : job.state === 'paused' ? icons.pause : job.state === 'error' ? icons.warning : icons.downloads}
+                size={11}
+                tint={color.actionInk}
+                weight={3}
+              />
+            </View>
+          </View>
+        ) : (
         <View style={[styles.badge, job.state === 'error' && { backgroundColor: 'rgba(226,128,110,0.14)' }]}>
           <Icon
             name={job.state === 'done' ? icons.check : job.state === 'paused' ? icons.pause : job.state === 'error' ? icons.warning : icons.downloads}
@@ -129,6 +154,7 @@ function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () =>
             weight={2.2}
           />
         </View>
+        )}
         <View style={{ flex: 1, gap: 6 }}>
           <Text style={type.callout} numberOfLines={2}>
             {name.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{name.tags}</Text>
@@ -159,7 +185,7 @@ function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
 
 function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   const link = useLink();
-  const name = readable(job.name ?? job.id);
+  const name = useJobName(job);
   const [busy, setBusy] = useState(false);
 
   const act = async (path: '/api/pause' | '/api/resume' | '/api/remove') => {
@@ -206,7 +232,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.hairline,
   },
-  badge: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: color.raised },
+  poster: { width: 40, height: 60, borderRadius: 6 },
+  miniBadge: { position: 'absolute', right: -5, bottom: -5, width: 20, height: 20, borderRadius: 10, backgroundColor: color.action, borderWidth: 2, borderColor: color.paper, alignItems: 'center', justifyContent: 'center' },
+  badge: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: color.raised },
   more: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginRight: -6 },
   track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(240,233,220,0.12)', overflow: 'hidden' },
   fill: { height: 4, borderRadius: 2 },

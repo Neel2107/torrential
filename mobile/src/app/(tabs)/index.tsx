@@ -17,6 +17,7 @@ import { EngineProblem } from '@/ui/EngineProblem';
 import { Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { Logo } from '@/ui/Logo';
+import { Mark } from '@/ui/Mark';
 import { Meter } from '@/ui/Meter';
 import { PosterGrid } from '@/ui/PosterGrid';
 import { rise } from '@/ui/rise';
@@ -77,7 +78,7 @@ export default function Home() {
       </Animated.ScrollView>
       <TopBar
         left={<EngineAvatar />}
-        title="torrential"
+        title={<Mark size={30} />}
         right={
           <Tap haptic shrink={0.9} onPress={() => router.push('/tv')} accessibilityLabel="Play on TV" style={styles.iconButton}>
             <Icon name={icons.cast} size={22} tint={color.ink} />

@@ -11,6 +11,7 @@ import { EngineError } from '@/engine/client';
 import { parsePairing, useSession } from '@/engine/session';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
+import { Mark } from '@/ui/Mark';
 import { color, font, radius, space, type } from '@/theme';
 
 type Mode = 'scan' | 'type';
@@ -74,7 +75,10 @@ export default function Pair() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.wordmark}>torrential</Text>
+        <View style={styles.brand}>
+          <Mark size={40} />
+          <Text style={styles.wordmark}>torrential</Text>
+        </View>
         <Text style={type.display}>Connect to your computer</Text>
         <Text style={type.body}>
           On the computer running torrential, open <Text style={styles.strong}>Devices</Text> and choose{' '}
@@ -191,7 +195,8 @@ function Typed({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.paper },
   content: { paddingHorizontal: space.page, gap: space.lg },
-  wordmark: { ...type.headline, color: color.action, marginBottom: space.lg },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.lg },
+  wordmark: { ...type.title, letterSpacing: -0.6 },
   strong: { fontFamily: font.semibold, color: color.ink },
   code: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), color: color.ink, fontSize: 14 },
   viewfinder: {

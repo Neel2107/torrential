@@ -21,10 +21,11 @@ export function useHome() {
   return useQuery({ queryKey: keys.home, queryFn: ({ signal }) => get<Home>(link, '/api/home', signal) });
 }
 
-export function useTitle(id: string) {
+export function useTitle(id: string, enabled = true) {
   const link = useLink();
   return useQuery({
     queryKey: keys.title(id),
+    enabled: enabled && id.length > 0,
     queryFn: ({ signal }) => get<TitlePage>(link, `/api/title?id=${encodeURIComponent(id)}`, signal),
   });
 }
