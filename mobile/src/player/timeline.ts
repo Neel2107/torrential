@@ -105,18 +105,26 @@ export function useTimeline({
   const [loadedDuration, setLoadedDuration] = useState(0);
   // A stream's timestamps are the file's own, but a player may count from zero; `base` is what to add.
   const base = useRef(0);
+  const baseKnown = useRef(false);
+  const startedAt = useRef<number | null>(null);
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const decided = useRef(false);
   const directRetried = useRef(false);
   const streamRetried = useRef(false);
 
-  const now = useCallback(() => base.current + player.currentTime, [player]);
+  const now = useCallback(() => {
+    const current = modeRef.current;
+    if (current.kind === 'stream' && !baseKnown.current) return current.from;
+    return base.current + player.currentTime;
+  }, [player]);
 
   const switchTo = useCallback(
     async (next: Mode, at: number) => {
       if (next.kind === 'stream' && media && !(await readyFfmpeg(link, media))) return;
       base.current = 0;
+      baseKnown.current = false;
+      startedAt.current = null;
       setMode(next);
       const source = sourceFor(link, play, next, metadata);
       if (!source) return;
@@ -136,14 +144,21 @@ export function useTimeline({
     else if (modeRef.current.kind === 'pending') switchTo({ kind: 'direct' }, at);
   }, [media, player, resumeAt, switchTo]);
 
-  useEventListener(player, 'sourceLoad', (event) => {
-    setLoadedDuration(event.duration);
+  useEventListener(player, 'sourceLoad', (event) => setLoadedDuration(event.duration));
+
+  // A stream's player counts from zero (HLS, and some fragmented MP4) or from the file's own
+  // timestamps. Each tick picks whichever reading sits nearer where the stream should be by now,
+  // judged by the wall clock since it started; the two readings are `from` apart, far more than any
+  // buffering stall moves them.
+  useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     const current = modeRef.current;
-    if (current.kind === 'stream') {
-      setTimeout(() => {
-        base.current = player.currentTime < current.from - 2 ? current.from : 0;
-      }, 250);
-    }
+    if (current.kind !== 'stream' || !player.playing || currentTime <= 0.05) return;
+    if (startedAt.current === null) startedAt.current = Date.now();
+    const elapsed = ((Date.now() - startedAt.current) / 1000) * (player.playbackRate || 1);
+    const asZeroBased = Math.abs(currentTime - elapsed);
+    const asFileTime = Math.abs(currentTime - (current.from + elapsed));
+    base.current = asZeroBased < asFileTime ? current.from : 0;
+    baseKnown.current = true;
   });
 
   useEventListener(player, 'statusChange', ({ status }) => {

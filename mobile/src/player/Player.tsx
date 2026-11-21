@@ -140,7 +140,8 @@ export function Player({
     resumeAt: resumeAt && resumeAt > 5 ? resumeAt : 0,
   });
   const duration = timeline.duration;
-  const position = timeline.base.current + time.currentTime;
+  // Read on each time update, so it follows the stream's start until its clock is known.
+  const position = time.currentTime >= 0 ? timeline.now() : 0;
   const [visible, setVisible] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
