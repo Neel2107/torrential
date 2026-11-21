@@ -526,7 +526,7 @@ async fn download(build: &Build, to: &Path, report: &watch::Sender<Stage>) -> Re
         Error::new(ErrorCode::FetchFailed, format!("cannot fetch ffmpeg: {cause}"))
             .with_hint(format!("check the network connection and try again, or {INSTALL}"))
     };
-    let client = reqwest::Client::builder()
+    let client = torrential_search::client_builder()
         .user_agent(concat!("torrential/", env!("CARGO_PKG_VERSION")))
         .connect_timeout(Duration::from_secs(10))
         .read_timeout(Duration::from_secs(30))

@@ -48,6 +48,24 @@ fn main() {
         let static_crt = env::var("CARGO_CFG_TARGET_FEATURE").is_ok_and(|f| f.split(',').any(|f| f == "crt-static"));
         cmake.define("static_runtime", if static_crt { "ON" } else { "OFF" });
     }
+    if target_os == "android" {
+        // The phone app's engine: CMake finds the compilers through the NDK's own toolchain file.
+        let ndk = PathBuf::from(required_env("ANDROID_NDK_HOME"));
+        let abi = match env::var("CARGO_CFG_TARGET_ARCH").as_deref() {
+            Ok("aarch64") => "arm64-v8a",
+            Ok("x86_64") => "x86_64",
+            other => panic!("no Android ABI for {other:?}"),
+        };
+        cmake
+            .define("CMAKE_TOOLCHAIN_FILE", ndk.join("build/cmake/android.toolchain.cmake"))
+            .define("ANDROID_ABI", abi)
+            .define("ANDROID_PLATFORM", "android-24");
+    }
+    if matches!(target_os.as_str(), "android" | "ios") {
+        // A cross toolchain searches only its own sysroot, and Homebrew's Boost package files
+        // describe macOS libraries. libtorrent needs only Boost's headers.
+        cmake.define("Boost_INCLUDE_DIR", Path::new(&boost_root).join("include")).define("Boost_NO_BOOST_CMAKE", "ON");
+    }
     let install = cmake
         .generator("Ninja")
         .profile("Release")

@@ -176,7 +176,7 @@ impl Dlna {
 impl Casts {
     pub fn new(ctx: Weak<Ctx>, find: Find) -> Self {
         // A redirect could lead anywhere, and a TV has no use for one.
-        let http = reqwest::Client::builder()
+        let http = torrential_search::client_builder()
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(Duration::from_secs(3))

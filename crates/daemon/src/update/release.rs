@@ -60,8 +60,9 @@ impl Releases {
 
     async fn latest(&self) -> Result<Version, Error> {
         let url = format!("{}/latest", self.base);
-        let client =
-            client(reqwest::Client::builder().redirect(reqwest::redirect::Policy::none()).timeout(CHECK_WITHIN))?;
+        let client = client(
+            torrential_search::client_builder().redirect(reqwest::redirect::Policy::none()).timeout(CHECK_WITHIN),
+        )?;
         let response = client.get(&url).send().await.map_err(|e| unreachable(&url, &e))?;
         let location = response.headers().get(reqwest::header::LOCATION).and_then(|v| v.to_str().ok());
         match location.and_then(tag_version) {
@@ -77,7 +78,9 @@ impl Releases {
     async fn download(&self, version: Version, asset: &str) -> Result<Vec<u8>, Error> {
         let url = format!("{}/download/v{version}/{asset}", self.base);
         let client = client(
-            reqwest::Client::builder().connect_timeout(Duration::from_secs(5)).read_timeout(Duration::from_secs(30)),
+            torrential_search::client_builder()
+                .connect_timeout(Duration::from_secs(5))
+                .read_timeout(Duration::from_secs(30)),
         )?;
         let mut response = client.get(&url).send().await.map_err(|e| unreachable(&url, &e))?;
         if !response.status().is_success() {

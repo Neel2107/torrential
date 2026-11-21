@@ -215,13 +215,13 @@ pub fn network_filesystem(path: &Path) -> std::io::Result<Option<String>> {
     Ok(remote.then(|| "network drive".to_string()))
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 fn network_kind(stat: &libc::statfs) -> Option<String> {
     let name = unsafe { std::ffi::CStr::from_ptr(stat.f_fstypename.as_ptr()) }.to_string_lossy().into_owned();
     ["nfs", "smbfs", "afpfs", "webdav", "cifs", "ftp"].contains(&name.as_str()).then_some(name)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 #[allow(clippy::unnecessary_cast)]
 fn network_kind(stat: &libc::statfs) -> Option<String> {
     let kind = match stat.f_type as i64 {

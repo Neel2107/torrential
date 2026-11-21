@@ -42,6 +42,7 @@ use url::Url;
 use crate::assemble::{Answer, Linked, Run, assemble, merged, vet};
 use crate::cache::AnswerKey;
 pub use crate::cache::ResultCache;
+pub use crate::http::client_builder;
 use crate::http::{FetchError, Http, Retry};
 use crate::sources::{Ctx, Failure, Source, Stores, archive_org};
 pub use crate::sources::{SavedLink, builtin, lawful};

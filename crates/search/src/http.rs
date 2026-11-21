@@ -11,6 +11,17 @@ pub(crate) const USER_AGENT: &str = concat!("torrential/", env!("CARGO_PKG_VERSI
 /// the person.
 pub(crate) const BROWSER: &str = "Mozilla/5.0";
 
+/// A client builder that trusts the system's certificates. On Android the engine runs inside the
+/// phone app, where the system's store needs the app's Java context, so it trusts Mozilla's roots.
+pub fn client_builder() -> reqwest::ClientBuilder {
+    let builder = reqwest::Client::builder();
+    #[cfg(target_os = "android")]
+    let builder = builder.tls_certs_only(
+        webpki_root_certs::TLS_SERVER_ROOT_CERTS.iter().filter_map(|der| reqwest::Certificate::from_der(der).ok()),
+    );
+    builder
+}
+
 /// The `name` endpoint at `url` as a base that relative paths join under, with a slash at its end.
 pub(crate) fn endpoint(url: &str, name: &str) -> Result<Url, Error> {
     let slashed = if url.ends_with('/') { url.to_string() } else { format!("{url}/") };
@@ -66,7 +77,7 @@ impl Http {
     }
 
     fn build(agent: &str, policy: reqwest::redirect::Policy, public: bool) -> Result<Http, reqwest::Error> {
-        let mut builder = reqwest::Client::builder()
+        let mut builder = client_builder()
             .user_agent(agent)
             .gzip(true)
             .brotli(true)
