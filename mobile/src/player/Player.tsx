@@ -46,7 +46,7 @@ import { usePlayerPreferences } from './preferences';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
 import { SettingsSheet } from './SettingsSheet';
-import { SubtitleOverlay, useSubtitleFile, type SubtitleFile } from './Subtitles';
+import { choiceKey, SubtitleOverlay, useOnlineSubtitles, useSubtitleCues, type SubtitleChoice } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
 
 const HIDE_AFTER_MS = 3200;
@@ -136,13 +136,15 @@ export function Player({
   // Each time this screen starts or resumes playback it claims the saved place, as the web player does.
   const resumed = useRef(true);
   const client = useQueryClient();
-  const [subtitleFile, setSubtitleFile] = useState<SubtitleFile | null>(null);
-  const cues = useSubtitleFile(play.id, subtitleFile);
+  const [drawn, setDrawn] = useState<SubtitleChoice | null>(null);
+  const cues = useSubtitleCues(play, drawn);
+  const online = useOnlineSubtitles(play.id, play.video.index);
   /** Seconds each drawn subtitle shows later than written, by track, for this screen. */
   const [offsets, setOffsets] = useState<Record<string, number>>({});
-  const drawn = subtitleFile ? `file:${subtitleFile.index}` : null;
-  const offset = drawn ? (offsets[drawn] ?? 0) : null;
-  const subtitleFiles: SubtitleFile[] = play.subtitles.map((file) => ({
+  const drawnKey = drawn ? choiceKey(drawn) : null;
+  const offset = drawnKey ? (offsets[drawnKey] ?? 0) : null;
+  const subtitleFiles = play.subtitles.map((file) => ({
+    kind: 'file' as const,
     index: file.index,
     name: file.path.split('/').pop() ?? file.path,
   }));
@@ -456,10 +458,11 @@ export function Player({
                 : null
             }
             files={subtitleFiles}
-            file={subtitleFile}
-            onFile={(file) => {
-              setSubtitleFile(file);
-              if (file) player.subtitleTrack = null;
+            online={online}
+            drawn={drawn}
+            onDraw={(choice) => {
+              setDrawn(choice);
+              if (choice) player.subtitleTrack = null;
             }}
             onClose={() => setTracksOpen(false)}
           />
@@ -470,7 +473,7 @@ export function Player({
             speed={preferences.speed}
             onSpeed={(speed) => setPreferences({ speed })}
             offset={offset}
-            onShift={(seconds) => drawn && setOffsets((previous) => ({ ...previous, [drawn]: seconds }))}
+            onShift={(seconds) => drawnKey && setOffsets((previous) => ({ ...previous, [drawnKey]: seconds }))}
             style={preferences.subtitleStyle}
             onStyle={(change) => setPreferences({ subtitleStyle: { ...preferences.subtitleStyle, ...change } })}
             onClose={() => setSettingsOpen(false)}

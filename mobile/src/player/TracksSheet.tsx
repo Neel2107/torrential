@@ -1,16 +1,20 @@
 import { useEvent } from 'expo';
 import type { AudioTrack, SubtitleTrack, VideoPlayer } from 'expo-video';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import type { MediaInfo } from '@web/wire';
+import type { MediaInfo, OnlineSubtitle } from '@web/wire';
 
-import { languageName } from './languages';
-import type { SubtitleFile } from './Subtitles';
+import { languageLabel, languageName, phoneLanguage } from './languages';
+import type { OnlineLookup, SubtitleChoice } from './Subtitles';
 
 import { Icon, icons } from '@/ui/Icon';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
-import { color, font, space, type } from '@/theme';
+import { color, font, motion, space, type } from '@/theme';
+
+type FileChoice = Extract<SubtitleChoice, { kind: 'file' }>;
 
 function trackName(
   track: { label?: string | null; language?: string | null; name?: string | null },
@@ -21,23 +25,28 @@ function trackName(
   return label || track.name || languageName(track.language) || `${kind} ${index + 1}`;
 }
 
-/** Subtitles and audio, read from the video itself by the phone's player. */
+/**
+ * Subtitles and audio: the video's own tracks, which the phone's player reads and draws, then the
+ * torrent's subtitle files and the engine's online finds, which the app draws.
+ */
 export function TracksSheet({
   player,
   media,
   streamAudio,
   files,
-  file,
-  onFile,
+  online,
+  drawn,
+  onDraw,
   onClose,
 }: {
   player: VideoPlayer;
   media: MediaInfo | null;
   /** In stream mode the engine picks the audio track, so the sheet lists the file's own tracks. */
   streamAudio: { tracks: MediaInfo['audio']; selected: number | null; onSelect: (stream: number) => void } | null;
-  files: SubtitleFile[];
-  file: SubtitleFile | null;
-  onFile: (file: SubtitleFile | null) => void;
+  files: FileChoice[];
+  online: OnlineLookup;
+  drawn: SubtitleChoice | null;
+  onDraw: (choice: SubtitleChoice | null) => void;
   onClose: () => void;
 }) {
   const { subtitleTrack } = useEvent(player, 'subtitleTrackChange', { subtitleTrack: player.subtitleTrack });
@@ -51,10 +60,10 @@ export function TracksSheet({
         <Text style={[type.title, styles.heading]}>Subtitles</Text>
         <Row
           label="Off"
-          selected={!subtitleTrack && !file}
+          selected={!subtitleTrack && !drawn}
           onPress={() => {
             player.subtitleTrack = null;
-            onFile(null);
+            onDraw(null);
           }}
         />
         {subtitles.map((track: SubtitleTrack, index) => (
@@ -62,9 +71,9 @@ export function TracksSheet({
             key={`${track.id ?? index}`}
             label={trackName(track, index, 'Subtitles')}
             detail={languageName(track.language)}
-            selected={!file && subtitleTrack?.id === track.id && subtitleTrack?.label === track.label}
+            selected={!drawn && subtitleTrack?.id === track.id && subtitleTrack?.label === track.label}
             onPress={() => {
-              onFile(null);
+              onDraw(null);
               player.subtitleTrack = track;
             }}
           />
@@ -74,13 +83,16 @@ export function TracksSheet({
             key={`file-${candidate.index}`}
             label={candidate.name.replace(/\.(srt|vtt|ass|ssa|sub)$/i, '')}
             detail="Subtitle file in the torrent"
-            selected={file?.index === candidate.index}
-            onPress={() => onFile(candidate)}
+            selected={drawn?.kind === 'file' && drawn.index === candidate.index}
+            onPress={() => onDraw(candidate)}
           />
         ))}
         {subtitles.length === 0 && files.length === 0 ? (
-          <Text style={[type.caption, styles.empty]}>This video has no subtitles.</Text>
+          <Text style={[type.caption, styles.empty]}>This video has no subtitles of its own.</Text>
         ) : null}
+
+        <Text style={[type.section, styles.section]}>Found online</Text>
+        <OnlineRows lookup={online} drawn={drawn} onDraw={onDraw} />
 
         <Text style={[type.title, styles.heading, { marginTop: space.lg }]}>Audio</Text>
         {streamAudio
@@ -111,6 +123,138 @@ export function TracksSheet({
             })}
       </ScrollView>
     </Sheet>
+  );
+}
+
+/**
+ * The online finds, one row per language as the web player lists them: the phone's language and
+ * English first, the rest behind More languages, and the other versions of the language showing
+ * behind their own row.
+ */
+function OnlineRows({
+  lookup,
+  drawn,
+  onDraw,
+}: {
+  lookup: OnlineLookup;
+  drawn: SubtitleChoice | null;
+  onDraw: (choice: SubtitleChoice) => void;
+}) {
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  if (lookup.kind === 'looking') {
+    return (
+      <View style={styles.status}>
+        <ActivityIndicator color={color.soft} size="small" />
+        <Text style={type.caption}>Looking for subtitles online…</Text>
+      </View>
+    );
+  }
+  if (lookup.kind !== 'found') {
+    return (
+      <Text style={[type.caption, styles.empty]}>
+        {lookup.kind === 'nothing'
+          ? 'No subtitles were found online for this video.'
+          : 'The online lookup did not answer.'}
+      </Text>
+    );
+  }
+
+  const chosen = drawn?.kind === 'online' ? drawn.subtitle : null;
+  const byLanguage = new Map<string, OnlineSubtitle[]>();
+  for (const subtitle of lookup.subtitles) {
+    byLanguage.set(subtitle.language, [...(byLanguage.get(subtitle.language) ?? []), subtitle]);
+  }
+  const languages = [...byLanguage.keys()].sort((a, b) => languageLabel(a).localeCompare(languageLabel(b)));
+  const wanted = [phoneLanguage(), 'en'];
+  const near = languages.filter((tag) => wanted.includes(tag.slice(0, 2).toLowerCase()) || tag === chosen?.language);
+  const rest = languages.filter((tag) => !near.includes(tag));
+  const versions = chosen ? (byLanguage.get(chosen.language) ?? []) : [];
+
+  const row = (subtitle: OnlineSubtitle, label: string, detail: string | null) => (
+    <Row
+      key={subtitle.id}
+      label={label}
+      detail={[subtitle.exact ? 'Exact match' : 'Online', detail].filter(Boolean).join(' · ')}
+      selected={chosen?.id === subtitle.id}
+      onPress={() => onDraw({ kind: 'online', subtitle })}
+    />
+  );
+  const best = (tag: string) => {
+    const subtitle = chosen?.language === tag ? chosen : byLanguage.get(tag)![0]!;
+    return row(subtitle, languageLabel(tag), subtitle.name);
+  };
+
+  return (
+    <>
+      {near.map(best)}
+      {chosen && versions.length > 1 ? (
+        <>
+          <Disclosure
+            label={`Other ${languageLabel(chosen.language)} versions`}
+            count={versions.length - 1}
+            open={versionsOpen}
+            onToggle={() => setVersionsOpen((open) => !open)}
+          />
+          {versionsOpen ? (
+            <Animated.View entering={FadeIn.duration(motion.quick)}>
+              {versions.map((subtitle) => row(subtitle, subtitle.name ?? subtitle.source, subtitle.source))}
+              <Text style={[type.caption, styles.empty]}>
+                A version made for another release can run early or late. Shift its timing in Settings.
+              </Text>
+            </Animated.View>
+          ) : null}
+        </>
+      ) : null}
+      {rest.length > 0 ? (
+        <>
+          <Disclosure
+            label={near.length ? 'More languages' : 'Languages'}
+            count={rest.length}
+            open={moreOpen}
+            onToggle={() => setMoreOpen((open) => !open)}
+          />
+          {moreOpen ? <Animated.View entering={FadeIn.duration(motion.quick)}>{rest.map(best)}</Animated.View> : null}
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function Disclosure({
+  label,
+  count,
+  open,
+  onToggle,
+}: {
+  label: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const turn = useSharedValue(open ? 1 : 0);
+  useEffect(() => {
+    turn.value = withTiming(open ? 1 : 0, { duration: motion.quick, easing: motion.out });
+  }, [open, turn]);
+  const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value * 180}deg` }] }));
+
+  return (
+    <Tap
+      shrink={1}
+      highlight
+      haptic
+      onPress={onToggle}
+      accessibilityState={{ expanded: open }}
+      accessibilityLabel={`${label}, ${count}`}
+      style={styles.row}
+    >
+      <Text style={[styles.label, { flex: 1 }]}>{label}</Text>
+      <Text style={type.numeric}>{count}</Text>
+      <Animated.View style={chevron}>
+        <Icon name={icons.expand} size={18} tint={color.pencil} />
+      </Animated.View>
+    </Tap>
   );
 }
 
@@ -160,4 +304,12 @@ const styles = StyleSheet.create({
   },
   label: { fontFamily: font.medium, fontSize: 16, color: color.soft },
   empty: { paddingHorizontal: space.md, paddingVertical: space.sm },
+  section: { paddingHorizontal: space.md, marginTop: space.md, marginBottom: space.xs },
+  status: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
 });
