@@ -1,0 +1,181 @@
+import { Directory, File, Paths, type DownloadTask } from 'expo-file-system';
+import { useSyncExternalStore } from 'react';
+
+import { bytes } from '@web/lib/format';
+import { fileName, fileUrl, savedVideo } from '@web/lib/release';
+import type { FilesReply } from '@web/wire';
+
+import { authHeaders, post, url, type Link } from '@/engine/client';
+
+/** What a copy on the phone is called and shows, kept with it so the list reads without the engine. */
+export type Label = { title: string; tags: string; poster: string | null };
+
+/** A finished download's film, copied onto the phone, by the download it came from. */
+export type Copy = { job: string; label: Label; size: number } & (
+  | { state: 'saving'; written: number }
+  | { state: 'failed'; error: string }
+  | { state: 'saved'; saved_at: number; uri: string }
+);
+
+type Saved = Extract<Copy, { state: 'saved' }>;
+
+/** Room left free on the phone after a copy, so saving a film never fills it to the last byte. */
+const KEEP_FREE = 512 * 1024 * 1024;
+/** How often progress reaches the screen while a copy runs. */
+const PROGRESS_MS = 250;
+
+const folder = new Directory(Paths.document, 'offline');
+const manifest = new File(folder, 'saved.json');
+
+let copies: ReadonlyMap<string, Copy> = new Map();
+let loaded = false;
+const listeners = new Set<() => void>();
+const tasks = new Map<string, DownloadTask>();
+
+function publish(next: Map<string, Copy>) {
+  copies = next;
+  for (const listener of listeners) listener();
+}
+
+function put(copy: Copy) {
+  publish(new Map(copies).set(copy.job, copy));
+}
+
+function drop(job: string) {
+  const next = new Map(copies);
+  next.delete(job);
+  publish(next);
+}
+
+function keep() {
+  const saved = [...copies.values()].filter((copy): copy is Saved => copy.state === 'saved');
+  try {
+    if (!manifest.exists) manifest.create({ intermediates: true });
+    manifest.write(JSON.stringify(saved));
+  } catch {}
+}
+
+/** Reads what earlier runs saved. A copy cut short by the app closing left only a part file, which goes. */
+function load() {
+  if (loaded) return;
+  loaded = true;
+  try {
+    if (!folder.exists) return;
+    for (const entry of folder.list()) if (entry instanceof File && entry.name.endsWith('.part')) entry.delete();
+    if (!manifest.exists) return;
+    const saved = (JSON.parse(manifest.textSync()) as Saved[]).filter((copy) => new File(copy.uri).exists);
+    publish(new Map(saved.map((copy) => [copy.job, copy])));
+  } catch {}
+}
+
+function subscribe(listener: () => void) {
+  load();
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Every copy on the phone or on its way, newest first. */
+export function useCopies(): Copy[] {
+  const all = useSyncExternalStore(subscribe, () => copies);
+  return [...all.values()].sort((a, b) => order(b) - order(a));
+}
+
+function order(copy: Copy): number {
+  return copy.state === 'saved' ? copy.saved_at : Number.MAX_SAFE_INTEGER;
+}
+
+export function useCopy(job: string): Copy | undefined {
+  return useSyncExternalStore(subscribe, () => copies).get(job);
+}
+
+export function freeSpace(): number | null {
+  try {
+    return Paths.availableDiskSpace;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Copies a finished download's film onto the phone from the engine's file route, which answers
+ * Range, under the job's ID. The copy lands as a part file and takes its name only once whole.
+ */
+export async function save(link: Link, job: string, label: Label): Promise<void> {
+  const before = copies.get(job);
+  if (before?.state === 'saving' || before?.state === 'saved') return;
+  const fail = (error: string) => put({ job, label, size: 0, state: 'failed', error });
+
+  let reply: FilesReply;
+  try {
+    reply = await post<FilesReply>(link, '/api/files', { ref: job });
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : 'Could not reach the engine.');
+  }
+  const file = savedVideo(reply.files);
+  if (!file) return fail('This download has no video to save.');
+  const free = freeSpace();
+  if (free !== null && file.size > free - KEEP_FREE) {
+    return fail(`It needs ${bytes(file.size)}, and this phone has ${bytes(Math.max(0, free - KEEP_FREE))} to spare.`);
+  }
+
+  const name = fileName(file.path);
+  const extension = name.includes('.') ? name.slice(name.lastIndexOf('.')) : '';
+  const part = new File(folder, `${job}.part`);
+  const size = file.size;
+  try {
+    if (!folder.exists) folder.create({ intermediates: true });
+    if (part.exists) part.delete();
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : 'The phone would not make room for the file.');
+  }
+
+  put({ job, label, size, state: 'saving', written: 0 });
+  let shown = 0;
+  let task: DownloadTask | null = null;
+  try {
+    task = File.createDownloadTask(url(link, fileUrl(job, file)), part, {
+      headers: authHeaders(link),
+      onProgress: ({ bytesWritten }) => {
+        const now = Date.now();
+        if (now - shown < PROGRESS_MS || copies.get(job)?.state !== 'saving') return;
+        shown = now;
+        put({ job, label, size, state: 'saving', written: bytesWritten });
+      },
+    });
+    tasks.set(job, task);
+    await task.downloadAsync();
+    const whole = `${job}${extension}`;
+    const target = new File(folder, whole);
+    if (target.exists) target.delete();
+    part.rename(whole);
+    put({ job, label, size, state: 'saved', saved_at: Date.now() / 1000, uri: target.uri });
+    keep();
+  } catch (error) {
+    try {
+      if (part.exists) part.delete();
+    } catch {}
+    if (task?.state === 'cancelled') drop(job);
+    else fail(error instanceof Error ? error.message : 'The copy stopped.');
+  } finally {
+    tasks.delete(job);
+  }
+}
+
+/** Stops a copy on its way and throws away what came. */
+export function cancel(job: string) {
+  tasks.get(job)?.cancel();
+}
+
+/** Deletes the copy from the phone, or forgets a failed one. The download on the computer stays. */
+export function remove(job: string) {
+  const copy = copies.get(job);
+  if (copy?.state === 'saving') return cancel(job);
+  if (copy?.state === 'saved') {
+    try {
+      const file = new File(copy.uri);
+      if (file.exists) file.delete();
+    } catch {}
+  }
+  drop(job);
+  keep();
+}

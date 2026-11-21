@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { Home, Me, TitlePage, TitleSearch, TvList, Version } from '@web/wire';
+import type { Cast, CastAction, Home, Me, TitlePage, TitleSearch, TvList, Version } from '@web/wire';
 
 import { get, post, type Link } from './client';
 import { useLink } from './session';
@@ -90,4 +90,27 @@ export function useTvs(polling: boolean) {
 
 export function findTvs(link: Link, fresh: boolean) {
   return post<TvList>(link, '/api/tvs', { fresh });
+}
+
+/** The TVs and their casts, asked for every second while one plays and every five seconds otherwise. */
+export function useCasts() {
+  const link = useLink();
+  return useQuery({
+    queryKey: [...keys.tvs, link.base],
+    queryFn: ({ signal }) => get<TvList>(link, '/api/tvs', signal),
+    refetchInterval: (query) => (query.state.data?.casts.some((cast) => cast.state !== 'ended') ? 1000 : 5000),
+  });
+}
+
+/** Sends a remote action to a TV and takes the cast the engine answers with over the last poll. */
+export function useCastControl() {
+  const link = useLink();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { tv: string } & CastAction) => post<{ cast: Cast }>(link, '/api/cast/control', body),
+    onSuccess: ({ cast }) =>
+      client.setQueryData<TvList>([...keys.tvs, link.base], (list) =>
+        list ? { ...list, casts: [...list.casts.filter((other) => other.tv !== cast.tv), cast] } : list,
+      ),
+  });
 }

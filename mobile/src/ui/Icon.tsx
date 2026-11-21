@@ -23,6 +23,7 @@ import {
   ScanQrCode,
   Search,
   SlidersHorizontal,
+  Smartphone,
   Square,
   Star,
   Subtitles,
@@ -76,6 +77,7 @@ export const icons = {
   add: Plus,
   history: History,
   settings: SlidersHorizontal,
+  phone: Smartphone,
 } satisfies Record<string, LucideIcon>;
 
 /**

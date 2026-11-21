@@ -9,11 +9,12 @@ import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { EngineError } from '@/engine/client';
+import { JobsProvider } from '@/engine/jobs';
 import { SessionProvider, useSession } from '@/engine/session';
 import { PortalHost } from '@/ui/Portal';
 import { color } from '@/theme';
@@ -73,69 +74,86 @@ function Routes() {
 
   return (
     <QueryClientProvider client={client}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          orientation: 'portrait_up',
-          contentStyle: { backgroundColor: color.paper },
-        }}
-      >
-        <Stack.Protected guard={paired}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="title/[id]" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen
-            name="play"
-            options={{
-              presentation: 'fullScreenModal',
-              animation: 'fade',
-              orientation: 'landscape',
-              statusBarHidden: true,
-              navigationBarHidden: true,
-            }}
-          />
-          <Stack.Screen
-            name="tv"
-            options={{
-              presentation: 'formSheet',
-              sheetGrabberVisible: true,
-              sheetAllowedDetents: [0.92],
-              sheetCornerRadius: 28,
-            }}
-          />
-          <Stack.Screen
-            name="add"
-            options={{
-              presentation: 'formSheet',
-              sheetGrabberVisible: true,
-              sheetAllowedDetents: 'fitToContents',
-              sheetCornerRadius: 28,
-            }}
-          />
-          <Stack.Screen
-            name="engine"
-            options={{
-              presentation: 'formSheet',
-              sheetGrabberVisible: true,
-              sheetAllowedDetents: 'fitToContents',
-              sheetCornerRadius: 28,
-            }}
-          />
-          <Stack.Screen
-            name="relocate"
-            options={{
-              presentation: 'formSheet',
-              sheetGrabberVisible: true,
-              sheetAllowedDetents: 'fitToContents',
-              sheetCornerRadius: 28,
-            }}
-          />
-        </Stack.Protected>
-        <Stack.Protected guard={!paired}>
-          <Stack.Screen name="pair" />
-        </Stack.Protected>
-      </Stack>
+      <MaybeJobs paired={paired}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            orientation: 'portrait_up',
+            contentStyle: { backgroundColor: color.paper },
+          }}
+        >
+          <Stack.Protected guard={paired}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="title/[id]" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen
+              name="play"
+              options={{
+                presentation: 'fullScreenModal',
+                animation: 'fade',
+                orientation: 'landscape',
+                statusBarHidden: true,
+                navigationBarHidden: true,
+              }}
+            />
+            <Stack.Screen
+              name="offline"
+              options={{
+                presentation: 'fullScreenModal',
+                animation: 'fade',
+                orientation: 'landscape',
+                statusBarHidden: true,
+                navigationBarHidden: true,
+              }}
+            />
+            <Stack.Screen
+              name="tv"
+              options={{
+                presentation: 'formSheet',
+                sheetGrabberVisible: true,
+                sheetAllowedDetents: [0.92],
+                sheetCornerRadius: 28,
+              }}
+            />
+            <Stack.Screen
+              name="add"
+              options={{
+                presentation: 'formSheet',
+                sheetGrabberVisible: true,
+                sheetAllowedDetents: 'fitToContents',
+                sheetCornerRadius: 28,
+              }}
+            />
+            <Stack.Screen
+              name="engine"
+              options={{
+                presentation: 'formSheet',
+                sheetGrabberVisible: true,
+                sheetAllowedDetents: 'fitToContents',
+                sheetCornerRadius: 28,
+              }}
+            />
+            <Stack.Screen
+              name="relocate"
+              options={{
+                presentation: 'formSheet',
+                sheetGrabberVisible: true,
+                sheetAllowedDetents: 'fitToContents',
+                sheetCornerRadius: 28,
+              }}
+            />
+          </Stack.Protected>
+          <Stack.Protected guard={!paired}>
+            <Stack.Screen name="pair" />
+          </Stack.Protected>
+        </Stack>
+      </MaybeJobs>
     </QueryClientProvider>
   );
+}
+
+/** Every paired screen reads the one downloads stream: the tabs, the player and the title pages. */
+function MaybeJobs({ paired, children }: { paired: boolean; children: ReactNode }) {
+  return paired ? <JobsProvider>{children}</JobsProvider> : children;
 }
 
 export default function RootLayout() {

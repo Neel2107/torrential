@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeOut,
@@ -12,113 +12,118 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ago, bytes, percent, rate, sentence, span } from '@web/lib/format';
-import { readable } from '@web/lib/release';
 import type { Job } from '@web/wire';
 
 import { post } from '@/engine/client';
-import { useJobs } from '@/engine/jobs';
-import { useTitle } from '@/engine/queries';
+import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
 import { Art } from '@/ui/Art';
 import { useLink } from '@/engine/session';
-import { useChromeScroll } from '@/ui/chrome';
+import { cancel, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
+import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
+import { MenuRow } from '@/ui/MenuRow';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { TAB_BAR_HEIGHT } from '@/ui/TabBar';
 import { Tap } from '@/ui/Tap';
 import { TopBar, useTopInset } from '@/ui/TopBar';
-import { color, font, motion, radius, space, type } from '@/theme';
+import { color, font, motion, space, type } from '@/theme';
 
 const ACTIVE = new Set<Job['state']>(['queued', 'metadata', 'checking', 'downloading', 'paused', 'error']);
-
-const STATE: Record<Job['state'], string> = {
-  queued: 'Queued',
-  metadata: 'Getting files',
-  checking: 'Checking',
-  downloading: 'Downloading',
-  paused: 'Paused',
-  done: 'Done',
-  error: 'Failed',
-};
 
 export default function Downloads() {
   const { jobs, live } = useJobs();
   const insets = useSafeAreaInsets();
   const top = useTopInset(true);
   const onScroll = useChromeScroll();
+  const { docked } = useChrome();
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState<Job | null>(null);
+  const [copyMenu, setCopyMenu] = useState<string | null>(null);
+  const copies = useCopies();
 
   const active = jobs.filter((job) => ACTIVE.has(job.state));
   const finished = jobs.filter((job) => !ACTIVE.has(job.state));
   const shown = tab === 0 ? active : finished;
+  const bottom = insets.bottom + TAB_BAR_HEIGHT + 96 + docked;
 
   return (
     <View style={styles.screen}>
-      <Animated.FlatList
-        data={shown}
-        keyExtractor={(job) => job.id}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        itemLayoutAnimation={LinearTransition.duration(motion.standard)}
-        contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 96 }}
-        ListEmptyComponent={
-          live ? (
+      {tab === 2 ? (
+        <Animated.FlatList
+          key="phone"
+          data={copies}
+          keyExtractor={(copy) => copy.job}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          itemLayoutAnimation={LinearTransition.duration(motion.standard)}
+          contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
+          ListHeaderComponent={<FreeSpace />}
+          ListEmptyComponent={
             <Animated.View entering={rise(0)} style={styles.empty}>
               <View style={styles.emptyIcon}>
-                <Icon name={icons.downloads} size={26} tint={color.soft} />
+                <Icon name={icons.phone} size={26} tint={color.soft} />
               </View>
-              <Text style={[type.title, { textAlign: 'center' }]}>
-                {tab === 0 ? 'Nothing downloading' : 'Nothing finished yet'}
-              </Text>
+              <Text style={[type.title, { textAlign: 'center' }]}>Nothing on this phone</Text>
               <Text style={[type.body, { textAlign: 'center' }]}>
-                {tab === 0
-                  ? 'What you play or add shows up here while it downloads.'
-                  : 'Finished downloads stay here until you remove them.'}
+                Save a finished download from its menu to watch it without the engine.
               </Text>
             </Animated.View>
-          ) : (
-            <Text style={[type.caption, { textAlign: 'center', marginTop: space.xxl }]}>Connecting…</Text>
-          )
-        }
-        renderItem={({ item, index }) => <JobRow job={item} index={index} onMenu={() => setMenu(item)} />}
-      />
+          }
+          renderItem={({ item, index }) => <CopyRow copy={item} index={index} onMenu={() => setCopyMenu(item.job)} />}
+        />
+      ) : (
+        <Animated.FlatList
+          key="engine"
+          data={shown}
+          keyExtractor={(job) => job.id}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          itemLayoutAnimation={LinearTransition.duration(motion.standard)}
+          contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
+          ListEmptyComponent={
+            live ? (
+              <Animated.View entering={rise(0)} style={styles.empty}>
+                <View style={styles.emptyIcon}>
+                  <Icon name={icons.downloads} size={26} tint={color.soft} />
+                </View>
+                <Text style={[type.title, { textAlign: 'center' }]}>
+                  {tab === 0 ? 'Nothing downloading' : 'Nothing finished yet'}
+                </Text>
+                <Text style={[type.body, { textAlign: 'center' }]}>
+                  {tab === 0
+                    ? 'What you play or add shows up here while it downloads.'
+                    : 'Finished downloads stay here until you remove them.'}
+                </Text>
+              </Animated.View>
+            ) : (
+              <Text style={[type.caption, { textAlign: 'center', marginTop: space.xxl }]}>Connecting…</Text>
+            )
+          }
+          renderItem={({ item, index }) => <JobRow job={item} index={index} onMenu={() => setMenu(item)} />}
+        />
+      )}
       <TopBar
         left={<EngineAvatar />}
         title="Downloads"
         tabs={{
-          labels: [`Active${active.length ? ` · ${active.length}` : ''}`, 'Finished'],
+          labels: [`Active${active.length ? ` · ${active.length}` : ''}`, 'Finished', 'On this phone'],
           index: tab,
           onChange: setTab,
         }}
       />
       <Fab icon={icons.add} label="Add a magnet link" onPress={() => router.push('/add')} />
       {menu ? <JobMenu job={menu} onClose={() => setMenu(null)} /> : null}
+      {copyMenu ? <CopyMenu job={copyMenu} onClose={() => setCopyMenu(null)} /> : null}
     </View>
   );
 }
 
-function open(job: Job) {
-  if (job.title) router.push({ pathname: '/title/[id]', params: { id: job.title.title } });
-  else router.push({ pathname: '/play', params: { ref: job.id } });
-}
-
-/** A download the engine tied to a film or show reads as that title, with its poster. */
-function useJobName(job: Job): { title: string; tags: string; poster: string | null } {
-  const page = useTitle(job.title?.title ?? '', Boolean(job.title));
-  const fromName = readable(job.name ?? job.id);
-  if (job.title && page.data) {
-    const span =
-      job.title.span === 'film' ? (page.data.year ? String(page.data.year) : '') : job.title.span.toUpperCase();
-    return { title: page.data.name, tags: span, poster: job.title.title };
-  }
-  return { ...fromName, poster: null };
-}
-
 function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () => void }) {
   const name = useJobName(job);
+  const copy = useCopy(job.id);
   const size = job.progress.size;
   const fraction = size ? job.progress.verified / size : 0;
   const downloading = job.state === 'downloading';
@@ -140,7 +145,7 @@ function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () =>
       <Tap
         shrink={1}
         highlight
-        onPress={() => open(job)}
+        onPress={() => openJob(job)}
         onLongPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           onMenu();
@@ -197,6 +202,7 @@ function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () =>
           <Text style={type.numeric} numberOfLines={2}>
             {facts.filter(Boolean).join('  ·  ')}
           </Text>
+          {copy ? <CopyState copy={copy} /> : null}
         </View>
         <Tap shrink={0.85} onPress={onMenu} accessibilityLabel="More" style={styles.more}>
           <Icon name={icons.more} size={20} tint={color.pencil} />
@@ -233,6 +239,7 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
     onClose();
   };
 
+  const copy = useCopy(job.id);
   const running =
     job.state === 'downloading' || job.state === 'queued' || job.state === 'metadata' || job.state === 'checking';
 
@@ -250,6 +257,35 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
             router.push({ pathname: '/play', params: { ref: job.id } });
           }}
         />
+        {copy?.state === 'saved' ? (
+          <MenuRow
+            icon={icons.phone}
+            label="Play from this phone"
+            onPress={() => {
+              onClose();
+              router.push({ pathname: '/offline', params: { job: job.id } });
+            }}
+          />
+        ) : copy?.state === 'saving' ? (
+          <MenuRow
+            icon={icons.close}
+            label="Stop saving to phone"
+            onPress={() => {
+              cancel(job.id);
+              onClose();
+            }}
+          />
+        ) : job.state === 'done' ? (
+          <MenuRow
+            icon={icons.phone}
+            label="Save to phone"
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              save(link, job.id, name);
+              onClose();
+            }}
+          />
+        ) : null}
         {running ? (
           <MenuRow icon={icons.pause} label="Pause" disabled={busy} onPress={() => act('/api/pause')} />
         ) : null}
@@ -262,24 +298,138 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   );
 }
 
-function MenuRow({
-  icon,
-  label,
-  onPress,
-  danger = false,
-  disabled = false,
-}: {
-  icon: (typeof icons)[keyof typeof icons];
-  label: string;
-  onPress: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
+function CopyState({ copy }: { copy: Copy }) {
+  if (copy.state === 'saving') {
+    return (
+      <View style={{ gap: 6 }}>
+        <Progress fraction={copy.size ? copy.written / copy.size : 0} paused={false} />
+        <Text style={type.numeric}>
+          Saving to phone · {bytes(copy.written)} of {bytes(copy.size)}
+        </Text>
+      </View>
+    );
+  }
+  if (copy.state === 'failed') {
+    return (
+      <Text style={[type.numeric, { color: color.error }]} numberOfLines={2}>
+        Not saved to phone: {sentence(copy.error)}
+      </Text>
+    );
+  }
   return (
-    <Tap shrink={1} highlight disabled={disabled} onPress={onPress} style={styles.menuRow}>
-      <Icon name={icon} size={22} tint={danger ? color.error : color.ink} />
-      <Text style={[styles.menuLabel, danger && { color: color.error }]}>{label}</Text>
-    </Tap>
+    <View style={styles.onPhone}>
+      <Icon name={icons.phone} size={13} tint={color.action} />
+      <Text style={[type.numeric, { color: color.action }]}>On this phone</Text>
+    </View>
+  );
+}
+
+function FreeSpace() {
+  const free = freeSpace();
+  if (free === null) return null;
+  return <Text style={styles.free}>{bytes(free)} free on this phone</Text>;
+}
+
+function CopyRow({ copy, index, onMenu }: { copy: Copy; index: number; onMenu: () => void }) {
+  const facts =
+    copy.state === 'saved'
+      ? `${bytes(copy.size)}  ·  saved ${ago(copy.saved_at)}`
+      : copy.state === 'saving'
+        ? `Saving · ${bytes(copy.written)} of ${bytes(copy.size)}`
+        : sentence(copy.error);
+
+  return (
+    <Animated.View entering={rise(index)} exiting={FadeOut.duration(motion.quick)}>
+      <Tap
+        shrink={1}
+        highlight
+        onPress={() => {
+          if (copy.state === 'saved') router.push({ pathname: '/offline', params: { job: copy.job } });
+          else onMenu();
+        }}
+        onLongPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onMenu();
+        }}
+        accessibilityLabel={`${copy.label.title}, ${facts}`}
+        accessibilityHint="Long press to delete it from the phone."
+        style={styles.row}
+      >
+        {copy.label.poster ? (
+          <Art id={copy.label.poster} kind="poster" name={copy.label.title} style={styles.poster} />
+        ) : (
+          <View style={styles.badge}>
+            <Icon name={icons.phone} size={18} tint={color.soft} weight={2.2} />
+          </View>
+        )}
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={type.callout} numberOfLines={2}>
+            {copy.label.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{copy.label.tags}</Text>
+          </Text>
+          {copy.state === 'saving' ? (
+            <Progress fraction={copy.size ? copy.written / copy.size : 0} paused={false} />
+          ) : null}
+          <Text style={[type.numeric, copy.state === 'failed' && { color: color.error }]} numberOfLines={2}>
+            {facts}
+          </Text>
+        </View>
+        <Tap shrink={0.85} onPress={onMenu} accessibilityLabel="More" style={styles.more}>
+          <Icon name={icons.more} size={20} tint={color.pencil} />
+        </Tap>
+      </Tap>
+    </Animated.View>
+  );
+}
+
+function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
+  const link = useLink();
+  const copy = useCopy(job);
+  const gone = !copy;
+  useEffect(() => {
+    if (gone) onClose();
+  }, [gone, onClose]);
+  if (!copy) return null;
+
+  return (
+    <Sheet onClose={onClose}>
+      <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
+        <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
+          {copy.label.title}
+        </Text>
+        {copy.state === 'saved' ? (
+          <MenuRow
+            icon={icons.play}
+            label="Play"
+            onPress={() => {
+              onClose();
+              router.push({ pathname: '/offline', params: { job } });
+            }}
+          />
+        ) : null}
+        {copy.state === 'failed' ? (
+          <MenuRow
+            icon={icons.refresh}
+            label="Try again"
+            onPress={() => {
+              save(link, job, copy.label);
+              onClose();
+            }}
+          />
+        ) : null}
+        <MenuRow
+          icon={copy.state === 'saving' ? icons.close : icons.trash}
+          label={
+            copy.state === 'saving' ? 'Stop saving' : copy.state === 'failed' ? 'Dismiss' : 'Delete from this phone'
+          }
+          danger={copy.state === 'saved'}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            remove(job);
+            onClose();
+          }}
+        />
+      </View>
+    </Sheet>
   );
 }
 
@@ -315,6 +465,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: color.raised,
   },
+  onPhone: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  free: { ...type.caption, paddingHorizontal: space.page, paddingTop: space.md, paddingBottom: space.xs },
   more: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginRight: -6 },
   track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(240,233,220,0.12)', overflow: 'hidden' },
   fill: { height: 4, borderRadius: 2 },
@@ -327,13 +479,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: color.raised,
   },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.lg,
-    minHeight: 56,
-    paddingHorizontal: space.md,
-    borderRadius: radius.md,
-  },
-  menuLabel: { fontFamily: font.semibold, fontSize: 17, color: color.ink },
 });

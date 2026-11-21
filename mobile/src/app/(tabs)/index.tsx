@@ -13,13 +13,11 @@ import {
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { minutesLeft } from '@web/lib/format';
-import { episodeCode, episodeName } from '@web/titles/words';
 import type { Continue } from '@web/wire';
 
 import { useHome } from '@/engine/queries';
 import { Art } from '@/ui/Art';
-import { useChromeScroll } from '@/ui/chrome';
+import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Fab } from '@/ui/Fab';
@@ -34,6 +32,7 @@ import { TAB_BAR_HEIGHT } from '@/ui/TabBar';
 import { Tap } from '@/ui/Tap';
 import { TopBar, useTopInset } from '@/ui/TopBar';
 import { Button } from '@/ui/Button';
+import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { color, radius, space, type } from '@/theme';
 
 export default function Home() {
@@ -41,6 +40,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const top = useTopInset(false);
   const onScroll = useChromeScroll();
+  const { docked } = useChrome();
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = async () => {
@@ -54,7 +54,10 @@ export default function Home() {
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: top + space.md, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 96 }}
+        contentContainerStyle={{
+          paddingTop: top + space.md,
+          paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 96 + docked,
+        }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -112,24 +115,6 @@ function SectionTitle({ children }: { children: string }) {
   );
 }
 
-function progressOf(item: Continue): number | null {
-  return item.resume_at !== null && item.duration ? item.resume_at / item.duration : null;
-}
-
-function subtitleOf(item: Continue): string {
-  if (item.episode) return `${episodeCode(item.episode)} · ${episodeName(item.episode)}`;
-  return item.title.year ? String(item.title.year) : '';
-}
-
-function remainingOf(item: Continue): string {
-  if (item.resume_at !== null && item.duration) return minutesLeft(item.resume_at, item.duration);
-  return item.episode ? 'Next episode' : 'Not started';
-}
-
-function play(item: Continue) {
-  router.push({ pathname: '/play', params: { video: item.video } });
-}
-
 function ContinueCarousel({ items }: { items: Continue[] }) {
   const { width } = useWindowDimensions();
   const cardWidth = items.length > 1 ? width - space.page * 2 - 28 : width - space.page * 2;
@@ -177,7 +162,7 @@ function ContinueCard({ item, width, index }: { item: Continue; width: number; i
     <Animated.View entering={rise(index)} style={{ width }}>
       <Tap
         shrink={0.98}
-        onPress={() => play(item)}
+        onPress={() => resume(item)}
         onLongPress={() => router.push({ pathname: '/title/[id]', params: { id: item.title.id } })}
         accessibilityLabel={`${item.title.name}, ${subtitleOf(item)}, ${remainingOf(item)}`}
         accessibilityHint="Plays it. Long press opens its page."
