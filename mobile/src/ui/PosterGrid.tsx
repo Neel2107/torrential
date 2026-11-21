@@ -41,7 +41,7 @@ export function Poster({ title, width }: { title: TitleCard; width: number }) {
       <View style={styles.facts}>
         {title.rating ? (
           <>
-            <Icon name={icons.star} size={11} tint={color.pencil} />
+            <Icon name={icons.star} size={11} tint={color.action} filled />
             <Text style={type.caption}>{title.rating.toFixed(1)}</Text>
             <Text style={type.caption}>·</Text>
           </>

@@ -2,7 +2,7 @@ import { ActivityIndicator, StyleSheet, Text, View, type StyleProp, type ViewSty
 
 import { color, font, radius, space } from '@/theme';
 
-import { Icon } from './Icon';
+import { Icon, icons } from './Icon';
 import { Tap } from './Tap';
 
 type Kind = 'primary' | 'secondary' | 'quiet';
@@ -40,7 +40,7 @@ export function Button({
         {busy ? (
           <ActivityIndicator size="small" color={ink} />
         ) : icon ? (
-          <Icon name={icon} size={20} tint={ink} />
+          <Icon name={icon} size={20} tint={ink} filled={icon === icons.play} />
         ) : null}
         <Text style={[styles.label, { color: ink }]} numberOfLines={1}>
           {label}

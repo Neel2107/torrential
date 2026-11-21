@@ -3,7 +3,7 @@ import { PixelRatio, useWindowDimensions } from 'react-native';
 
 import type { Check, EpisodeInfo, Error as WireError, PlayInfo, PlayTitle, Release, TitleCard, Tried, Viewer } from '@web/wire';
 
-import { EngineError, stream } from '@/engine/client';
+import { EngineError, post, stream } from '@/engine/client';
 import { useLink } from '@/engine/session';
 
 type PlayMessage =
@@ -92,6 +92,54 @@ export function useTitlePlay(video: string, attempt: number): Start {
     // The viewer is read once per attempt; rotating the phone mid-start should not restart it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [link, video, attempt]);
+
+  return start;
+}
+
+/**
+ * Starts a torrent picked by hand: a search result, or a magnet link shared from another app. The
+ * engine waits up to a minute for a magnet's file list, then answers with the file to play.
+ */
+export function useTorrentPlay(ref: string, attempt: number): Start {
+  const link = useLink();
+  const [start, setStart] = useState<Start>({ phase: 'finding', title: null, episode: null });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setStart({ phase: 'finding', title: null, episode: null });
+    post<PlayInfo>(link, '/api/play', { ref }, controller.signal).then(
+      (play) => {
+        const release: Release = {
+          id: play.id,
+          name: play.name,
+          size: play.total_size,
+          seeders: null,
+          leechers: null,
+          published: null,
+          category: 'video',
+          quality: { resolution: null, codec: null, hdr: false },
+          flags: [],
+          sources: [],
+          magnet: null,
+          torrent_url: null,
+          info_url: null,
+        };
+        setStart({ phase: 'ready', title: null, episode: null, release, play, resumeAt: null });
+      },
+      (error: unknown) => {
+        if (controller.signal.aborted) return;
+        setStart({
+          phase: 'failed',
+          title: null,
+          episode: null,
+          message: error instanceof EngineError ? error.message : 'Lost the engine while starting the torrent.',
+          hint: error instanceof EngineError ? error.hint : null,
+          tried: 0,
+        });
+      },
+    );
+    return () => controller.abort();
+  }, [link, ref, attempt]);
 
   return start;
 }

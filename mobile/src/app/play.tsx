@@ -11,7 +11,7 @@ import { titleOf } from '@web/lib/video';
 import { CHECKS, episodeCode, episodeName } from '@web/titles/words';
 
 import { Player } from '@/player/Player';
-import { useTitlePlay, type Start } from '@/player/start';
+import { useTitlePlay, useTorrentPlay, type Start } from '@/player/start';
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
@@ -20,9 +20,12 @@ import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
 
 export default function Play() {
-  const { video } = useLocalSearchParams<{ video: string }>();
+  const { video, ref } = useLocalSearchParams<{ video?: string; ref?: string }>();
   const [attempt, setAttempt] = useState(0);
-  const start = useTitlePlay(video, attempt);
+  return ref ? <ByTorrent torrent={ref} attempt={attempt} retry={() => setAttempt((n) => n + 1)} /> : <ByTitle video={video ?? ''} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />;
+}
+
+function useLandscape() {
 
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
@@ -30,7 +33,20 @@ export default function Play() {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     };
   }, []);
+}
 
+function ByTorrent({ torrent, attempt, retry }: { torrent: string; attempt: number; retry: () => void }) {
+  useLandscape();
+  const start = useTorrentPlay(torrent, attempt);
+  if (start.phase === 'ready') {
+    return <Player video={null} play={start.play} release={start.release} resumeAt={null} title={null} episode={null} />;
+  }
+  return <Starting video={null} start={start} onRetry={retry} />;
+}
+
+function ByTitle({ video, attempt, retry }: { video: string; attempt: number; retry: () => void }) {
+  useLandscape();
+  const start = useTitlePlay(video, attempt);
   if (start.phase === 'ready') {
     return (
       <Player
@@ -43,13 +59,13 @@ export default function Play() {
       />
     );
   }
-  return <Starting video={video} start={start} onRetry={() => setAttempt((n) => n + 1)} />;
+  return <Starting video={video} start={start} onRetry={retry} />;
 }
 
 function stepOf(start: Start): string {
   switch (start.phase) {
     case 'finding':
-      return 'Finding sources';
+      return start.title ? 'Finding sources' : 'Getting the torrent’s files';
     case 'trying':
       return start.check ? CHECKS[start.check].replace(/\.$/, '') : `Trying source ${start.rank} of ${start.of}`;
     default:
@@ -57,15 +73,15 @@ function stepOf(start: Start): string {
   }
 }
 
-function Starting({ video, start, onRetry }: { video: string; start: Exclude<Start, { phase: 'ready' }>; onRetry: () => void }) {
+function Starting({ video, start, onRetry }: { video: string | null; start: Exclude<Start, { phase: 'ready' }>; onRetry: () => void }) {
   const insets = useSafeAreaInsets();
-  const id = titleOf(video);
+  const id = video ? titleOf(video) : null;
   const name = start.title?.name ?? '';
   const detail = start.episode ? `${episodeCode(start.episode)} · ${episodeName(start.episode)}` : start.title?.year ? String(start.title.year) : '';
 
   return (
     <View style={styles.screen}>
-      <Art id={id} kind="background" style={StyleSheet.absoluteFill} placeholder={false} />
+      {id ? <Art id={id} kind="background" style={StyleSheet.absoluteFill} placeholder={false} /> : null}
       <LinearGradient
         colors={['rgba(10,9,7,0.55)', 'rgba(10,9,7,0.82)', '#0a0907']}
         locations={[0, 0.55, 1]}
@@ -77,7 +93,7 @@ function Starting({ video, start, onRetry }: { video: string; start: Exclude<Sta
         </Tap>
       </View>
       <View style={[styles.body, { paddingLeft: insets.left + 56, paddingRight: insets.right + 56 }]}>
-        {name ? <Logo id={id} name={name} style={styles.logo} /> : <View style={styles.logo} />}
+        {id && name ? <Logo id={id} name={name} style={styles.logo} /> : <View style={styles.logo} />}
         {detail ? <Text style={styles.detail}>{detail}</Text> : null}
 
         {start.phase === 'failed' ? (

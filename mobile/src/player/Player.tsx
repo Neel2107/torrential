@@ -42,7 +42,7 @@ export function Player({
   title,
   episode,
 }: {
-  video: string;
+  video: string | null;
   play: PlayInfo;
   release: Release;
   resumeAt: number | null;
@@ -91,7 +91,7 @@ export function Player({
   const save = useCallback(() => {
     const position = player.currentTime;
     const length = player.duration || duration || null;
-    if (!length || position < 1) return;
+    if (!video || !length || position < 1) return;
     const body: Position = { video, position: Math.min(position, length), duration: length, release: release.id, tab: TAB, starts: !claimed.current };
     claimed.current = true;
     post(link, '/api/watched', body).catch(() => {});
@@ -211,7 +211,7 @@ export function Player({
             <Tap shrink={0.88} onPress={() => setTracksOpen(true)} accessibilityLabel="Subtitles and audio" style={styles.round}>
               <Icon name={icons.subtitles} size={22} tint={color.ink} />
             </Tap>
-            <Tap shrink={0.88} onPress={() => router.push({ pathname: '/tv', params: { video } })} accessibilityLabel="Play on TV" style={styles.round}>
+            <Tap shrink={0.88} onPress={() => router.push({ pathname: '/tv', params: video ? { video } : { ref: play.id, file: String(play.video.index) } })} accessibilityLabel="Play on TV" style={styles.round}>
               <Icon name={icons.cast} size={22} tint={color.ink} />
             </Tap>
           </View>
