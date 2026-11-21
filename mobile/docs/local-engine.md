@@ -37,6 +37,18 @@ listening on loopback.
 5. The engine switcher in the app.
 6. iOS: xcframework, Swift module, same checks on the simulator and the iPhone.
 
+## Building
+
+The engine's binaries are not in git. Build them before a native build of the app, after any change
+to the Rust crates:
+
+    mobile/scripts/build-engine.sh android   # → modules/torrential-engine/android/src/main/jniLibs
+    mobile/scripts/build-engine.sh ios       # → modules/torrential-engine/ios/TorrentialMobile.xcframework
+
+They need rustup's toolchain with the `aarch64-linux-android`, `aarch64-apple-ios` and
+`aarch64-apple-ios-sim` targets, `cargo-ndk`, the Android NDK, Homebrew's Boost, and Xcode. OpenSSL
+for the three targets is built once into `target/mobile-deps` by `build-openssl.sh`.
+
 ## Log
 
 (dated entries as steps complete)
@@ -59,3 +71,10 @@ listening on loopback.
   `TorrentialMobile.xcframework` and started by a Swift module in Application Support. Phone builds
   report ffmpeg as unavailable: the simulator had found the Mac's ffprobe and failed to run it, and
   a phone has none to run. Big Buck Bunny played on the iOS simulator from the app's own engine.
+- 2026-11-22: From the council review: the phone's engine requires the app's secret on loopback
+  (401 without it, on the F6 and the simulator); start waits for the engine and returns its real
+  port; the service no longer restarts without the app and stops at Android 15's data sync limit;
+  engine-list writes are queued; pairing lands on Home; removing on the phone deletes the files.
+  With the app in the background and the screen off, the F6 downloaded Night of the Living Dead at
+  about 220 KB/s (1 → 41 MiB in three minutes). A Release build is installed on the iPhone 17 Pro
+  Max, untested until the phone is unlocked.
