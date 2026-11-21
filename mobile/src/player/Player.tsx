@@ -17,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { episodeCode, episodeName } from '@web/titles/words';
+import { episodeCode, episodeName, findEpisode, playingOrder } from '@web/titles/words';
 import {
   SAVE_EVERY_MS,
   type EpisodeInfo,
@@ -26,26 +26,40 @@ import {
   type Position,
   type Release,
   type TitleCard,
+  type TitlePage,
 } from '@web/wire';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { titleOf } from '@web/lib/video';
+import { titleOf, videoOf } from '@web/lib/video';
 
 import { get, post } from '@/engine/client';
-import { keys } from '@/engine/queries';
+import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, space } from '@/theme';
 
+import { Ended } from './Ended';
 import { SeekBar } from './SeekBar';
-import { sourceFor, useTimeline } from './timeline';
+import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
 import { SubtitleOverlay, useSubtitleFile, type SubtitleFile } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
 
 const HIDE_AFTER_MS = 3200;
 const SKIP = 10;
+
+/** The aired episode after `video` in playing order, as the web player finds it. */
+function nextEpisode(page: TitlePage | null, video: string | null): { video: string; name: string } | null {
+  const here = page && video ? findEpisode(page, video) : null;
+  if (!page || !here) return null;
+  const order = playingOrder(page, here.season === 0);
+  const at = order.findIndex((e) => e.season === here.season && e.episode === here.episode);
+  const following = at === -1 ? undefined : order[at + 1];
+  return following
+    ? { video: videoOf(page.id, following), name: `${episodeCode(following)} · ${episodeName(following)}` }
+    : null;
+}
 
 /** A random name for this screen, so the engine knows which player owns the saved position. */
 const TAB = Math.random().toString(36).slice(2, 10);
@@ -73,14 +87,17 @@ export function Player({
     artist: episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : undefined,
   }));
 
-  const player = useVideoPlayer(sourceFor(link, play, { kind: 'direct' }, metadata), (p) => {
-    p.timeUpdateEventInterval = 0.25;
-    p.showNowPlayingNotification = true;
-    p.staysActiveInBackground = false;
-    p.keepScreenOnWhilePlaying = true;
-    if (resumeAt && resumeAt > 5) p.currentTime = resumeAt;
-    p.play();
-  });
+  const player = useVideoPlayer(
+    sourceFor(link, play, STARTS_DIRECT ? { kind: 'direct' } : { kind: 'pending' }, metadata),
+    (p) => {
+      p.timeUpdateEventInterval = 0.25;
+      p.showNowPlayingNotification = true;
+      p.staysActiveInBackground = false;
+      p.keepScreenOnWhilePlaying = true;
+      if (resumeAt && resumeAt > 5) p.currentTime = resumeAt;
+      p.play();
+    },
+  );
 
   const { isPlaying } = useEvent(player, 'playingChange', {
     isPlaying: player.playing,
@@ -96,7 +113,14 @@ export function Player({
     currentOffsetFromLive: null,
   });
   const [media, setMedia] = useState<MediaInfo | null>(null);
-  const timeline = useTimeline({ player, link, play, media, metadata });
+  const timeline = useTimeline({
+    player,
+    link,
+    play,
+    media,
+    metadata,
+    resumeAt: resumeAt && resumeAt > 5 ? resumeAt : 0,
+  });
   const duration = timeline.duration;
   const position = timeline.base.current + time.currentTime;
   const [visible, setVisible] = useState(true);
@@ -112,6 +136,13 @@ export function Player({
     name: file.path.split('/').pop() ?? file.path,
   }));
 
+  const [ended, setEnded] = useState(false);
+  const page = useTitle(video ? titleOf(video) : '', Boolean(video && episode));
+  const next = nextEpisode(page.data ?? null, video);
+  useEventListener(player, 'playToEnd', () => {
+    setEnded(true);
+    setVisible(false);
+  });
   useEventListener(player, 'playingChange', (event) => {
     if (event.isPlaying) resumed.current = true;
   });
@@ -372,6 +403,19 @@ export function Player({
         ) : null}
 
         <SubtitleOverlay cues={cues} time={position} lifted={visible} />
+
+        {ended ? (
+          <Ended
+            next={next?.name ?? null}
+            onNext={() => next && router.replace({ pathname: '/play', params: { video: next.video } })}
+            onReplay={() => {
+              setEnded(false);
+              timeline.seek(0);
+              player.play();
+            }}
+            onBack={() => router.back()}
+          />
+        ) : null}
 
         {tracksOpen ? (
           <TracksSheet

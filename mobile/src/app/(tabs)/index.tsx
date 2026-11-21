@@ -188,7 +188,6 @@ function ContinueCard({ item, width, index }: { item: Continue; width: number; i
             kind={still ? 'thumbnail' : 'background'}
             season={still ? item.episode!.season : undefined}
             episode={still ? item.episode!.episode : undefined}
-            name={item.title.name}
             style={StyleSheet.absoluteFill}
           />
           <LinearGradient
