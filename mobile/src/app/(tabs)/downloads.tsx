@@ -22,12 +22,13 @@ import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
+import { MenuRow } from '@/ui/MenuRow';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { TAB_BAR_HEIGHT } from '@/ui/TabBar';
 import { Tap } from '@/ui/Tap';
 import { TopBar, useTopInset } from '@/ui/TopBar';
-import { color, font, motion, radius, space, type } from '@/theme';
+import { color, font, motion, space, type } from '@/theme';
 
 const ACTIVE = new Set<Job['state']>(['queued', 'metadata', 'checking', 'downloading', 'paused', 'error']);
 
@@ -234,27 +235,6 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   );
 }
 
-function MenuRow({
-  icon,
-  label,
-  onPress,
-  danger = false,
-  disabled = false,
-}: {
-  icon: (typeof icons)[keyof typeof icons];
-  label: string;
-  onPress: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <Tap shrink={1} highlight disabled={disabled} onPress={onPress} style={styles.menuRow}>
-      <Icon name={icon} size={22} tint={danger ? color.error : color.ink} />
-      <Text style={[styles.menuLabel, danger && { color: color.error }]}>{label}</Text>
-    </Tap>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.paper },
   row: {
@@ -299,13 +279,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: color.raised,
   },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.lg,
-    minHeight: 56,
-    paddingHorizontal: space.md,
-    borderRadius: radius.md,
-  },
-  menuLabel: { fontFamily: font.semibold, fontSize: 17, color: color.ink },
 });

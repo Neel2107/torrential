@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { ActivityIndicator, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -15,9 +16,17 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bytes, percent, rate } from '@web/lib/format';
-import { readable } from '@web/lib/release';
+import { isVideo, readable } from '@web/lib/release';
 import { cardFacts } from '@web/titles/words';
-import type { Continue, Job, Release, SearchMessage, TitleCard } from '@web/wire';
+import {
+  SHORT_ID,
+  type Category,
+  type Continue,
+  type Job,
+  type Release,
+  type SearchMessage,
+  type TitleCard,
+} from '@web/wire';
 
 import { post, stream } from '@/engine/client';
 import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
@@ -28,8 +37,10 @@ import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Icon, icons } from '@/ui/Icon';
+import { MenuRow } from '@/ui/MenuRow';
 import { Meter } from '@/ui/Meter';
 import { rise } from '@/ui/rise';
+import { Sheet } from '@/ui/Sheet';
 import { TAB_BAR_HEIGHT } from '@/ui/TabBar';
 import { Tap } from '@/ui/Tap';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
@@ -39,6 +50,15 @@ import { color, font, motion, radius, space, type } from '@/theme';
 const TABS = ['Films & shows', 'Torrents'] as const;
 /** How many of each kind of thing to pick up again the search page lists before a search. */
 const SHOWN = 3;
+const CATEGORIES: Record<Category, string> = {
+  video: 'Video',
+  audio: 'Audio',
+  software: 'Software',
+  book: 'Book',
+  game: 'Game',
+  dataset: 'Dataset',
+  other: 'Other',
+};
 
 function useDebounced<T>(value: T, ms: number): T {
   const [settled, setSettled] = useState(value);
@@ -53,6 +73,7 @@ export default function Search() {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState('');
   const [tab, setTab] = useState(0);
+  const [everything, setEverything] = useState(false);
   const query = useDebounced(text.trim(), 280);
   const top = insets.top + BAR_HEIGHT + TABS_HEIGHT;
   const recents = useRecentSearches();
@@ -76,7 +97,14 @@ export default function Search() {
       {tab === 0 ? (
         <Titles query={query} top={top} idle={idle} onOpen={remember} />
       ) : (
-        <Torrents query={query} top={top} idle={idle} onOpen={remember} />
+        <Torrents
+          query={query}
+          everything={everything}
+          onScope={setEverything}
+          top={top}
+          idle={idle}
+          onOpen={remember}
+        />
       )}
       <SearchHeader text={text} setText={setText} tab={tab} setTab={setTab} onSubmit={remember} />
     </View>
@@ -274,11 +302,16 @@ function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; o
 
 function Torrents({
   query,
+  everything,
+  onScope,
   top,
   idle,
   onOpen,
 }: {
   query: string;
+  /** Search every category, not only video. */
+  everything: boolean;
+  onScope: (everything: boolean) => void;
   top: number;
   idle: ReactElement | null;
   onOpen: () => void;
@@ -293,6 +326,7 @@ function Torrents({
     done: false,
     error: null,
   });
+  const [notVideo, setNotVideo] = useState<Release | null>(null);
 
   useEffect(() => {
     if (!query) return setState({ releases: [], pending: [], done: false, error: null });
@@ -301,7 +335,7 @@ function Torrents({
     stream<SearchMessage>(
       link,
       '/api/search',
-      { method: 'POST', body: { q: query }, signal: controller.signal },
+      { method: 'POST', body: { q: query, category: everything ? undefined : 'video' }, signal: controller.signal },
       (message) => {
         if (message.type === 'update')
           setState({ releases: message.result.releases, pending: message.pending, done: false, error: null });
@@ -315,52 +349,147 @@ function Torrents({
         !controller.signal.aborted && setState((previous) => ({ ...previous, done: true, error: error.message })),
     );
     return () => controller.abort();
-  }, [link, query]);
+  }, [link, query, everything]);
 
   return (
-    <Animated.FlatList
-      data={state.releases}
-      keyExtractor={(item) => item.id}
-      onScroll={onScroll}
-      scrollEventThrottle={16}
-      keyboardDismissMode="on-drag"
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl + docked }}
-      ListHeaderComponent={
-        query && !state.done ? (
-          <View style={styles.searching}>
-            <ActivityIndicator size="small" color={color.soft} />
-            <Text style={type.caption}>
-              Asking {state.pending.length > 1 ? `${state.pending.length} sources` : 'sources'}…
-            </Text>
-          </View>
-        ) : undefined
-      }
-      ListEmptyComponent={
-        !query ? (
-          (idle ?? (
+    <>
+      <Animated.FlatList
+        data={state.releases}
+        keyExtractor={(item) => item.id}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl + docked }}
+        ListHeaderComponent={
+          query ? (
+            <View>
+              <Scope everything={everything} onChange={onScope} />
+              {!state.done ? (
+                <View style={styles.searching}>
+                  <ActivityIndicator size="small" color={color.soft} />
+                  <Text style={type.caption}>
+                    Asking {state.pending.length > 1 ? `${state.pending.length} sources` : 'sources'}…
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : undefined
+        }
+        ListEmptyComponent={
+          !query ? (
+            (idle ?? (
+              <Hint
+                icon={icons.magnet}
+                title="Search every source"
+                body="Torrents are listed best first. Tap one to play it while it downloads."
+              />
+            ))
+          ) : state.done ? (
             <Hint
-              icon={icons.magnet}
-              title="Search every source"
-              body="Torrents are listed best first. Tap one to play it while it downloads."
+              icon={icons.warning}
+              title={state.error ? 'Search failed' : 'No torrents found'}
+              body={
+                state.error ??
+                (everything
+                  ? 'Try fewer or different words.'
+                  : 'Try fewer or different words, or search everything instead of only video.')
+              }
             />
-          ))
-        ) : state.done ? (
-          <Hint
-            icon={icons.warning}
-            title={state.error ? 'Search failed' : 'No torrents found'}
-            body={state.error ?? 'Try fewer or different words.'}
-          />
-        ) : undefined
-      }
-      renderItem={({ item, index }) => <ReleaseRow release={item} index={index} onOpen={onOpen} />}
-    />
+          ) : undefined
+        }
+        renderItem={({ item, index }) => (
+          <ReleaseRow release={item} index={index} onOpen={onOpen} onNotVideo={() => setNotVideo(item)} />
+        )}
+      />
+      {notVideo ? <NotVideo release={notVideo} onClose={() => setNotVideo(null)} /> : null}
+    </>
   );
 }
 
-function ReleaseRow({ release, index, onOpen }: { release: Release; index: number; onOpen: () => void }) {
+/** Video only, as Play needs, or every category the sources know. */
+function Scope({ everything, onChange }: { everything: boolean; onChange: (everything: boolean) => void }) {
+  return (
+    <View style={styles.scope} accessibilityRole="radiogroup" accessibilityLabel="What to search">
+      {[false, true].map((all) => {
+        const on = everything === all;
+        return (
+          <Tap
+            key={String(all)}
+            shrink={0.94}
+            haptic={!on}
+            onPress={() => onChange(all)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: on }}
+            style={[styles.scopeChip, on && styles.scopeChipOn]}
+          >
+            <Text style={[styles.scopeText, on && styles.scopeTextOn]}>{all ? 'Everything' : 'Video'}</Text>
+          </Tap>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * What a result that is not a video offers. The engine's only add route for a phone starts a play,
+ * which refuses a torrent with no video file, so the honest offer is the computer's own download
+ * command, as the web app copies it, or the magnet for another app on the phone.
+ */
+function NotVideo({ release, onClose }: { release: Release; onClose: () => void }) {
+  const command = `torrential get ${release.id.slice(0, SHORT_ID)}`;
+  const [copied, setCopied] = useState(false);
   const name = readable(release.name);
+
+  return (
+    <Sheet onClose={onClose}>
+      <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
+        <Text style={type.headline} numberOfLines={2}>
+          {name.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{name.tags}</Text>
+        </Text>
+        <Text style={[type.label, { marginBottom: space.md }]}>
+          {CATEGORIES[release.category ?? 'other']}, not a video, so it cannot play here. Run the command on the
+          computer running torrential to download it there.
+        </Text>
+        <MenuRow
+          icon={copied ? icons.check : icons.link}
+          label={copied ? 'Copied' : `Copy “${command}”`}
+          onPress={async () => {
+            await Clipboard.setStringAsync(command);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setCopied(true);
+          }}
+        />
+        {release.magnet ? (
+          <MenuRow
+            icon={icons.magnet}
+            label="Share the magnet link"
+            onPress={() => {
+              const magnet = release.magnet;
+              if (magnet) Share.share({ message: magnet }).catch(() => {});
+            }}
+          />
+        ) : null}
+      </View>
+    </Sheet>
+  );
+}
+
+function ReleaseRow({
+  release,
+  index,
+  onOpen,
+  onNotVideo,
+}: {
+  release: Release;
+  index: number;
+  onOpen: () => void;
+  onNotVideo: () => void;
+}) {
+  const name = readable(release.name);
+  const playable = isVideo(release);
   const chips = [
+    playable ? null : CATEGORIES[release.category ?? 'other'],
     release.quality.resolution?.toUpperCase(),
     release.quality.codec?.toUpperCase(),
     release.quality.hdr ? 'HDR' : null,
@@ -373,7 +502,8 @@ function ReleaseRow({ release, index, onOpen }: { release: Release; index: numbe
         highlight
         onPress={() => {
           onOpen();
-          router.push({ pathname: '/play', params: { ref: release.magnet ?? release.id } });
+          if (playable) router.push({ pathname: '/play', params: { ref: release.magnet ?? release.id } });
+          else onNotVideo();
         }}
         accessibilityLabel={`${name.title}, ${release.size ? bytes(release.size) : ''}, ${release.seeders ?? 0} seeders`}
         style={styles.release}
@@ -673,6 +803,18 @@ const styles = StyleSheet.create({
   },
   releaseFacts: { flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' },
   chip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: color.lifted },
+  scope: { flexDirection: 'row', gap: space.sm, paddingHorizontal: space.page, paddingTop: space.md },
+  scopeChip: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.rule,
+  },
+  scopeChipOn: { backgroundColor: color.ink, borderColor: color.ink },
+  scopeText: { fontFamily: font.semibold, fontSize: 14, color: color.soft },
+  scopeTextOn: { color: color.paper },
   chipText: { fontFamily: font.semibold, fontSize: 11, color: color.soft, letterSpacing: 0.3 },
   recentHead: {
     flexDirection: 'row',
