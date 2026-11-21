@@ -1,5 +1,4 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -25,18 +24,7 @@ export default function Play() {
   return ref ? <ByTorrent torrent={ref} attempt={attempt} retry={() => setAttempt((n) => n + 1)} /> : <ByTitle video={video ?? ''} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />;
 }
 
-function useLandscape() {
-
-  useEffect(() => {
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-    };
-  }, []);
-}
-
 function ByTorrent({ torrent, attempt, retry }: { torrent: string; attempt: number; retry: () => void }) {
-  useLandscape();
   const start = useTorrentPlay(torrent, attempt);
   if (start.phase === 'ready') {
     return <Player video={null} play={start.play} release={start.release} resumeAt={null} title={null} episode={null} />;
@@ -45,7 +33,6 @@ function ByTorrent({ torrent, attempt, retry }: { torrent: string; attempt: numb
 }
 
 function ByTitle({ video, attempt, retry }: { video: string; attempt: number; retry: () => void }) {
-  useLandscape();
   const start = useTitlePlay(video, attempt);
   if (start.phase === 'ready') {
     return (

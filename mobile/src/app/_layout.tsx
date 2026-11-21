@@ -72,7 +72,7 @@ function Routes() {
           <Stack.Screen name="title/[id]" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen
             name="play"
-            options={{ animation: 'fade', orientation: 'all', statusBarHidden: true, navigationBarHidden: true }}
+            options={{ animation: 'fade', orientation: 'landscape', statusBarHidden: true, navigationBarHidden: true }}
           />
           <Stack.Screen name="tv" options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: [0.92], sheetCornerRadius: 28 }} />
           <Stack.Screen name="add" options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents', sheetCornerRadius: 28 }} />
