@@ -1,5 +1,14 @@
 import { useIsFocused, useNavigation, usePreventRemove, type NativeStackNavigationProp } from 'expo-router';
-import { createContext, use, useEffect, useRef, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import {
+  createContext,
+  use,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -128,6 +137,12 @@ export function useHeroPage(id: string) {
   const flown = useSharedValue(HERO && flight?.id === id ? 1 : 0);
   const own = useSharedValue(HERO && flight?.id !== id ? 0 : 1);
   const leaving = useRef(false);
+  // The removal held back while the page leaves, sent again once the guard below is off: sent while
+  // it is on, the guard would catch it again and the invisible page would stay over everything.
+  const [release, setRelease] = useState<Parameters<typeof navigation.dispatch>[0] | null>(null);
+  useEffect(() => {
+    if (release) navigation.dispatch(release);
+  }, [navigation, release]);
 
   useEffect(() => {
     if (HERO && !flown.value) own.value = withTiming(1, FADE);
@@ -135,10 +150,10 @@ export function useHeroPage(id: string) {
 
   // Only while this page is in front: a Back from the player above it is the player's to take.
   const focused = useIsFocused();
-  usePreventRemove(HERO && focused, ({ data }) => {
+  usePreventRemove(HERO && focused && !release, ({ data }) => {
     if (leaving.current) return;
     leaving.current = true;
-    const go = () => navigation.dispatch(data.action);
+    const go = () => setRelease(data.action);
     const current = flight;
     const fade = () => {
       if (current?.id === id) update(current.token, null);
