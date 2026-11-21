@@ -7,6 +7,7 @@
 
 pub mod assets;
 mod cast;
+mod hls;
 pub mod devices;
 mod online;
 pub mod play;
@@ -68,6 +69,7 @@ pub async fn answer(conn: &mut Connection<'_>, request: &Request, route: &str, a
         (Method::Post, "search") => return search(conn, request).await,
         (Method::Get, "events") => return watch::events(conn, request).await,
         (Method::Get, "stream") => return watch::stream(conn, request).await,
+        (Method::Get, route) if route.starts_with("hls/") => return hls::answer(conn, request, route).await,
         (Method::Get, "subtitles") => return watch::subtitles(conn, request).await,
         (Method::Get, "title/sources") => return titles::sources(conn, request, asker).await,
         (Method::Post, "title/play") => return titles::play(conn, request, asker).await,
