@@ -37,6 +37,7 @@ import { get, post } from '@/engine/client';
 import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { Icon, icons } from '@/ui/Icon';
+import { PortalHost } from '@/ui/Portal';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, space } from '@/theme';
 
@@ -313,247 +314,253 @@ export function Player({
       : release.name;
 
   return (
-    <View style={styles.backdrop}>
-      <Animated.View style={[styles.screen, dropStyle]} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-        <VideoView
-          player={player}
-          style={StyleSheet.absoluteFill}
-          nativeControls={false}
-          contentFit="contain"
-          allowsPictureInPicture
-          startsPictureInPictureAutomatically
-        />
-        <GestureDetector gesture={taps}>
-          <View style={StyleSheet.absoluteFill}>
-            <Animated.View style={[styles.skip, styles.skipLeft, leftStyle]} pointerEvents="none">
-              <Icon name={icons.rewind} size={30} tint={color.ink} />
-              <Text style={styles.skipText}>{SKIP} s</Text>
-            </Animated.View>
-            <Animated.View style={[styles.skip, styles.skipRight, rightStyle]} pointerEvents="none">
-              <Icon name={icons.forward} size={30} tint={color.ink} />
-              <Text style={styles.skipText}>{SKIP} s</Text>
-            </Animated.View>
-          </View>
-        </GestureDetector>
-
-        {buffering && !visible ? <ActivityIndicator style={styles.center} size="large" color={color.ink} /> : null}
-
-        {status === 'error' ? (
-          <View style={[styles.center, styles.errorBox]}>
-            <Icon name={icons.warning} size={28} tint={color.error} />
-            <Text style={styles.errorText}>{error?.message ?? 'This video does not play on this phone.'}</Text>
-          </View>
-        ) : null}
-
-        {visible ? (
-          <Animated.View
-            entering={FadeIn.duration(motion.quick)}
-            exiting={FadeOut.duration(motion.quick)}
+    // The player is a modal above the app's root, so its sheets need a portal host of their own.
+    <PortalHost>
+      <View style={styles.backdrop}>
+        <Animated.View
+          style={[styles.screen, dropStyle]}
+          onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+        >
+          <VideoView
+            player={player}
             style={StyleSheet.absoluteFill}
-            pointerEvents="box-none"
-          >
-            <View style={styles.scrim} pointerEvents="none" />
-            <View
-              style={[
-                styles.top,
-                {
-                  paddingTop: Math.max(insets.top, space.lg),
-                  paddingLeft: insets.left + space.lg,
-                  paddingRight: insets.right + space.lg,
-                },
-              ]}
+            nativeControls={false}
+            contentFit="contain"
+            allowsPictureInPicture
+            startsPictureInPictureAutomatically
+          />
+          <GestureDetector gesture={taps}>
+            <View style={StyleSheet.absoluteFill}>
+              <Animated.View style={[styles.skip, styles.skipLeft, leftStyle]} pointerEvents="none">
+                <Icon name={icons.rewind} size={30} tint={color.ink} />
+                <Text style={styles.skipText}>{SKIP} s</Text>
+              </Animated.View>
+              <Animated.View style={[styles.skip, styles.skipRight, rightStyle]} pointerEvents="none">
+                <Icon name={icons.forward} size={30} tint={color.ink} />
+                <Text style={styles.skipText}>{SKIP} s</Text>
+              </Animated.View>
+            </View>
+          </GestureDetector>
+
+          {buffering && !visible ? <ActivityIndicator style={styles.center} size="large" color={color.ink} /> : null}
+
+          {status === 'error' ? (
+            <View style={[styles.center, styles.errorBox]}>
+              <Icon name={icons.warning} size={28} tint={color.error} />
+              <Text style={styles.errorText}>{error?.message ?? 'This video does not play on this phone.'}</Text>
+            </View>
+          ) : null}
+
+          {visible ? (
+            <Animated.View
+              entering={FadeIn.duration(motion.quick)}
+              exiting={FadeOut.duration(motion.quick)}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="box-none"
             >
-              <Tap
-                shrink={0.88}
-                onPress={() => router.back()}
-                accessibilityLabel="Close the player"
-                style={styles.round}
+              <View style={styles.scrim} pointerEvents="none" />
+              <View
+                style={[
+                  styles.top,
+                  {
+                    paddingTop: Math.max(insets.top, space.lg),
+                    paddingLeft: insets.left + space.lg,
+                    paddingRight: insets.right + space.lg,
+                  },
+                ]}
               >
-                <Icon name={icons.back} size={24} tint={color.ink} />
-              </Tap>
-              <View style={styles.heading}>
-                <Text style={styles.title} numberOfLines={1}>
-                  {heading}
-                </Text>
-                <Text style={styles.subtitle} numberOfLines={1}>
-                  {subheading}
-                </Text>
-              </View>
-              {videos.length > 1 ? (
                 <Tap
                   shrink={0.88}
-                  onPress={() => setSheet('files')}
-                  accessibilityLabel="Videos in this torrent"
+                  onPress={() => router.back()}
+                  accessibilityLabel="Close the player"
                   style={styles.round}
                 >
-                  <Icon name={icons.episodes} size={22} tint={color.ink} />
+                  <Icon name={icons.back} size={24} tint={color.ink} />
                 </Tap>
-              ) : null}
-              <Tap
-                shrink={0.88}
-                onPress={() => setSheet('tracks')}
-                accessibilityLabel="Subtitles and audio"
-                style={styles.round}
+                <View style={styles.heading}>
+                  <Text style={styles.title} numberOfLines={1}>
+                    {heading}
+                  </Text>
+                  <Text style={styles.subtitle} numberOfLines={1}>
+                    {subheading}
+                  </Text>
+                </View>
+                {videos.length > 1 ? (
+                  <Tap
+                    shrink={0.88}
+                    onPress={() => setSheet('files')}
+                    accessibilityLabel="Videos in this torrent"
+                    style={styles.round}
+                  >
+                    <Icon name={icons.episodes} size={22} tint={color.ink} />
+                  </Tap>
+                ) : null}
+                <Tap
+                  shrink={0.88}
+                  onPress={() => setSheet('tracks')}
+                  accessibilityLabel="Subtitles and audio"
+                  style={styles.round}
+                >
+                  <Icon name={icons.subtitles} size={22} tint={color.ink} />
+                </Tap>
+                <Tap
+                  shrink={0.88}
+                  onPress={() => setSheet('settings')}
+                  accessibilityLabel="Settings"
+                  style={styles.round}
+                >
+                  <Icon name={icons.settings} size={22} tint={color.ink} />
+                </Tap>
+                <Tap
+                  shrink={0.88}
+                  onPress={() => {
+                    const at = String(Math.floor(timeline.now()));
+                    player.pause();
+                    router.push({
+                      pathname: '/tv',
+                      params: video ? { video, at } : { ref: play.id, file: String(play.video.index), at },
+                    });
+                  }}
+                  accessibilityLabel="Play on TV"
+                  style={styles.round}
+                >
+                  <Icon name={icons.cast} size={22} tint={color.ink} />
+                </Tap>
+              </View>
+
+              <View style={styles.middle} pointerEvents="box-none">
+                <Tap
+                  shrink={0.86}
+                  onPress={() => skip(-SKIP)}
+                  accessibilityLabel={`Back ${SKIP} seconds`}
+                  style={styles.side}
+                >
+                  <Icon name={icons.rewind} size={30} tint={color.ink} />
+                </Tap>
+                <PlayButton playing={isPlaying} buffering={buffering} onPress={toggle} />
+                <Tap
+                  shrink={0.86}
+                  onPress={() => skip(SKIP)}
+                  accessibilityLabel={`Forward ${SKIP} seconds`}
+                  style={styles.side}
+                >
+                  <Icon name={icons.forward} size={30} tint={color.ink} />
+                </Tap>
+              </View>
+
+              <View
+                style={[
+                  styles.bottom,
+                  {
+                    paddingBottom: Math.max(insets.bottom, space.lg),
+                    paddingLeft: insets.left + space.xl,
+                    paddingRight: insets.right + space.xl,
+                  },
+                ]}
               >
-                <Icon name={icons.subtitles} size={22} tint={color.ink} />
-              </Tap>
-              <Tap
-                shrink={0.88}
-                onPress={() => setSheet('settings')}
-                accessibilityLabel="Settings"
-                style={styles.round}
-              >
-                <Icon name={icons.settings} size={22} tint={color.ink} />
-              </Tap>
-              <Tap
-                shrink={0.88}
-                onPress={() => {
-                  const at = String(Math.floor(timeline.now()));
-                  player.pause();
-                  router.push({
-                    pathname: '/tv',
-                    params: video ? { video, at } : { ref: play.id, file: String(play.video.index), at },
-                  });
-                }}
-                accessibilityLabel="Play on TV"
-                style={styles.round}
-              >
-                <Icon name={icons.cast} size={22} tint={color.ink} />
-              </Tap>
-            </View>
+                <SeekBar
+                  position={time.currentTime}
+                  duration={duration || player.duration || 0}
+                  buffered={time.bufferedPosition}
+                  download={download}
+                  downloaded={downloaded}
+                  onScrubbing={setScrubbing}
+                  onSeek={(seconds) => {
+                    if (duration <= 0) return;
+                    timeline.seek(seconds);
+                  }}
+                />
+              </View>
+            </Animated.View>
+          ) : null}
 
-            <View style={styles.middle} pointerEvents="box-none">
-              <Tap
-                shrink={0.86}
-                onPress={() => skip(-SKIP)}
-                accessibilityLabel={`Back ${SKIP} seconds`}
-                style={styles.side}
-              >
-                <Icon name={icons.rewind} size={30} tint={color.ink} />
-              </Tap>
-              <PlayButton playing={isPlaying} buffering={buffering} onPress={toggle} />
-              <Tap
-                shrink={0.86}
-                onPress={() => skip(SKIP)}
-                accessibilityLabel={`Forward ${SKIP} seconds`}
-                style={styles.side}
-              >
-                <Icon name={icons.forward} size={30} tint={color.ink} />
-              </Tap>
-            </View>
-
-            <View
-              style={[
-                styles.bottom,
-                {
-                  paddingBottom: Math.max(insets.bottom, space.lg),
-                  paddingLeft: insets.left + space.xl,
-                  paddingRight: insets.right + space.xl,
-                },
-              ]}
-            >
-              <SeekBar
-                position={time.currentTime}
-                duration={duration || player.duration || 0}
-                buffered={time.bufferedPosition}
-                download={download}
-                downloaded={downloaded}
-                onScrubbing={setScrubbing}
-                onSeek={(seconds) => {
-                  if (duration <= 0) return;
-                  timeline.seek(seconds);
-                }}
-              />
-            </View>
-          </Animated.View>
-        ) : null}
-
-        <SubtitleOverlay
-          cues={cues}
-          time={position - (offset ?? 0)}
-          lifted={visible}
-          look={preferences.subtitleStyle}
-        />
-
-        <RecoveryNotice recovery={recovery} switched={switched} onRetry={retry} />
-
-        {ended ? (
-          <Ended
-            next={next?.name ?? null}
-            onNext={() => next && router.replace({ pathname: '/play', params: { video: next.video } })}
-            onReplay={() => {
-              setEnded(false);
-              timeline.seek(0);
-              player.play();
-            }}
-            onBack={() => router.back()}
+          <SubtitleOverlay
+            cues={cues}
+            time={position - (offset ?? 0)}
+            lifted={visible}
+            look={preferences.subtitleStyle}
           />
-        ) : null}
 
-        {sheet === 'tracks' ? (
-          <TracksSheet
-            player={player}
-            media={media}
-            streamAudio={
-              timeline.mode.kind === 'stream' && media
-                ? { tracks: media.audio, selected: timeline.mode.audio, onSelect: timeline.chooseAudio }
-                : null
-            }
-            files={subtitleFiles}
-            online={online}
-            drawn={drawn}
-            onDraw={(choice) => {
-              setDrawn(choice);
-              if (choice) player.subtitleTrack = null;
-            }}
-            onClose={() => setSheet(null)}
-          />
-        ) : null}
+          <RecoveryNotice recovery={recovery} switched={switched} onRetry={retry} />
 
-        {sheet === 'settings' ? (
-          <SettingsSheet
-            source={video ? release : null}
-            onSources={() => setSheet('sources')}
-            speed={preferences.speed}
-            onSpeed={(speed) => setPreferences({ speed })}
-            offset={offset}
-            onShift={(seconds) => drawnKey && setOffsets((previous) => ({ ...previous, [drawnKey]: seconds }))}
-            style={preferences.subtitleStyle}
-            onStyle={(change) => setPreferences({ subtitleStyle: { ...preferences.subtitleStyle, ...change } })}
-            onClose={() => setSheet(null)}
-          />
-        ) : null}
+          {ended ? (
+            <Ended
+              next={next?.name ?? null}
+              onNext={() => next && router.replace({ pathname: '/play', params: { video: next.video } })}
+              onReplay={() => {
+                setEnded(false);
+                timeline.seek(0);
+                player.play();
+              }}
+              onBack={() => router.back()}
+            />
+          ) : null}
 
-        {sheet === 'sources' && video ? (
-          <SourcesSheet
-            video={video}
-            label={episode ? subheading : heading}
-            current={release.id}
-            onPick={(source) => {
-              const at = String(Math.floor(timeline.now()));
-              setSheet(null);
-              player.pause();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              // Saved first, so the place is the engine's too if this screen is gone before the next starts.
-              save().then(() => router.replace({ pathname: '/play', params: { video, source: source.id, at } }));
-            }}
-            onClose={() => setSheet(null)}
-          />
-        ) : null}
+          {sheet === 'tracks' ? (
+            <TracksSheet
+              player={player}
+              media={media}
+              streamAudio={
+                timeline.mode.kind === 'stream' && media
+                  ? { tracks: media.audio, selected: timeline.mode.audio, onSelect: timeline.chooseAudio }
+                  : null
+              }
+              files={subtitleFiles}
+              online={online}
+              drawn={drawn}
+              onDraw={(choice) => {
+                setDrawn(choice);
+                if (choice) player.subtitleTrack = null;
+              }}
+              onClose={() => setSheet(null)}
+            />
+          ) : null}
 
-        {sheet === 'files' ? (
-          <FilesSheet
-            videos={videos}
-            current={play.video.index}
-            onPick={(file) => {
-              setSheet(null);
-              router.replace({ pathname: '/play', params: { ref: play.id, file: String(file.index) } });
-            }}
-            onClose={() => setSheet(null)}
-          />
-        ) : null}
-      </Animated.View>
-    </View>
+          {sheet === 'settings' ? (
+            <SettingsSheet
+              source={video ? release : null}
+              onSources={() => setSheet('sources')}
+              speed={preferences.speed}
+              onSpeed={(speed) => setPreferences({ speed })}
+              offset={offset}
+              onShift={(seconds) => drawnKey && setOffsets((previous) => ({ ...previous, [drawnKey]: seconds }))}
+              style={preferences.subtitleStyle}
+              onStyle={(change) => setPreferences({ subtitleStyle: { ...preferences.subtitleStyle, ...change } })}
+              onClose={() => setSheet(null)}
+            />
+          ) : null}
+
+          {sheet === 'sources' && video ? (
+            <SourcesSheet
+              video={video}
+              label={episode ? subheading : heading}
+              current={release.id}
+              onPick={(source) => {
+                const at = String(Math.floor(timeline.now()));
+                setSheet(null);
+                player.pause();
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                // Saved first, so the place is the engine's too if this screen is gone before the next starts.
+                save().then(() => router.replace({ pathname: '/play', params: { video, source: source.id, at } }));
+              }}
+              onClose={() => setSheet(null)}
+            />
+          ) : null}
+
+          {sheet === 'files' ? (
+            <FilesSheet
+              videos={videos}
+              current={play.video.index}
+              onPick={(file) => {
+                setSheet(null);
+                router.replace({ pathname: '/play', params: { ref: play.id, file: String(file.index) } });
+              }}
+              onClose={() => setSheet(null)}
+            />
+          ) : null}
+        </Animated.View>
+      </View>
+    </PortalHost>
   );
 }
 
