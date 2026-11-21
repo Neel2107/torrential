@@ -1,0 +1,112 @@
+{
+  "expo": {
+    "name": "torrential",
+    "slug": "torrential",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "torrential",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#14120f",
+    "ios": {
+      "bundleIdentifier": "dev.torrential.app",
+      "icon": "./assets/expo.icon",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "torrential connects to the engine on your computer or server over your home network.",
+        "NSCameraUsageDescription": "The camera scans the pairing code your computer shows."
+      }
+    },
+    "android": {
+      "package": "dev.torrential.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#14120f",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": [
+            "DEFAULT",
+            "BROWSABLE"
+          ],
+          "data": [
+            {
+              "scheme": "magnet"
+            }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "category": [
+            "DEFAULT",
+            "BROWSABLE"
+          ],
+          "data": [
+            {
+              "scheme": "content",
+              "mimeType": "application/x-bittorrent"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/x-bittorrent"
+            }
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "The camera scans the pairing code your computer shows.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#14120f",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      [
+        "expo-sharing",
+        {
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["text/plain", "application/x-bittorrent", "application/octet-stream"]
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
