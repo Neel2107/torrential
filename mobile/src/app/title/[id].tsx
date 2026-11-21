@@ -26,6 +26,7 @@ import { SourcesSheet } from '@/player/SourcesSheet';
 import { Art } from '@/ui/Art';
 import { Burst, type BurstHandle } from '@/ui/Burst';
 import { Button } from '@/ui/Button';
+import { CastBar } from '@/ui/CastBar';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
@@ -44,6 +45,7 @@ export default function Title() {
   const scrollY = useSharedValue(0);
   const bannerHeight = Math.round(width * BANNER);
   const [refreshing, setRefreshing] = useState(false);
+  const [docked, setDocked] = useState(0);
 
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
@@ -79,7 +81,7 @@ export default function Title() {
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: bannerHeight - 56, paddingBottom: insets.bottom + space.xxl }}
+        contentContainerStyle={{ paddingTop: bannerHeight - 56, paddingBottom: insets.bottom + space.xxl + docked }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -132,6 +134,7 @@ export default function Title() {
           <Icon name={icons.cast} size={20} tint={color.ink} />
         </Tap>
       </View>
+      <CastBar bottom={insets.bottom + space.sm} onHeight={setDocked} />
     </View>
   );
 }

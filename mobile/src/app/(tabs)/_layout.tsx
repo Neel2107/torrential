@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router/js-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { JobsProvider, useJobs } from '@/engine/jobs';
-import { ChromeProvider } from '@/ui/chrome';
-import { TabBar } from '@/ui/TabBar';
-import { color } from '@/theme';
+import { CastBar } from '@/ui/CastBar';
+import { ChromeProvider, useChrome } from '@/ui/chrome';
+import { TAB_BAR_HEIGHT, TabBar } from '@/ui/TabBar';
+import { color, space } from '@/theme';
 
 export default function TabsLayout() {
   return (
@@ -27,6 +29,20 @@ function Tabbed() {
         <Tabs.Screen name="search" />
         <Tabs.Screen name="downloads" />
       </Tabs>
+      <DockedCastBar />
     </ChromeProvider>
+  );
+}
+
+function DockedCastBar() {
+  const insets = useSafeAreaInsets();
+  const { hidden, setDocked } = useChrome();
+  return (
+    <CastBar
+      bottom={insets.bottom + TAB_BAR_HEIGHT + space.sm}
+      hidden={hidden}
+      travel={TAB_BAR_HEIGHT}
+      onHeight={setDocked}
+    />
   );
 }

@@ -180,6 +180,7 @@ function Titles({
 }) {
   const insets = useSafeAreaInsets();
   const onScroll = useChromeScroll();
+  const { docked } = useChrome();
   const result = useTitleSearch(query);
   const titles = result.data?.titles ?? [];
 
@@ -191,7 +192,7 @@ function Titles({
       scrollEventThrottle={16}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl }}
+      contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl + docked }}
       ListHeaderComponent={
         result.isFetching && query ? (
           <ActivityIndicator style={{ marginTop: space.lg }} color={color.soft} />
@@ -269,6 +270,7 @@ function Torrents({
   const link = useLink();
   const insets = useSafeAreaInsets();
   const onScroll = useChromeScroll();
+  const { docked } = useChrome();
   const [state, setState] = useState<{ releases: Release[]; pending: string[]; done: boolean; error: string | null }>({
     releases: [],
     pending: [],
@@ -307,7 +309,7 @@ function Torrents({
       scrollEventThrottle={16}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl }}
+      contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xl + docked }}
       ListHeaderComponent={
         query && !state.done ? (
           <View style={styles.searching}>

@@ -1,9 +1,9 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { StyleSheet } from 'react-native';
-import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { interpolate, LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { color, space } from '@/theme';
+import { color, motion, space } from '@/theme';
 
 import { useChrome } from './chrome';
 import { Icon } from './Icon';
@@ -13,14 +13,17 @@ import { Tap } from './Tap';
 /** The floating button in the corner. It turns see-through while the feed scrolls, as X's does. */
 export function Fab({ icon, label, onPress }: { icon: LucideIcon; label: string; onPress: () => void }) {
   const insets = useSafeAreaInsets();
-  const { hidden } = useChrome();
+  const { hidden, docked } = useChrome();
   const fade = useAnimatedStyle(() => ({
     opacity: interpolate(hidden.value, [0, 1], [1, 0.45]),
     transform: [{ translateY: hidden.value * (TAB_BAR_HEIGHT * 0.6) }],
   }));
 
   return (
-    <Animated.View style={[styles.wrap, { bottom: insets.bottom + TAB_BAR_HEIGHT + space.lg }, fade]}>
+    <Animated.View
+      layout={LinearTransition.duration(motion.standard).easing(motion.out)}
+      style={[styles.wrap, { bottom: insets.bottom + TAB_BAR_HEIGHT + space.lg + docked }, fade]}
+    >
       <Tap haptic shrink={0.92} onPress={onPress} accessibilityLabel={label} style={styles.fab}>
         <Icon name={icon} size={26} tint={color.actionInk} weight={2.4} />
       </Tap>

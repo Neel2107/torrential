@@ -19,7 +19,7 @@ import type { Continue } from '@web/wire';
 
 import { useHome } from '@/engine/queries';
 import { Art } from '@/ui/Art';
-import { useChromeScroll } from '@/ui/chrome';
+import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Fab } from '@/ui/Fab';
@@ -41,6 +41,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const top = useTopInset(false);
   const onScroll = useChromeScroll();
+  const { docked } = useChrome();
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = async () => {
@@ -54,7 +55,10 @@ export default function Home() {
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: top + space.md, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 96 }}
+        contentContainerStyle={{
+          paddingTop: top + space.md,
+          paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 96 + docked,
+        }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

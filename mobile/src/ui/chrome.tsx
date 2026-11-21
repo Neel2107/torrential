@@ -1,4 +1,4 @@
-import { createContext, use, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, use, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAnimatedScrollHandler, useSharedValue, withSpring, type SharedValue } from 'react-native-reanimated';
 
 import { motion } from '@/theme';
@@ -6,7 +6,12 @@ import { motion } from '@/theme';
 /** How far a finger scrolls, in points, to hide the bars all the way. */
 const TRAVEL = 72;
 
-type Chrome = { hidden: SharedValue<number> };
+type Chrome = {
+  hidden: SharedValue<number>;
+  /** How much of the bottom the cast bar covers, in points, so feeds and the floating button make room. */
+  docked: number;
+  setDocked: (height: number) => void;
+};
 
 const Context = createContext<Chrome | null>(null);
 
@@ -16,7 +21,8 @@ const Context = createContext<Chrome | null>(null);
  */
 export function ChromeProvider({ children }: { children: ReactNode }) {
   const hidden = useSharedValue(0);
-  const value = useMemo(() => ({ hidden }), [hidden]);
+  const [docked, setDocked] = useState(0);
+  const value = useMemo(() => ({ hidden, docked, setDocked }), [hidden, docked]);
   return <Context value={value}>{children}</Context>;
 }
 

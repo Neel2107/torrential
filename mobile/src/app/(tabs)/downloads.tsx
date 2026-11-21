@@ -18,7 +18,7 @@ import { post } from '@/engine/client';
 import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
 import { Art } from '@/ui/Art';
 import { useLink } from '@/engine/session';
-import { useChromeScroll } from '@/ui/chrome';
+import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
@@ -36,6 +36,7 @@ export default function Downloads() {
   const insets = useSafeAreaInsets();
   const top = useTopInset(true);
   const onScroll = useChromeScroll();
+  const { docked } = useChrome();
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState<Job | null>(null);
 
@@ -51,7 +52,7 @@ export default function Downloads() {
         onScroll={onScroll}
         scrollEventThrottle={16}
         itemLayoutAnimation={LinearTransition.duration(motion.standard)}
-        contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 96 }}
+        contentContainerStyle={{ paddingTop: top, paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 96 + docked }}
         ListEmptyComponent={
           live ? (
             <Animated.View entering={rise(0)} style={styles.empty}>
