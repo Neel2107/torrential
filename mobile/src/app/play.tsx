@@ -28,11 +28,13 @@ import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
 
 export default function Play() {
-  const { video, ref, file, source, stream } = useLocalSearchParams<{
+  const { video, ref, file, source, at, stream } = useLocalSearchParams<{
     video?: string;
     ref?: string;
     file?: string;
     source?: string;
+    /** Seconds to start at, when another source takes over mid-play. */
+    at?: string;
     stream?: string;
   }>();
   if (__DEV__) FORCE_STREAM.value = stream === '1';
@@ -45,7 +47,13 @@ export default function Play() {
       retry={() => setAttempt((n) => n + 1)}
     />
   ) : (
-    <ByTitle video={video ?? ''} source={source} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />
+    <ByTitle
+      video={video ?? ''}
+      source={source}
+      at={at ? Number(at) : null}
+      attempt={attempt}
+      retry={() => setAttempt((n) => n + 1)}
+    />
   );
 }
 
@@ -72,11 +80,13 @@ function ByTorrent({
 function ByTitle({
   video,
   source,
+  at,
   attempt,
   retry,
 }: {
   video: string;
   source?: string;
+  at: number | null;
   attempt: number;
   retry: () => void;
 }) {
@@ -87,7 +97,7 @@ function ByTitle({
         video={video}
         play={start.play}
         release={start.release}
-        resumeAt={start.resumeAt}
+        resumeAt={at ?? start.resumeAt}
         title={start.title}
         episode={start.episode}
       />

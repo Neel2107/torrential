@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { bytes } from '@web/lib/format';
+import { readable } from '@web/lib/release';
 import type { SubtitleBacking, SubtitleStyle } from '@web/lib/storage';
+import type { Release } from '@web/wire';
 
+import { Icon, icons } from '@/ui/Icon';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { color, font, radius, space, type } from '@/theme';
@@ -32,8 +36,10 @@ function speedText(speed: number): string {
   return speed === 1 ? 'Normal' : `${speed}×`;
 }
 
-/** The player's settings: speed, and the timing and look of drawn subtitles. */
+/** The player's settings: the source of a title, the speed, and the timing and look of drawn subtitles. */
 export function SettingsSheet({
+  source,
+  onSources,
   speed,
   onSpeed,
   offset,
@@ -42,6 +48,9 @@ export function SettingsSheet({
   onStyle,
   onClose,
 }: {
+  /** The release playing, for a title play, whose other sources can take over. */
+  source: Release | null;
+  onSources: () => void;
   speed: number;
   onSpeed: (speed: number) => void;
   /** Seconds the drawn subtitles show later than written, or null when none are drawn. */
@@ -55,6 +64,25 @@ export function SettingsSheet({
     <Sheet onClose={onClose}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[type.title, styles.heading]}>Settings</Text>
+
+        {source ? (
+          <Tap shrink={1} highlight haptic onPress={onSources} accessibilityLabel="Other sources" style={styles.link}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={type.headline}>Source</Text>
+              <Text style={type.caption} numberOfLines={1}>
+                {[
+                  readable(source.name).title,
+                  source.quality.resolution?.toUpperCase(),
+                  source.size && bytes(source.size),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+            </View>
+            <Text style={type.label}>Change</Text>
+            <Icon name={icons.chevron} size={20} tint={color.pencil} />
+          </Tap>
+        ) : null}
 
         <Section title="Speed" value={speedText(speed)}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.line}>
@@ -184,4 +212,13 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: color.ink },
   chipText: { fontFamily: font.semibold, fontSize: 14, color: color.soft, fontVariant: ['tabular-nums'] },
   chipTextSelected: { color: color.paper },
+  link: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    minHeight: 56,
+    marginHorizontal: -space.md,
+    paddingHorizontal: space.md,
+    borderRadius: 12,
+  },
 });

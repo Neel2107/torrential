@@ -47,6 +47,7 @@ import { usePlayerPreferences } from './preferences';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
 import { SettingsSheet } from './SettingsSheet';
+import { SourcesSheet } from './SourcesSheet';
 import { choiceKey, SubtitleOverlay, useOnlineSubtitles, useSubtitleCues, type SubtitleChoice } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
 
@@ -54,7 +55,7 @@ const HIDE_AFTER_MS = 3200;
 const SKIP = 10;
 
 /** The one sheet open over the player, if any. */
-type OpenSheet = 'tracks' | 'settings' | 'files';
+type OpenSheet = 'tracks' | 'settings' | 'sources' | 'files';
 
 /** The aired episode after `video` in playing order, as the web player finds it. */
 function nextEpisode(page: TitlePage | null, video: string | null): { video: string; name: string } | null {
@@ -485,12 +486,31 @@ export function Player({
 
         {sheet === 'settings' ? (
           <SettingsSheet
+            source={video ? release : null}
+            onSources={() => setSheet('sources')}
             speed={preferences.speed}
             onSpeed={(speed) => setPreferences({ speed })}
             offset={offset}
             onShift={(seconds) => drawnKey && setOffsets((previous) => ({ ...previous, [drawnKey]: seconds }))}
             style={preferences.subtitleStyle}
             onStyle={(change) => setPreferences({ subtitleStyle: { ...preferences.subtitleStyle, ...change } })}
+            onClose={() => setSheet(null)}
+          />
+        ) : null}
+
+        {sheet === 'sources' && video ? (
+          <SourcesSheet
+            video={video}
+            label={episode ? subheading : heading}
+            current={release.id}
+            onPick={(source) => {
+              const at = String(Math.floor(timeline.now()));
+              setSheet(null);
+              player.pause();
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              // Saved first, so the place is the engine's too if this screen is gone before the next starts.
+              save().then(() => router.replace({ pathname: '/play', params: { video, source: source.id, at } }));
+            }}
             onClose={() => setSheet(null)}
           />
         ) : null}

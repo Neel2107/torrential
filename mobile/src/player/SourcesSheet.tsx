@@ -21,9 +21,22 @@ type State = { releases: Release[]; done: boolean; error: string | null };
 
 /**
  * Every release of a film or episode, ranked for this phone's screen and decoders, in the order Play
- * tries them. Picking one plays that release and no other.
+ * tries them. Picking one plays that release and no other. From the player, `current` is the
+ * release playing and `onPick` takes over from it.
  */
-export function SourcesSheet({ video, label, onClose }: { video: string; label: string; onClose: () => void }) {
+export function SourcesSheet({
+  video,
+  label,
+  current,
+  onPick,
+  onClose,
+}: {
+  video: string;
+  label: string;
+  current?: string;
+  onPick?: (release: Release) => void;
+  onClose: () => void;
+}) {
   const link = useLink();
   const viewer = useViewer();
   const [state, setState] = useState<State>({ releases: [], done: false, error: null });
@@ -66,8 +79,11 @@ export function SourcesSheet({ video, label, onClose }: { video: string; label: 
             <Tap
               shrink={1}
               highlight
-              haptic
+              haptic={release.id !== current}
+              disabled={release.id === current}
+              accessibilityState={{ selected: release.id === current }}
               onPress={() => {
+                if (onPick) return onPick(release);
                 onClose();
                 router.push({ pathname: '/play', params: { video, source: release.id } });
               }}
@@ -102,7 +118,11 @@ export function SourcesSheet({ video, label, onClose }: { video: string; label: 
                   ) : null}
                 </View>
               </View>
-              <Icon name={icons.play} size={18} tint={color.soft} filled />
+              {release.id === current ? (
+                <Text style={[type.label, { color: color.action }]}>Playing</Text>
+              ) : (
+                <Icon name={icons.play} size={18} tint={color.soft} filled />
+              )}
             </Tap>
           </Animated.View>
         ))}
