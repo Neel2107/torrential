@@ -44,6 +44,20 @@ What was decided while building the app, why, and how each part was checked on t
 | `.torrent` file | The Big Buck Bunny `.torrent` pushed to Downloads and opened with a VIEW intent became `magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c`, the known infohash |
 | Engine moved networks | The Mac moved from the phone's hotspot to home Wi-Fi; Change address kept the pairing and reloaded everything at `192.168.1.42` |
 | Stream fallback | Forced in development: the engine ran ffmpeg from the resume point, and a scrub started a new stream at 42:34 with the clock in step |
+| A damaged file | Pioneer One S01E01's MKV is damaged as published (the bytes match archive.org's copy). Media3 refuses it ("No valid varint length mask found"), so it plays from the stream. Opened at 33:45, it showed the credits with the clock at 33:51 and 0:13 left, then Up next |
+
+## A Matroska index that breaks off
+
+ffmpeg's seek reads a Matroska file's index. Where the index breaks off, as Pioneer One's does at
+17:41, every seek past that point lands at the last keyframe the index names. The stream asked for
+33:45 started at 17:41, and the app's clock, adding the asked-for time to the stream's own
+timestamps, read 50:52. Before a stream starts more than a minute in, the engine now asks ffprobe where
+the seek lands. When it lands more than a minute short, ffmpeg seeks with `-seek2any`. That lands on
+the packet at the asked-for time, and the copied picture starts at the next keyframe, a few seconds
+on. Files whose seek lands near the asked-for time keep the usual seek, because `-seek2any` would hold
+their picture back by up to one keyframe interval (9.5 s on The Martian). Embedded subtitles from such
+a file still start at the break: ffmpeg reading only a subtitle track lands there even with
+`-seek2any`.
 
 ## Not verified yet
 

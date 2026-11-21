@@ -558,6 +558,13 @@ async fn the_player_gets_a_files_tracks_once_and_a_stream_of_what_ffmpeg_writes(
     assert_eq!(
         tools.calls()[2],
         format!(
+            "ffprobe -v quiet -read_intervals 3000.500%+#1 -select_streams v:0 -show_entries packet=pts_time -of csv=p=0 {url}"
+        ),
+        "where the seek lands is asked first"
+    );
+    assert_eq!(
+        tools.calls()[3],
+        format!(
             "ffmpeg -v error -nostdin -ss 3000.500 -copyts -i {url} -map 0:0 -c:v copy -tag:v hvc1 -map 0:2 -c:a copy \
              -map_chapters -1 -map_metadata -1 -avoid_negative_ts disabled -movflags \
              frag_keyframe+empty_moov+default_base_moof+frag_discont -f mp4 pipe:1"
@@ -567,7 +574,7 @@ async fn the_player_gets_a_files_tracks_once_and_a_stream_of_what_ffmpeg_writes(
     assert_eq!(status, 200);
     assert!(headers.contains("content-type: text/vtt; charset=utf-8\n"), "{headers}");
     assert_eq!(
-        tools.calls()[3],
+        tools.calls()[4],
         format!(
             "ffmpeg -v error -nostdin -ss 60.000 -copyts -i {url} -map 0:3 -c:s webvtt -avoid_negative_ts disabled \
              -flush_packets 1 -f webvtt pipe:1"
@@ -592,7 +599,7 @@ async fn the_player_gets_a_files_tracks_once_and_a_stream_of_what_ffmpeg_writes(
             (404, "not_found", "Film (2024).mkv has no subtitle track at stream 9"),
         ]
     );
-    assert_eq!(tools.calls().len(), 4, "a refused request runs nothing");
+    assert_eq!(tools.calls().len(), 5, "a refused request runs nothing");
 }
 
 /// The version of the stand-in build, which names the folder it unpacks into.

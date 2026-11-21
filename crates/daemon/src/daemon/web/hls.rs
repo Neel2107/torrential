@@ -176,10 +176,10 @@ fn session_key(file: &(String, u32), t: f64, audio: Option<u32>, picture: Pictur
 async fn first_segment(key: &str, dir: &Path) -> Result<String, Error> {
     let deadline = Instant::now() + FIRST_SEGMENT;
     loop {
-        if let Ok(text) = tokio::fs::read_to_string(dir.join("index.m3u8")).await {
-            if text.contains("#EXTINF") {
-                return Ok(text);
-            }
+        if let Ok(text) = tokio::fs::read_to_string(dir.join("index.m3u8")).await
+            && text.contains("#EXTINF")
+        {
+            return Ok(text);
         }
         let exited = {
             let mut sessions = SESSIONS.lock().expect("no holder panics");
@@ -264,10 +264,24 @@ mod tests {
 
     #[test]
     fn the_stream_conversion_becomes_hls_in_the_folder() {
-        let args: Vec<String> =
-            ["-v", "error", "-copyts", "-i", "URL", "-map", "0:0", "-c:v", "copy", "-movflags", "frag", "-f", "mp4", "pipe:1"]
-                .map(String::from)
-                .to_vec();
+        let args: Vec<String> = [
+            "-v",
+            "error",
+            "-copyts",
+            "-i",
+            "URL",
+            "-map",
+            "0:0",
+            "-c:v",
+            "copy",
+            "-movflags",
+            "frag",
+            "-f",
+            "mp4",
+            "pipe:1",
+        ]
+        .map(String::from)
+        .to_vec();
         let hls = as_hls(args, Path::new("/tmp/s"));
         assert!(!hls.contains(&"-copyts".to_string()), "timestamps start at zero");
         assert!(!hls.contains(&"pipe:1".to_string()), "nothing goes to stdout");

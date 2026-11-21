@@ -7,8 +7,8 @@
 
 pub mod assets;
 mod cast;
-mod hls;
 pub mod devices;
+mod hls;
 mod online;
 pub mod play;
 pub(super) mod titles;

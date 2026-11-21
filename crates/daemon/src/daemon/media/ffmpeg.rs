@@ -30,6 +30,16 @@ pub enum Picture {
     H264,
 }
 
+/// Where a conversion starts in the file.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Start {
+    pub t: f64,
+    /// Seek to the packet at `t` instead of through the file's index to the keyframe before it. A
+    /// copied picture then starts at the first keyframe after `t`, seconds late, so this is only for
+    /// a file whose index breaks off before `t`.
+    pub past_index: bool,
+}
+
 /// The encoder to use for `Picture::H264`.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Encoder {
@@ -46,6 +56,15 @@ impl Encoder {
 
 pub fn probe(url: &str) -> Vec<String> {
     strings(&["-v", "error", "-print_format", "json", "-show_format", "-show_streams", "-show_chapters", url])
+}
+
+/// ffprobe arguments that print the time of the first video packet a seek to `t` reaches.
+pub fn landing(url: &str, t: f64) -> Vec<String> {
+    let interval = format!("{}%+#1", seconds(t));
+    strings(&["-v", "quiet", "-read_intervals", &interval, "-select_streams", "v:0"])
+        .into_iter()
+        .chain(strings(&["-show_entries", "packet=pts_time", "-of", "csv=p=0", url]))
+        .collect()
 }
 
 /// A JPEG of the frame at `t` seconds, 240 pixels wide, written to stdout. ffmpeg reads the file on
@@ -81,14 +100,14 @@ pub fn paces(version: &str) -> bool {
 pub fn stream(
     url: &str,
     media: &Media,
-    t: f64,
+    start: Start,
     audio: Option<u32>,
     picture: Picture,
     encoder: Encoder,
     paced: bool,
 ) -> Vec<String> {
     let mut args = strings(&["-v", "error", "-nostdin"]);
-    args.extend(from(t));
+    args.extend(from(start));
     args.extend(pacing(paced));
     args.extend(strings(&["-copyts", "-i", url]));
     let mut add = |more: &[&str]| args.extend(strings(more));
@@ -132,7 +151,7 @@ pub fn stream(
 /// own timeline. With `paced`, ffmpeg reads no faster than the video plays, past a burst.
 pub fn embedded_subtitles(url: &str, stream: u32, t: f64, paced: bool) -> Vec<String> {
     let mut args = strings(&["-v", "error", "-nostdin"]);
-    args.extend(from(t));
+    args.extend(from(Start { t, past_index: false }));
     args.extend(pacing(paced));
     args.extend(strings(&["-copyts", "-i", url]));
     args.extend(strings(&["-map", &format!("0:{stream}"), "-c:s", "webvtt", "-avoid_negative_ts", "disabled"]));
@@ -171,8 +190,12 @@ fn bitrate(height: u32) -> &'static str {
 /// The seek that starts a conversion `t` seconds in. A conversion from the start has none: a seek
 /// reads the file's index, which a Matroska file keeps at its end, and playing from the beginning
 /// would wait for the last piece of the download.
-fn from(t: f64) -> Vec<String> {
-    if t.is_finite() && t > 0.0 { strings(&["-ss", &seconds(t)]) } else { Vec::new() }
+fn from(Start { t, past_index }: Start) -> Vec<String> {
+    match (t.is_finite() && t > 0.0, past_index) {
+        (false, _) => Vec::new(),
+        (true, false) => strings(&["-ss", &seconds(t)]),
+        (true, true) => strings(&["-seek2any", "1", "-ss", &seconds(t)]),
+    }
 }
 
 fn seconds(t: f64) -> String {
@@ -190,6 +213,10 @@ mod tests {
     use crate::ffmpeg::fetch::Readiness;
 
     const URL: &str = "http://127.0.0.1:47919/ab/0/film.mkv";
+
+    fn at(t: f64) -> Start {
+        Start { t, past_index: false }
+    }
 
     fn media(codec: &str, audio: &[(&str, bool)]) -> Media {
         let audio = (1..)
@@ -232,26 +259,26 @@ mod tests {
         let tail = "-map_chapters -1 -map_metadata -1 -avoid_negative_ts disabled -movflags \
                     frag_keyframe+empty_moov+default_base_moof+frag_discont -f mp4 pipe:1";
         assert_eq!(
-            line(stream(URL, &film, 3000.5, None, Picture::Copy, Encoder::X264, false)),
+            line(stream(URL, &film, at(3000.5), None, Picture::Copy, Encoder::X264, false)),
             format!(
                 "-v error -nostdin -ss 3000.500 -copyts -i {URL} -map 0:0 -c:v copy -tag:v hvc1 -map 0:2 -c:a copy {tail}"
             )
         );
         assert_eq!(
-            line(stream(URL, &media("h264", &[("ac3", false)]), 0.0, Some(1), Picture::Copy, Encoder::X264, false)),
+            line(stream(URL, &media("h264", &[("ac3", false)]), at(0.0), Some(1), Picture::Copy, Encoder::X264, false)),
             format!("-v error -nostdin -copyts -i {URL} -map 0:0 -c:v copy -map 0:1 -c:a aac -ac 2 -b:a 192k {tail}")
         );
         let fit = "-vf scale=w='min(1920,iw)':h='min(1080,ih)':force_original_aspect_ratio=decrease:\
                    force_divisible_by=2,format=yuv420p -g 48";
         assert_eq!(
-            line(stream(URL, &media("mpeg4", &[]), -4.0, Some(7), Picture::H264, Encoder::VideoToolbox, false)),
+            line(stream(URL, &media("mpeg4", &[]), at(-4.0), Some(7), Picture::H264, Encoder::VideoToolbox, false)),
             format!(
                 "-v error -nostdin -copyts -i {URL} -map 0:0 {fit} -c:v h264_videotoolbox -profile:v high \
                  -b:v 8M {tail}"
             )
         );
         assert!(
-            line(stream(URL, &film, 1.0, None, Picture::H264, Encoder::X264, false))
+            line(stream(URL, &film, at(1.0), None, Picture::H264, Encoder::X264, false))
                 .contains(&format!("{fit} -c:v libx264 -preset veryfast -crf 21 -profile:v high -map 0:2"))
         );
     }
@@ -259,7 +286,7 @@ mod tests {
     #[test]
     fn a_paced_conversion_reads_at_one_and_a_half_times_its_speed_after_a_minute() {
         let film = media("h264", &[("aac", true)]);
-        let paced = stream(URL, &film, 600.0, None, Picture::Copy, Encoder::X264, true).join(" ");
+        let paced = stream(URL, &film, at(600.0), None, Picture::Copy, Encoder::X264, true).join(" ");
         assert!(
             paced.starts_with(&format!(
                 "-v error -nostdin -ss 600.000 -readrate 1.5 -readrate_initial_burst 60 -copyts -i {URL}"
@@ -273,6 +300,19 @@ mod tests {
                  -avoid_negative_ts disabled -flush_packets 1 -f webvtt pipe:1"
             )
         );
+    }
+
+    #[test]
+    fn a_start_past_a_broken_index_seeks_to_the_packet_itself() {
+        let film = media("h264", &[("aac", true)]);
+        let past = Start { t: 2025.0, past_index: true };
+        assert!(
+            stream(URL, &film, past, None, Picture::Copy, Encoder::X264, false)
+                .join(" ")
+                .starts_with(&format!("-v error -nostdin -seek2any 1 -ss 2025.000 -copyts -i {URL}"))
+        );
+        let start = Start { t: 0.0, past_index: true };
+        assert!(!stream(URL, &film, start, None, Picture::Copy, Encoder::X264, false).contains(&"-seek2any".into()));
     }
 
     #[test]
