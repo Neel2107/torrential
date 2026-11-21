@@ -42,6 +42,7 @@ import { MenuRow } from '@/ui/MenuRow';
 import { Meter } from '@/ui/Meter';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
+import { Skeleton } from '@/ui/Skeleton';
 import { Tap } from '@/ui/Tap';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
@@ -69,9 +70,22 @@ function useDebounced<T>(value: T, ms: number): T {
   return settled;
 }
 
+/** True once `busy` has lasted `ms`, so an answer that comes quickly never flashes a spinner. */
+function useLingering(busy: boolean, ms: number): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!busy) return setShown(false);
+    const timer = setTimeout(() => setShown(true), ms);
+    return () => clearTimeout(timer);
+  }, [busy, ms]);
+  return shown;
+}
+
 export default function Search() {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const searching = useLingering(busy, 200);
   const [tab, setTab] = useState(0);
   const [everything, setEverything] = useState(false);
   const query = useDebounced(text.trim(), 280);
@@ -95,7 +109,7 @@ export default function Search() {
   return (
     <View style={styles.screen}>
       {tab === 0 ? (
-        <Titles query={query} top={top} idle={idle} onOpen={remember} />
+        <Titles query={query} top={top} idle={idle} onOpen={remember} onBusy={setBusy} />
       ) : (
         <Torrents
           query={query}
@@ -104,9 +118,10 @@ export default function Search() {
           top={top}
           idle={idle}
           onOpen={remember}
+          onBusy={setBusy}
         />
       )}
-      <SearchHeader text={text} setText={setText} tab={tab} setTab={setTab} onSubmit={remember} />
+      <SearchHeader text={text} setText={setText} tab={tab} setTab={setTab} onSubmit={remember} searching={searching} />
     </View>
   );
 }
@@ -117,12 +132,15 @@ function SearchHeader({
   tab,
   setTab,
   onSubmit,
+  searching,
 }: {
   text: string;
   setText: (text: string) => void;
   tab: number;
   setTab: (tab: number) => void;
   onSubmit: () => void;
+  /** A search is on its way, shown where the magnifying glass sits. */
+  searching: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { hidden } = useChrome();
@@ -139,7 +157,13 @@ function SearchHeader({
         <View style={styles.fieldRow}>
           <Animated.View style={[styles.field, field]}>
             <Glass style={styles.fieldGlass} />
-            <Icon name={icons.search} size={18} tint={color.pencil} />
+            <View style={styles.fieldIcon}>
+              {searching ? (
+                <ActivityIndicator size="small" color={color.soft} />
+              ) : (
+                <Icon name={icons.search} size={18} tint={color.pencil} />
+              )}
+            </View>
             <TextInput
               ref={input}
               value={text}
@@ -217,16 +241,25 @@ function Titles({
   top,
   idle,
   onOpen,
+  onBusy,
 }: {
   query: string;
   top: number;
   idle: ReactElement | null;
   onOpen: () => void;
+  onBusy: (busy: boolean) => void;
 }) {
   const onScroll = useChromeScroll();
   const { bottom } = useChrome();
   const result = useTitleSearch(query);
   const titles = result.data?.titles ?? [];
+  const fetching = result.isFetching && query.length > 0;
+  // The last answer stays while the next is on its way, dimmed so it reads as the old one.
+  const stale = useAnimatedStyle(() => ({
+    opacity: withTiming(result.isPlaceholderData ? 0.5 : 1, { duration: motion.quick }),
+  }));
+
+  useEffect(() => onBusy(fetching), [fetching, onBusy]);
 
   return (
     <Animated.FlatList
@@ -237,11 +270,6 @@ function Titles({
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ paddingTop: top, paddingBottom: bottom + space.xl }}
-      ListHeaderComponent={
-        result.isFetching && query ? (
-          <ActivityIndicator style={{ marginTop: space.lg }} color={color.soft} />
-        ) : undefined
-      }
       ListEmptyComponent={
         !query ? (
           (idle ?? (
@@ -259,9 +287,15 @@ function Titles({
             title={`No films or shows named “${query}”`}
             body="Try the Torrents tab to search every source by name."
           />
-        ) : undefined
+        ) : (
+          <RowsLoading />
+        )
       }
-      renderItem={({ item, index }) => <TitleRow title={item} index={index} onOpen={onOpen} />}
+      renderItem={({ item, index }) => (
+        <Animated.View style={stale}>
+          <TitleRow title={item} index={index} onOpen={onOpen} />
+        </Animated.View>
+      )}
     />
   );
 }
@@ -300,6 +334,23 @@ function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; o
   );
 }
 
+/** The shape of the first answer while it is on its way. */
+function RowsLoading() {
+  return (
+    <View accessibilityLabel="Searching" accessibilityRole="progressbar">
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} style={styles.row}>
+          <Skeleton style={styles.thumb} />
+          <View style={{ flex: 1, gap: space.sm }}>
+            <Skeleton style={{ height: 16, width: `${70 - i * 12}%`, borderRadius: radius.sm }} />
+            <Skeleton style={{ height: 12, width: '35%', borderRadius: radius.sm }} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function Torrents({
   query,
   everything,
@@ -307,6 +358,7 @@ function Torrents({
   top,
   idle,
   onOpen,
+  onBusy,
 }: {
   query: string;
   /** Search every category, not only video. */
@@ -315,6 +367,7 @@ function Torrents({
   top: number;
   idle: ReactElement | null;
   onOpen: () => void;
+  onBusy: (busy: boolean) => void;
 }) {
   const link = useLink();
   const onScroll = useChromeScroll();
@@ -350,6 +403,9 @@ function Torrents({
     return () => controller.abort();
   }, [link, query, everything]);
 
+  const busy = query.length > 0 && !state.done;
+  useEffect(() => onBusy(busy), [busy, onBusy]);
+
   return (
     <>
       <Animated.FlatList
@@ -362,17 +418,15 @@ function Torrents({
         contentContainerStyle={{ paddingTop: top, paddingBottom: bottom + space.xl }}
         ListHeaderComponent={
           query ? (
-            <View>
-              <Scope everything={everything} onChange={onScope} />
-              {!state.done ? (
-                <View style={styles.searching}>
-                  <ActivityIndicator size="small" color={color.soft} />
-                  <Text style={type.caption}>
-                    Asking {state.pending.length > 1 ? `${state.pending.length} sources` : 'sources'}…
-                  </Text>
-                </View>
-              ) : null}
-            </View>
+            <Scope
+              everything={everything}
+              onChange={onScope}
+              status={
+                state.done
+                  ? null
+                  : `Asking ${state.pending.length > 1 ? `${state.pending.length} sources` : 'sources'}…`
+              }
+            />
           ) : undefined
         }
         ListEmptyComponent={
@@ -407,7 +461,16 @@ function Torrents({
 }
 
 /** Video only, as Play needs, or every category the sources know. */
-function Scope({ everything, onChange }: { everything: boolean; onChange: (everything: boolean) => void }) {
+function Scope({
+  everything,
+  onChange,
+  status,
+}: {
+  everything: boolean;
+  onChange: (everything: boolean) => void;
+  /** What the search is doing, beside the choice, where it moves nothing as it comes and goes. */
+  status: string | null;
+}) {
   return (
     <View style={styles.scope} accessibilityRole="radiogroup" accessibilityLabel="What to search">
       {[false, true].map((all) => {
@@ -426,6 +489,17 @@ function Scope({ everything, onChange }: { everything: boolean; onChange: (every
           </Tap>
         );
       })}
+      {status ? (
+        <Animated.Text
+          entering={FadeIn.duration(motion.quick)}
+          exiting={FadeOut.duration(motion.quick)}
+          style={[type.caption, styles.scopeStatus]}
+          accessibilityLiveRegion="polite"
+          numberOfLines={1}
+        >
+          {status}
+        </Animated.Text>
+      ) : null}
     </View>
   );
 }
@@ -786,13 +860,8 @@ const styles = StyleSheet.create({
   },
   thumb: { width: 52, height: 78, borderRadius: radius.sm },
   facts: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  searching: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.page,
-    paddingVertical: space.md,
-  },
+  scopeStatus: { flex: 1, textAlign: 'right' },
+  fieldIcon: { width: 20, alignItems: 'center' },
   release: {
     paddingHorizontal: space.page,
     paddingVertical: space.md,
