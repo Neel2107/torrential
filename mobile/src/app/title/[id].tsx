@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -23,6 +23,7 @@ import type { EpisodeInfo, TitlePage as Page, Watched } from '@web/wire';
 
 import { useSaveTitle, useTitle } from '@/engine/queries';
 import { Art } from '@/ui/Art';
+import { Burst, type BurstHandle } from '@/ui/Burst';
 import { Button } from '@/ui/Button';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Icon, icons } from '@/ui/Icon';
@@ -229,6 +230,7 @@ function Body({ page }: { page: Page }) {
 
 function SaveButton({ id, saved }: { id: string; saved: boolean }) {
   const save = useSaveTitle(id);
+  const burst = useRef<BurstHandle>(null);
   const pop = useSharedValue(1);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
 
@@ -238,15 +240,19 @@ function SaveButton({ id, saved }: { id: string; saved: boolean }) {
       onPress={() => {
         Haptics.impactAsync(saved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
         pop.value = withSequence(withTiming(0.7, { duration: 90 }), withSpring(1, motion.pop));
+        if (!saved) burst.current?.fire();
         save.mutate(!saved);
       }}
       accessibilityLabel={saved ? 'Saved. Remove from saved' : 'Save'}
       accessibilityState={{ selected: saved }}
       style={[styles.save, saved ? styles.saveOn : styles.saveOff]}
     >
-      <Animated.View style={style}>
-        <Icon name={icons.save} size={17} tint={saved ? color.actionInk : color.ink} filled={saved} />
-      </Animated.View>
+      <View>
+        <Burst ref={burst} size={34} />
+        <Animated.View style={style}>
+          <Icon name={icons.save} size={17} tint={saved ? color.actionInk : color.ink} filled={saved} />
+        </Animated.View>
+      </View>
       <Animated.Text
         layout={LinearTransition.duration(motion.quick)}
         style={[styles.saveText, { color: saved ? color.actionInk : color.ink }]}
