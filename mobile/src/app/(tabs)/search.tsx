@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   FadeIn,
@@ -8,6 +8,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  LinearTransition,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,6 +19,7 @@ import type { Release, SearchMessage, TitleCard } from '@web/wire';
 
 import { stream } from '@/engine/client';
 import { useTitleSearch } from '@/engine/queries';
+import { useRecentSearches } from '@/engine/recent';
 import { useLink } from '@/engine/session';
 import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
@@ -46,11 +48,21 @@ export default function Search() {
   const [tab, setTab] = useState(0);
   const query = useDebounced(text.trim(), 280);
   const top = insets.top + BAR_HEIGHT + TABS_HEIGHT;
+  const recents = useRecentSearches();
+  const remember = () => recents.remember(text);
+  const idle =
+    recents.recent.length > 0 ? (
+      <Recent items={recents.recent} onPick={setText} onForget={recents.forget} onClear={recents.clear} />
+    ) : null;
 
   return (
     <View style={styles.screen}>
-      {tab === 0 ? <Titles query={query} top={top} /> : <Torrents query={query} top={top} />}
-      <SearchHeader text={text} setText={setText} tab={tab} setTab={setTab} />
+      {tab === 0 ? (
+        <Titles query={query} top={top} idle={idle} onOpen={remember} />
+      ) : (
+        <Torrents query={query} top={top} idle={idle} onOpen={remember} />
+      )}
+      <SearchHeader text={text} setText={setText} tab={tab} setTab={setTab} onSubmit={remember} />
     </View>
   );
 }
@@ -60,11 +72,13 @@ function SearchHeader({
   setText,
   tab,
   setTab,
+  onSubmit,
 }: {
   text: string;
   setText: (text: string) => void;
   tab: number;
   setTab: (tab: number) => void;
+  onSubmit: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const { hidden } = useChrome();
@@ -89,6 +103,7 @@ function SearchHeader({
               placeholderTextColor={color.pencil}
               style={styles.input}
               returnKeyType="search"
+              onSubmitEditing={onSubmit}
               autoCorrect={false}
               autoCapitalize="none"
               selectionColor={color.action}
@@ -152,7 +167,17 @@ function Tabs({ index, onChange }: { index: number; onChange: (index: number) =>
   );
 }
 
-function Titles({ query, top }: { query: string; top: number }) {
+function Titles({
+  query,
+  top,
+  idle,
+  onOpen,
+}: {
+  query: string;
+  top: number;
+  idle: ReactElement | null;
+  onOpen: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const onScroll = useChromeScroll();
   const result = useTitleSearch(query);
@@ -174,11 +199,13 @@ function Titles({ query, top }: { query: string; top: number }) {
       }
       ListEmptyComponent={
         !query ? (
-          <Hint
-            icon={icons.search}
-            title="Find something to watch"
-            body="Search by name. A film or a show starts playing in seconds, while it downloads."
-          />
+          (idle ?? (
+            <Hint
+              icon={icons.search}
+              title="Find something to watch"
+              body="Search by name. A film or a show starts playing in seconds, while it downloads."
+            />
+          ))
         ) : result.isError ? (
           <EngineProblem error={result.error} onRetry={() => result.refetch()} />
         ) : result.isSuccess && !result.isPlaceholderData ? (
@@ -189,18 +216,21 @@ function Titles({ query, top }: { query: string; top: number }) {
           />
         ) : undefined
       }
-      renderItem={({ item, index }) => <TitleRow title={item} index={index} />}
+      renderItem={({ item, index }) => <TitleRow title={item} index={index} onOpen={onOpen} />}
     />
   );
 }
 
-function TitleRow({ title, index }: { title: TitleCard; index: number }) {
+function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; onOpen: () => void }) {
   return (
     <Animated.View entering={rise(index)}>
       <Tap
         shrink={1}
         highlight
-        onPress={() => router.push({ pathname: '/title/[id]', params: { id: title.id } })}
+        onPress={() => {
+          onOpen();
+          router.push({ pathname: '/title/[id]', params: { id: title.id } });
+        }}
         accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
         style={styles.row}
       >
@@ -225,7 +255,17 @@ function TitleRow({ title, index }: { title: TitleCard; index: number }) {
   );
 }
 
-function Torrents({ query, top }: { query: string; top: number }) {
+function Torrents({
+  query,
+  top,
+  idle,
+  onOpen,
+}: {
+  query: string;
+  top: number;
+  idle: ReactElement | null;
+  onOpen: () => void;
+}) {
   const link = useLink();
   const insets = useSafeAreaInsets();
   const onScroll = useChromeScroll();
@@ -280,11 +320,13 @@ function Torrents({ query, top }: { query: string; top: number }) {
       }
       ListEmptyComponent={
         !query ? (
-          <Hint
-            icon={icons.magnet}
-            title="Search every source"
-            body="Torrents are listed best first. Tap one to play it while it downloads."
-          />
+          (idle ?? (
+            <Hint
+              icon={icons.magnet}
+              title="Search every source"
+              body="Torrents are listed best first. Tap one to play it while it downloads."
+            />
+          ))
         ) : state.done ? (
           <Hint
             icon={icons.warning}
@@ -293,12 +335,12 @@ function Torrents({ query, top }: { query: string; top: number }) {
           />
         ) : undefined
       }
-      renderItem={({ item, index }) => <ReleaseRow release={item} index={index} />}
+      renderItem={({ item, index }) => <ReleaseRow release={item} index={index} onOpen={onOpen} />}
     />
   );
 }
 
-function ReleaseRow({ release, index }: { release: Release; index: number }) {
+function ReleaseRow({ release, index, onOpen }: { release: Release; index: number; onOpen: () => void }) {
   const name = readable(release.name);
   const chips = [
     release.quality.resolution?.toUpperCase(),
@@ -311,7 +353,10 @@ function ReleaseRow({ release, index }: { release: Release; index: number }) {
       <Tap
         shrink={1}
         highlight
-        onPress={() => router.push({ pathname: '/play', params: { ref: release.magnet ?? release.id } })}
+        onPress={() => {
+          onOpen();
+          router.push({ pathname: '/play', params: { ref: release.magnet ?? release.id } });
+        }}
         accessibilityLabel={`${name.title}, ${release.size ? bytes(release.size) : ''}, ${release.seeders ?? 0} seeders`}
         style={styles.release}
       >
@@ -332,6 +377,58 @@ function ReleaseRow({ release, index }: { release: Release; index: number }) {
           ) : null}
         </View>
       </Tap>
+    </Animated.View>
+  );
+}
+
+function Recent({
+  items,
+  onPick,
+  onForget,
+  onClear,
+}: {
+  items: string[];
+  onPick: (query: string) => void;
+  onForget: (query: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <Animated.View entering={rise(0)}>
+      <View style={styles.recentHead}>
+        <Text style={type.title}>Recent</Text>
+        <Tap shrink={0.94} haptic onPress={onClear} accessibilityLabel="Clear recent searches">
+          <Text style={[type.label, { color: color.action }]}>Clear all</Text>
+        </Tap>
+      </View>
+      {items.map((item, index) => (
+        <Animated.View
+          key={item}
+          entering={rise(index + 1)}
+          exiting={FadeOut.duration(motion.quick)}
+          layout={LinearTransition.duration(motion.standard)}
+        >
+          <Tap
+            shrink={1}
+            highlight
+            onPress={() => onPick(item)}
+            accessibilityLabel={`Search for ${item}`}
+            style={styles.recentRow}
+          >
+            <Icon name={icons.history} size={18} tint={color.pencil} />
+            <Text style={[type.callout, { flex: 1 }]} numberOfLines={1}>
+              {item}
+            </Text>
+            <Tap
+              shrink={0.85}
+              onPress={() => onForget(item)}
+              accessibilityLabel={`Remove ${item}`}
+              style={styles.recentRemove}
+            >
+              <Icon name={icons.close} size={16} tint={color.pencil} />
+            </Tap>
+          </Tap>
+        </Animated.View>
+      ))}
     </Animated.View>
   );
 }
@@ -416,6 +513,22 @@ const styles = StyleSheet.create({
   releaseFacts: { flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' },
   chip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: color.lifted },
   chipText: { fontFamily: font.semibold, fontSize: 11, color: color.soft, letterSpacing: 0.3 },
+  recentHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: space.page,
+    paddingTop: space.lg,
+    paddingBottom: space.sm,
+  },
+  recentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingHorizontal: space.page,
+    minHeight: 52,
+  },
+  recentRemove: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   hint: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 80 },
   hintIcon: {
     width: 64,

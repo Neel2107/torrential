@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   Ellipsis,
+  History,
   Film,
   House,
   Link,
@@ -72,6 +73,7 @@ export const icons = {
   episodes: ListVideo,
   magnet: Magnet,
   add: Plus,
+  history: History,
 } satisfies Record<string, LucideIcon>;
 
 /**
