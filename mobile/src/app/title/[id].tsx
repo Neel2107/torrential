@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -70,12 +70,16 @@ export default function Title() {
   return (
     <View style={styles.screen}>
       <Animated.View style={[styles.banner, { height: bannerHeight }, banner]}>
-        <Art id={id} kind="background" style={StyleSheet.absoluteFill} name={title.data?.name} />
-        <LinearGradient
-          colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']}
-          locations={[0, 0.4, 1]}
-          style={StyleSheet.absoluteFill}
-        />
+        <Link.AppleZoomTarget>
+          <View style={{ width, height: bannerHeight }}>
+            <Art id={id} kind="background" style={StyleSheet.absoluteFill} name={title.data?.name} />
+            <LinearGradient
+              colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']}
+              locations={[0, 0.4, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
+        </Link.AppleZoomTarget>
       </Animated.View>
 
       <Animated.ScrollView

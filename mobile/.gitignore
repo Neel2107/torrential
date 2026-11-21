@@ -45,3 +45,4 @@ example
 # Continuous Native Generation
 /android
 /ios
+.review/

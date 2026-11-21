@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Link } from 'expo-router';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { cardFacts } from '@web/titles/words';
@@ -26,31 +26,35 @@ export function PosterGrid({ titles }: { titles: TitleCard[] }) {
   );
 }
 
+/** A poster that opens its title page. On iOS the poster zooms into the page and shrinks back on a swipe down. */
 export function Poster({ title, width }: { title: TitleCard; width: number }) {
   return (
-    <Tap
-      shrink={0.95}
-      onPress={() => router.push({ pathname: '/title/[id]', params: { id: title.id } })}
-      accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
-      style={{ width }}
-    >
-      <Art id={title.id} kind="poster" name={title.name} style={[styles.poster, { height: width * 1.5 }]} />
-      <Text style={[type.label, styles.name]} numberOfLines={2}>
-        {title.name}
-      </Text>
-      <View style={styles.facts}>
-        {title.rating ? (
-          <>
-            <Icon name={icons.star} size={11} tint={color.action} filled />
-            <Text style={type.caption}>{title.rating.toFixed(1)}</Text>
-            <Text style={type.caption}>·</Text>
-          </>
-        ) : null}
-        <Text style={type.caption} numberOfLines={1}>
-          {cardFacts(title)}
+    <Link href={{ pathname: '/title/[id]', params: { id: title.id } }} asChild>
+      <Tap
+        shrink={0.95}
+        accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
+        style={{ width }}
+      >
+        <Link.AppleZoom>
+          <Art id={title.id} kind="poster" name={title.name} style={StyleSheet.flatten([styles.poster, { height: width * 1.5 }])} />
+        </Link.AppleZoom>
+        <Text style={[type.label, styles.name]} numberOfLines={2}>
+          {title.name}
         </Text>
-      </View>
-    </Tap>
+        <View style={styles.facts}>
+          {title.rating ? (
+            <>
+              <Icon name={icons.star} size={11} tint={color.action} filled />
+              <Text style={type.caption}>{title.rating.toFixed(1)}</Text>
+              <Text style={type.caption}>·</Text>
+            </>
+          ) : null}
+          <Text style={type.caption} numberOfLines={1}>
+            {cardFacts(title)}
+          </Text>
+        </View>
+      </Tap>
+    </Link>
   );
 }
 
