@@ -40,6 +40,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, space } from '@/theme';
 
+import { useDownloaded, usePlayingJob } from './downloaded';
 import { Ended } from './Ended';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
@@ -82,6 +83,8 @@ export function Player({
   const link = useLink();
   const insets = useSafeAreaInsets();
   const download = { id: play.id, file: play.video.index };
+  const job = usePlayingJob(play.job);
+  const downloaded = useDownloaded(job, play.video, play.total_size);
   const [metadata] = useState(() => ({
     title: title?.name ?? play.name,
     artist: episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : undefined,
@@ -392,6 +395,7 @@ export function Player({
                 duration={duration || player.duration || 0}
                 buffered={time.bufferedPosition}
                 download={download}
+                downloaded={downloaded}
                 onScrubbing={setScrubbing}
                 onSeek={(seconds) => {
                   if (duration <= 0) return;
