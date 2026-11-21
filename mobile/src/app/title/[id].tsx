@@ -70,16 +70,12 @@ export default function Title() {
   return (
     <View style={styles.screen}>
       <Animated.View style={[styles.banner, { height: bannerHeight }, banner]}>
-        <Link.AppleZoomTarget>
-          <View style={{ width, height: bannerHeight }}>
-            <Art id={id} kind="background" style={StyleSheet.absoluteFill} name={title.data?.name} />
-            <LinearGradient
-              colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']}
-              locations={[0, 0.4, 1]}
-              style={StyleSheet.absoluteFill}
-            />
-          </View>
-        </Link.AppleZoomTarget>
+        <Art id={id} kind="background" style={StyleSheet.absoluteFill} name={title.data?.name} />
+        <LinearGradient
+          colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']}
+          locations={[0, 0.4, 1]}
+          style={StyleSheet.absoluteFill}
+        />
       </Animated.View>
 
       <Animated.ScrollView
@@ -102,7 +98,7 @@ export default function Title() {
         }
       >
         {title.isPending ? (
-          <Loading />
+          <Loading id={id} />
         ) : title.isError ? (
           <View style={styles.sheet}>
             <EngineProblem error={title.error} onRetry={() => title.refetch()} />
@@ -173,9 +169,7 @@ function Body({ page }: { page: Page }) {
   return (
     <View style={styles.sheet}>
       <View style={styles.identity}>
-        <Animated.View entering={rise(0)} style={styles.posterWrap}>
-          <Art id={page.id} kind="poster" name={page.name} style={styles.poster} />
-        </Animated.View>
+        <PosterSlot id={page.id} name={page.name} />
         <SaveButton id={page.id} saved={page.saved} />
       </View>
 
@@ -435,11 +429,25 @@ function EpisodeRow({
   );
 }
 
-function Loading() {
+/**
+ * Where the poster lands when it zooms in from a card. It is drawn from the title's ID alone, before
+ * the page loads and without a fade of its own, so the zoom has the same picture to land on.
+ */
+function PosterSlot({ id, name }: { id: string; name?: string }) {
+  return (
+    <View style={styles.posterWrap}>
+      <Link.AppleZoomTarget>
+        <Art id={id} kind="poster" name={name} style={styles.poster} fade={false} />
+      </Link.AppleZoomTarget>
+    </View>
+  );
+}
+
+function Loading({ id }: { id: string }) {
   return (
     <View style={styles.sheet}>
       <View style={styles.identity}>
-        <Skeleton style={[styles.poster, { borderRadius: radius.md }]} />
+        <PosterSlot id={id} />
       </View>
       <Skeleton style={{ height: 32, width: '70%', borderRadius: radius.sm, marginTop: space.lg }} />
       <Skeleton style={{ height: 16, width: '45%', borderRadius: radius.sm, marginTop: space.md }} />

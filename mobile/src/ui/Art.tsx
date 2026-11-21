@@ -21,6 +21,7 @@ export function Art({
   fit = 'cover',
   style,
   placeholder = true,
+  fade = true,
 }: {
   id: string;
   kind: ArtKind;
@@ -30,6 +31,8 @@ export function Art({
   fit?: ImageContentFit;
   style?: StyleProp<ViewStyle>;
   placeholder?: boolean;
+  /** Fade the image in over the placeholder. Off where a transition carries the same picture in. */
+  fade?: boolean;
 }) {
   const link = useLink();
   // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
@@ -54,7 +57,7 @@ export function Art({
           source={{ uri, headers: authHeaders(link) }}
           style={StyleSheet.absoluteFill}
           contentFit={fit}
-          transition={220}
+          transition={fade ? 220 : 0}
           cachePolicy="memory-disk"
           recyclingKey={uri}
           onError={() => setFailedUri(uri)}
