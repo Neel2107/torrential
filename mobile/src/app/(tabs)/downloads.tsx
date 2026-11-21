@@ -17,7 +17,7 @@ import { post } from '@/engine/client';
 import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
 import { qualityOf } from '@/engine/quality';
 import { Art } from '@/ui/Art';
-import { useLink } from '@/engine/session';
+import { useLink, useSession } from '@/engine/session';
 import { cancel, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
@@ -246,13 +246,18 @@ function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
 
 function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   const link = useLink();
+  const { session } = useSession();
   const name = useJobName(job);
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  // On the phone's own engine nothing else can clear the files, so removing deletes them.
+  const onPhone = session.state === 'paired' && session.engine.kind === 'phone';
 
   const act = async (path: '/api/pause' | '/api/resume' | '/api/remove') => {
     setBusy(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await post(link, path, { refs: [job.id] }).catch(() => {});
+    const body = path === '/api/remove' && onPhone ? { refs: [job.id], delete: true } : { refs: [job.id] };
+    await post(link, path, body).catch(() => {});
     setBusy(false);
     onClose();
   };
@@ -310,7 +315,21 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
         {job.state === 'paused' || job.state === 'error' ? (
           <MenuRow icon={icons.refresh} label="Resume" disabled={busy} onPress={() => act('/api/resume')} />
         ) : null}
-        <MenuRow icon={icons.trash} label="Remove" danger disabled={busy} onPress={() => act('/api/remove')} />
+        {confirming ? (
+          <MenuRow
+            icon={icons.trash}
+            label={
+              onPhone
+                ? `Delete ${job.progress.verified ? bytes(job.progress.verified) : 'it'} from this phone`
+                : 'Remove from the list'
+            }
+            danger
+            disabled={busy}
+            onPress={() => act('/api/remove')}
+          />
+        ) : (
+          <MenuRow icon={icons.trash} label="Remove" danger disabled={busy} onPress={() => setConfirming(true)} />
+        )}
       </View>
     </Sheet>
   );

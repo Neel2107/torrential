@@ -980,6 +980,15 @@ enum Refusal {
     Moved(String),
 }
 
+/// Inside a phone app every other app on the phone reaches loopback too, so there a loopback
+/// caller is the owner only with the app's secret in its cookie. Set once, before the engine starts.
+static LOOPBACK_SECRET: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// Makes loopback callers show `secret`, for an engine embedded in a phone app.
+pub fn require_loopback_secret(secret: String) {
+    let _ = LOOPBACK_SECRET.set(secret);
+}
+
 /// Who sent `request`. Over loopback, a request that names this Mac's .local name moves to
 /// 127.0.0.1 first. At `wire::PATH`, this user's token over loopback lets a request in, and so does
 /// a paired device's token, such as torrential's on another machine. A cast URL is let in by its
@@ -1018,7 +1027,10 @@ fn ask(peer: Peer, request: &Request, port: u16, devices: &Devices, now: i64) ->
         return devices.granted(&request.path).map(Asker::Cast).ok_or(Refusal::CastEnded);
     }
     if peer == Peer::Loopback {
-        return Ok(Asker::Local);
+        return Ok(match LOOPBACK_SECRET.get() {
+            Some(secret) if request.cookie.as_deref() != Some(secret.as_str()) => Asker::Stranger { removed: false },
+            _ => Asker::Local,
+        });
     }
     Ok(match request.cookie.as_deref() {
         Some(token) => {

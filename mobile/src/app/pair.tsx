@@ -46,8 +46,7 @@ export default function Pair() {
     try {
       await pair(base, pairingCode);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Added from the engine sheet while watching from another engine: back to the app.
-      if (router.canGoBack()) router.dismissTo('/');
+      router.replace('/');
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setProblem(explain(error));
@@ -121,7 +120,7 @@ export default function Pair() {
             label="Download on this phone instead"
             onPress={async () => {
               await usePhone();
-              if (router.canGoBack()) router.dismissTo('/');
+              router.replace('/');
             }}
           />
         ) : null}

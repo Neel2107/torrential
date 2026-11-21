@@ -1,42 +1,97 @@
-//! torrential's engine inside the phone app. The app calls `torrential_start` once with a folder of
-//! its own; the engine keeps everything under it and serves the same HTTP API as on a computer, on
-//! loopback, where the app trusts it without pairing.
+//! torrential's engine inside the phone app. The app calls `torrential_start` with a folder of its
+//! own; the engine keeps everything under it and serves the same HTTP API as on a computer, on
+//! loopback. Other apps on the phone reach loopback too, so the engine lets in only callers with the
+//! secret it keeps in `app-secret` in that folder, which the app reads and sends as its cookie.
 
 use std::ffi::{CStr, c_char};
+use std::net::{SocketAddr, TcpStream};
 use std::path::Path;
-use std::sync::OnceLock;
+use std::sync::Mutex;
+use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
 
 use torrential_daemon::env::Env;
 
-/// The engine's thread, started at most once per process.
-static STARTED: OnceLock<()> = OnceLock::new();
+/// The engine's thread. A finished one, after a failed start, can be started again.
+static ENGINE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 
-/// What the phone's engine is told before it starts: never update itself, and keep the plays it
-/// streams within what a phone can spare.
+/// What the phone's engine is told before it first starts: never update itself, and keep the plays
+/// it streams within what a phone can spare.
 const CONFIG: &str = "updates: off\nplays:\n  max: 8GiB\n";
+/// How long a start waits for the engine to answer.
+const READY_WITHIN: Duration = Duration::from_secs(20);
 
-/// Starts the engine on its own thread with `home` as its folder and `port` for its HTTP API, and
-/// returns at once. A second call does nothing. Returns 0, or 1 when `home` cannot be used.
+/// Why a start failed, as the negative numbers the app sees.
+const HOME_UNUSABLE: i32 = -1;
+const ENGINE_STOPPED: i32 = -2;
+const NOT_READY: i32 = -3;
+
+/// Starts the engine with `home` as its folder, asking for `port`, and waits until it answers.
+/// Returns the port it serves on, or a negative error. A running engine is left as it is.
 fn start(home: &Path, port: u16) -> i32 {
-    let config = home.join("config");
-    if std::fs::create_dir_all(&config).is_err() {
-        return 1;
-    }
-    let file = config.join("config.yaml");
-    if !file.exists() && std::fs::write(&file, CONFIG).is_err() {
-        return 1;
-    }
-    STARTED.get_or_init(|| {
-        let home = home.to_string_lossy().into_owned();
-        std::thread::Builder::new()
-            .name("torrential-engine".into())
-            .spawn(move || {
-                let env = Env::from_pairs([("HOME", home.as_str()), ("TORRENTIAL_HOME", home.as_str())]);
+    let Ok(secret) = prepare(home) else { return HOME_UNUSABLE };
+    torrential_daemon::daemon::require_loopback_secret(secret);
+    {
+        let mut engine = ENGINE.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        if !engine.as_ref().is_some_and(|thread| !thread.is_finished()) {
+            let folder = home.to_string_lossy().into_owned();
+            let spawned = std::thread::Builder::new().name("torrential-engine".into()).spawn(move || {
+                let env = Env::from_pairs([("HOME", folder.as_str()), ("TORRENTIAL_HOME", folder.as_str())]);
                 torrential_daemon::daemon::run(&env, false, Some(port), false);
-            })
-            .expect("a thread for the engine");
-    });
-    0
+            });
+            match spawned {
+                Ok(thread) => *engine = Some(thread),
+                Err(_) => return ENGINE_STOPPED,
+            }
+        }
+    }
+    ready(home)
+}
+
+/// The config and the secret, made once and replaced whole so a crash never leaves half a file.
+fn prepare(home: &Path) -> std::io::Result<String> {
+    std::fs::create_dir_all(home.join("config"))?;
+    let config = home.join("config/config.yaml");
+    if !config.exists() {
+        write_whole(&config, CONFIG.as_bytes())?;
+    }
+    let file = home.join("app-secret");
+    match std::fs::read_to_string(&file) {
+        Ok(secret) if secret.trim().len() == 64 => Ok(secret.trim().to_string()),
+        _ => {
+            let mut bytes = [0u8; 32];
+            getrandom::fill(&mut bytes).map_err(|e| std::io::Error::other(e.to_string()))?;
+            let secret: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+            write_whole(&file, secret.as_bytes())?;
+            Ok(secret)
+        }
+    }
+}
+
+fn write_whole(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let partial = path.with_extension("partial");
+    std::fs::write(&partial, bytes)?;
+    std::fs::rename(partial, path)
+}
+
+/// Waits for the engine to answer on the port it wrote, and returns that port.
+fn ready(home: &Path) -> i32 {
+    let deadline = Instant::now() + READY_WITHIN;
+    while Instant::now() < deadline {
+        let stopped = ENGINE.lock().map(|engine| engine.as_ref().is_none_or(JoinHandle::is_finished)).unwrap_or(true);
+        if stopped {
+            return ENGINE_STOPPED;
+        }
+        let written = std::fs::read_to_string(home.join("state/http-port")).ok();
+        if let Some(port) = written.and_then(|text| text.trim().parse::<u16>().ok()) {
+            let address = SocketAddr::from(([127, 0, 0, 1], port));
+            if TcpStream::connect_timeout(&address, Duration::from_millis(200)).is_ok() {
+                return i32::from(port);
+            }
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    NOT_READY
 }
 
 /// # Safety
@@ -44,7 +99,7 @@ fn start(home: &Path, port: u16) -> i32 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn torrential_start(home: *const c_char, port: u16) -> i32 {
     if home.is_null() {
-        return 1;
+        return HOME_UNUSABLE;
     }
     let home = unsafe { CStr::from_ptr(home) }.to_string_lossy().into_owned();
     start(Path::new(&home), port)
@@ -63,7 +118,7 @@ mod android {
         home: JString,
         port: jint,
     ) -> jint {
-        let Ok(home) = env.get_string(&home) else { return 1 };
+        let Ok(home) = env.get_string(&home) else { return super::HOME_UNUSABLE };
         let home: String = home.into();
         super::start(std::path::Path::new(&home), port as u16)
     }

@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
-import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { PermissionsAndroid, Platform } from 'react-native';
 
 import type { Me } from '@web/wire';
 
@@ -61,10 +62,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .catch(() => setSaved({ engines: [], active: null }));
   }, []);
 
-  const keep = useCallback(async (next: Saved) => {
-    await SecureStore.setItemAsync(KEY, JSON.stringify(next));
-    await SecureStore.deleteItemAsync(OLD_KEY);
-    setSaved(next);
+  // Every change reads the list as it is now and waits for the one before it, so a switch, a
+  // pairing and an automatic forget that land together cannot write over each other.
+  const latest = useRef<Saved | null>(null);
+  latest.current = saved;
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const change = useCallback((next: (now: Saved) => Saved) => {
+    const run = queue.current.then(async () => {
+      const now = latest.current ?? { engines: [], active: null };
+      const saving = next(now);
+      await SecureStore.setItemAsync(KEY, JSON.stringify(saving));
+      await SecureStore.deleteItemAsync(OLD_KEY);
+      latest.current = saving;
+      setSaved(saving);
+    });
+    queue.current = run.catch(() => {});
+    return run;
   }, []);
 
   const { engines, engine, session } = useMemo(() => {
@@ -78,14 +91,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return { engines, engine, session };
   }, [saved]);
 
-  // The phone's engine runs in the app's process, so it starts again each time the app does.
+  // The phone's engine runs in the app's process, so it starts again each time the app does, and
+  // its link follows the port and secret it comes up with.
   useEffect(() => {
-    if (engine?.kind === 'phone') LocalEngine?.start().catch(() => {});
-  }, [engine?.kind]);
+    if (engine?.kind !== 'phone' || !LocalEngine) return;
+    LocalEngine.start()
+      .then(({ port, secret }) => {
+        const link = { base: `http://127.0.0.1:${port}`, token: secret };
+        if (link.base === engine.link.base && link.token === engine.link.token) return;
+        return change((now) => ({
+          ...now,
+          engines: now.engines.map((e) => (e.id === engine.id ? { ...e, link } : e)),
+        }));
+      })
+      .catch(() => {});
+  }, [engine, change]);
 
   const api = useMemo<SessionApi>(() => {
     const add = (next: Engine) =>
-      keep({ engines: [...engines.filter((e) => e.id !== next.id), next], active: next.id });
+      change((now) => ({ engines: [...now.engines.filter((e) => e.id !== next.id), next], active: next.id }));
     return {
       session,
       engines,
@@ -99,28 +123,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       },
       usePhone: async () => {
         if (!LocalEngine) throw new Error('This build cannot run the engine on the phone');
-        const port = await LocalEngine.start();
-        const base = `http://127.0.0.1:${port}`;
-        await add({ id: 'phone', name: 'This phone', kind: 'phone', link: { base, token: null } });
+        // Android 13 and later show the engine's notification only with permission.
+        if (Platform.OS === 'android' && Platform.Version >= 33) {
+          await PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS').catch(() => {});
+        }
+        const { port, secret } = await LocalEngine.start();
+        const link = { base: `http://127.0.0.1:${port}`, token: secret };
+        await add({ id: 'phone', name: 'This phone', kind: 'phone', link });
       },
-      switchTo: async (id) => {
-        if (engines.some((e) => e.id === id)) await keep({ engines, active: id });
-      },
+      switchTo: (id) => change((now) => (now.engines.some((e) => e.id === id) ? { ...now, active: id } : now)),
       relocate: async (base) => {
         if (!engine) return;
         const link = { base, token: engine.link.token };
         await get<Me>(link, '/api/me');
-        await keep({
-          engines: engines.map((e) => (e.id === engine.id ? { ...e, name: computerName(base), link } : e)),
-          active: engine.id,
-        });
+        await change((now) => ({
+          ...now,
+          engines: now.engines.map((e) => (e.id === engine.id ? { ...e, name: computerName(base), link } : e)),
+        }));
       },
-      forget: async () => {
-        const rest = engines.filter((e) => e.id !== engine?.id);
-        await keep({ engines: rest, active: rest[0]?.id ?? null });
-      },
+      forget: () =>
+        change((now) => {
+          const rest = now.engines.filter((e) => e.id !== now.active);
+          return { engines: rest, active: rest[0]?.id ?? null };
+        }),
     };
-  }, [session, engines, engine, keep]);
+  }, [session, engines, engine, change]);
 
   return <Context value={api}>{children}</Context>;
 }

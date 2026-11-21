@@ -10,11 +10,14 @@ class TorrentialEngineModule : Module() {
 
     Constant("port") { Engine.PORT }
 
-    /** Starts the engine in its foreground service and answers with its port. */
+    /** Starts the engine in its foreground service, waits until it answers, and gives its port and secret. */
     AsyncFunction("start") {
       val context = appContext.reactContext ?: throw CodedException("ERR_NO_CONTEXT", "The app has no context yet", null)
       EngineService.start(context)
-      Engine.PORT
+      val home = EngineService.home(context)
+      val port = Engine.start(home.path, Engine.PORT)
+      if (port <= 0) throw CodedException("ERR_ENGINE", "The engine did not start ($port)", null)
+      mapOf("port" to port, "secret" to Engine.secret(home))
     }
   }
 }

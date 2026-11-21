@@ -10,6 +10,7 @@ pub(crate) mod engine_port;
 pub mod fake;
 pub mod files;
 pub(crate) mod http;
+pub use http::require_loopback_secret;
 pub(crate) mod indexers;
 pub(crate) mod libtorrent;
 pub(crate) mod magnet;

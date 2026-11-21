@@ -24,10 +24,18 @@ class EngineService : Service() {
     } else {
       startForeground(NOTIFICATION, notification)
     }
-    Engine.start(home(this).path, Engine.PORT)
+    // Starting waits for the engine to answer, which is too long for the main thread.
+    Thread({ Engine.start(home(this).path, Engine.PORT) }, "torrential-engine-start").start()
   }
 
-  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+  // Android does not bring the service back without the app: the app starts it when it opens.
+  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
+
+  // Android 15 allows a data sync service six hours a day. The engine runs on in the app's process
+  // while the app is open; only the promise to keep it alive in the background ends here.
+  override fun onTimeout(startId: Int, fgsType: Int) {
+    stopSelf()
+  }
 
   override fun onBind(intent: Intent?): IBinder? = null
 

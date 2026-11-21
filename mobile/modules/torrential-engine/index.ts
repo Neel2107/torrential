@@ -4,8 +4,8 @@ import { requireOptionalNativeModule } from 'expo';
 /** torrential's engine running inside this app, on loopback. Missing on builds without the native module. */
 type TorrentialEngine = {
   port: number;
-  /** Starts the engine if it is not running, and answers with its port. */
-  start(): Promise<number>;
+  /** Starts the engine if it is not running, waits until it answers, and gives where to reach it. */
+  start(): Promise<{ port: number; secret: string }>;
 };
 
 export const LocalEngine = requireOptionalNativeModule<TorrentialEngine>('TorrentialEngine');

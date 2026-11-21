@@ -75,7 +75,8 @@ function Routes() {
 
   return (
     <QueryClientProvider client={client}>
-      <MaybeJobs paired={paired}>
+      {/* Keyed by engine, so switching never shows the last engine's downloads. */}
+      <MaybeJobs key={engineKey} paired={paired}>
         <Stack
           screenOptions={{
             headerShown: false,
