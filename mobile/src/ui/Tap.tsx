@@ -30,7 +30,7 @@ export function Tap({
   const pressed = useSharedValue(0);
   const animated = useAnimatedStyle(() => ({
     transform: [{ scale: 1 - (1 - shrink) * pressed.value }],
-    backgroundColor: highlight ? `rgba(240, 233, 220, ${0.06 * pressed.value})` : undefined,
+    backgroundColor: highlight ? `rgba(240, 233, 220, ${(0.06 * pressed.value).toFixed(3)})` : undefined,
   }));
 
   return (

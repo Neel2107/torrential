@@ -10,7 +10,7 @@
     "backgroundColor": "#14120f",
     "ios": {
       "bundleIdentifier": "dev.torrential.app",
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "supportsTablet": true,
       "infoPlist": {
         "NSLocalNetworkUsageDescription": "torrential connects to the engine on your computer or server over your home network.",
@@ -91,7 +91,7 @@
         {
           "backgroundColor": "#14120f",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 96
         }
       ],
       [
@@ -99,7 +99,11 @@
         {
           "android": {
             "enabled": true,
-            "singleShareMimeTypes": ["text/plain", "application/x-bittorrent", "application/octet-stream"]
+            "singleShareMimeTypes": [
+              "text/plain",
+              "application/x-bittorrent",
+              "application/octet-stream"
+            ]
           }
         }
       ]

@@ -26,6 +26,7 @@ import { Tap } from '@/ui/Tap';
 import { color, font, motion, space } from '@/theme';
 
 import { SeekBar } from './SeekBar';
+import { SubtitleOverlay, useSubtitleFile, type SubtitleFile } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
 
 const HIDE_AFTER_MS = 3200;
@@ -61,7 +62,7 @@ export function Player({
       metadata: { title: title?.name ?? play.name, artist: episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : undefined },
     },
     (p) => {
-      p.timeUpdateEventInterval = 0.5;
+      p.timeUpdateEventInterval = 0.25;
       p.showNowPlayingNotification = true;
       p.staysActiveInBackground = false;
       p.keepScreenOnWhilePlaying = true;
@@ -79,6 +80,9 @@ export function Player({
   const [scrubbing, setScrubbing] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
   const claimed = useRef(false);
+  const [subtitleFile, setSubtitleFile] = useState<SubtitleFile | null>(null);
+  const cues = useSubtitleFile(play.id, subtitleFile);
+  const subtitleFiles: SubtitleFile[] = play.subtitles.map((file) => ({ index: file.index, name: file.path.split('/').pop() ?? file.path }));
 
   useEventListener(player, 'sourceLoad', (event) => setDuration(event.duration));
 
@@ -241,7 +245,21 @@ export function Player({
         </Animated.View>
       ) : null}
 
-      {tracksOpen ? <TracksSheet player={player} media={media} onClose={() => setTracksOpen(false)} /> : null}
+      <SubtitleOverlay cues={cues} time={time.currentTime} lifted={visible} />
+
+      {tracksOpen ? (
+        <TracksSheet
+          player={player}
+          media={media}
+          files={subtitleFiles}
+          file={subtitleFile}
+          onFile={(file) => {
+            setSubtitleFile(file);
+            if (file) player.subtitleTrack = null;
+          }}
+          onClose={() => setTracksOpen(false)}
+        />
+      ) : null}
     </View>
   );
 }

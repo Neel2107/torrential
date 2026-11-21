@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
@@ -81,18 +81,31 @@ export function SeekBar({
 
   const previewFraction = duration > 0 ? shown / duration : 0;
   const thumbLeft = Math.max(0, Math.min(width - THUMB_WIDTH, previewFraction * width - THUMB_WIDTH / 2));
-  const thumbTime = Math.floor(shown / THUMBNAIL_EVERY) * THUMBNAIL_EVERY;
+  const wanted = Math.floor(shown / THUMBNAIL_EVERY) * THUMBNAIL_EVERY;
+  const [thumbTime, setThumbTime] = useState(wanted);
+  const [lastFrame, setLastFrame] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (preview === null) return;
+    const timer = setTimeout(() => setThumbTime(wanted), 120);
+    return () => clearTimeout(timer);
+  }, [wanted, preview]);
+
+  const frame = url(link, '/api/thumbnail', { id: download.id, file: download.file, t: thumbTime });
 
   return (
     <View style={styles.wrap}>
       {preview !== null && width > 0 ? (
         <Animated.View style={[styles.bubble, { left: thumbLeft }]} pointerEvents="none">
           <Image
-            source={{ uri: url(link, '/api/thumbnail', { id: download.id, file: download.file, t: thumbTime }), headers: authHeaders(link) }}
+            source={{ uri: frame, headers: authHeaders(link) }}
+            placeholder={lastFrame ? { uri: lastFrame, headers: authHeaders(link) } : undefined}
+            placeholderContentFit="cover"
             style={styles.thumb}
             contentFit="cover"
-            cachePolicy="memory"
-            transition={80}
+            cachePolicy="memory-disk"
+            transition={0}
+            onLoad={() => setLastFrame(frame)}
           />
           <Text style={styles.bubbleTime}>{clock(shown)}</Text>
         </Animated.View>

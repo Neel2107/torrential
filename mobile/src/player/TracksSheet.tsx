@@ -5,18 +5,34 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { MediaInfo } from '@web/wire';
 
 import { languageName } from './languages';
+import type { SubtitleFile } from './Subtitles';
 
 import { Icon, icons } from '@/ui/Icon';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { color, font, space, type } from '@/theme';
 
-function trackName(track: { label?: string | null; language?: string | null; name?: string | null }, index: number): string {
-  return track.label || track.name || languageName(track.language) || `Track ${index + 1}`;
+function trackName(track: { label?: string | null; language?: string | null; name?: string | null }, index: number, kind: string): string {
+  const label = track.label && track.label !== 'und' ? track.label : null;
+  return label || track.name || languageName(track.language) || `${kind} ${index + 1}`;
 }
 
 /** Subtitles and audio, read from the video itself by the phone's player. */
-export function TracksSheet({ player, media, onClose }: { player: VideoPlayer; media: MediaInfo | null; onClose: () => void }) {
+export function TracksSheet({
+  player,
+  media,
+  files,
+  file,
+  onFile,
+  onClose,
+}: {
+  player: VideoPlayer;
+  media: MediaInfo | null;
+  files: SubtitleFile[];
+  file: SubtitleFile | null;
+  onFile: (file: SubtitleFile | null) => void;
+  onClose: () => void;
+}) {
   const { subtitleTrack } = useEvent(player, 'subtitleTrackChange', { subtitleTrack: player.subtitleTrack });
   const { audioTrack } = useEvent(player, 'audioTrackChange', { audioTrack: player.audioTrack });
   const subtitles = player.availableSubtitleTracks;
@@ -26,17 +42,36 @@ export function TracksSheet({ player, media, onClose }: { player: VideoPlayer; m
     <Sheet onClose={onClose}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.xs }}>
         <Text style={[type.title, styles.heading]}>Subtitles</Text>
-        <Row label="Off" selected={!subtitleTrack} onPress={() => (player.subtitleTrack = null)} />
+        <Row
+          label="Off"
+          selected={!subtitleTrack && !file}
+          onPress={() => {
+            player.subtitleTrack = null;
+            onFile(null);
+          }}
+        />
         {subtitles.map((track: SubtitleTrack, index) => (
           <Row
             key={`${track.id ?? index}`}
-            label={trackName(track, index)}
+            label={trackName(track, index, 'Subtitles')}
             detail={languageName(track.language)}
-            selected={subtitleTrack?.id === track.id && subtitleTrack?.label === track.label}
-            onPress={() => (player.subtitleTrack = track)}
+            selected={!file && subtitleTrack?.id === track.id && subtitleTrack?.label === track.label}
+            onPress={() => {
+              onFile(null);
+              player.subtitleTrack = track;
+            }}
           />
         ))}
-        {subtitles.length === 0 ? <Text style={[type.caption, styles.empty]}>This video has no subtitles inside it.</Text> : null}
+        {files.map((candidate) => (
+          <Row
+            key={`file-${candidate.index}`}
+            label={candidate.name.replace(/\.(srt|vtt|ass|ssa|sub)$/i, '')}
+            detail="Subtitle file in the torrent"
+            selected={file?.index === candidate.index}
+            onPress={() => onFile(candidate)}
+          />
+        ))}
+        {subtitles.length === 0 && files.length === 0 ? <Text style={[type.caption, styles.empty]}>This video has no subtitles.</Text> : null}
 
         <Text style={[type.title, styles.heading, { marginTop: space.lg }]}>Audio</Text>
         {audio.map((track: AudioTrack, index) => {
@@ -44,7 +79,7 @@ export function TracksSheet({ player, media, onClose }: { player: VideoPlayer; m
           return (
             <Row
               key={`${track.id ?? index}`}
-              label={trackName(track, index)}
+              label={audio.length === 1 && !languageName(track.language) ? 'Original' : trackName(track, index, 'Audio')}
               detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${fromEngine.channels > 2 ? `${fromEngine.channels - 1}.1` : fromEngine.channels === 2 ? 'Stereo' : 'Mono'}` : null}
               selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
               onPress={() => (player.audioTrack = track)}
