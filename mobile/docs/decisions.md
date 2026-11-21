@@ -15,6 +15,8 @@ What was decided while building the app, why, and how each part was checked on t
 | Every screen portrait except the player, which is landscape through its screen options | The runtime lock was unreliable on HyperOS, and Home left sideways after the player looked broken | Free rotation |
 | Sheets through a root portal | Sheets drawn inside a tab sat under the tab bar | Per-screen sheets |
 | A `.torrent` file becomes a magnet on the phone, by SHA-1 of its bencoded `info` | The engine takes magnets and URLs but no `.torrent` bytes | Uploading the file, which the API does not allow |
+| A seek in stream mode asks for a new stream from there | The engine's stream ignores Range; its timestamps are the file's own, and the clock adds the start back when the player counts from zero | Re-encoding with a reset clock |
+| Change address keeps the token | The engine never expires a device token, so moving networks needs a new address, not a new pairing | Pairing again on every network change |
 | Play-cache cap on the Mac set to 6 GiB (`~/.config/torrential/config.yaml`) | The Mac had about 18 GB free during the build | The 20 GiB default |
 
 ## Found along the way
@@ -38,11 +40,15 @@ What was decided while building the app, why, and how each part was checked on t
 | Swipe down to close | Dragged past 100 pt, the player closed back to portrait Home |
 | Torrent search, magnet intent | Big Buck Bunny found by the Torrents tab; a `magnet:` VIEW intent opened the add sheet and played |
 | Pinned source | The smallest Big Buck Bunny release, picked from Sources, played |
-| Downloads | Live list from `/api/events`, sheets for play and remove |
+| Downloads | Live list from `/api/events`, sheets for play and remove; one stream open per phone (`lsof` on the Mac) |
+| `.torrent` file | The Big Buck Bunny `.torrent` pushed to Downloads and opened with a VIEW intent became `magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c`, the known infohash |
+| Engine moved networks | The Mac moved from the phone's hotspot to home Wi-Fi; Change address kept the pairing and reloaded everything at `192.168.1.42` |
+| Stream fallback | Forced in development: the engine ran ffmpeg from the resume point, and a scrub started a new stream at 42:34 with the clock in step |
 
 ## Not verified yet
 
 - Play on TV: no TV was on the Mac's network (it was on the phone's hotspot).
 - Scanning the pairing QR code with the camera.
-- A `.torrent` file opened from Files or a chat, and text shared to the app.
+- Text shared to the app from another app's share sheet.
+- A real DTS or TrueHD file switching to the stream by itself (the switch was forced on an AAC file).
 - iOS.
