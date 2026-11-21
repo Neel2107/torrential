@@ -1,17 +1,20 @@
 import { router } from 'expo-router';
-import { HardDrive } from 'lucide-react-native';
+import { HardDrive, Smartphone } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { useVersion } from '@/engine/queries';
+import { useSession } from '@/engine/session';
 import { color } from '@/theme';
 
 import { Glass, LIQUID_GLASS } from './Glass';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
 
-/** Where X puts your avatar: the engine this phone watches from, with a dot for whether it answers. */
+/** Where X puts your avatar: the engine this phone watches from, a computer or the phone itself, with a dot for whether it answers. */
 export function EngineAvatar() {
   const version = useVersion();
+  const { session } = useSession();
+  const phone = session.state === 'paired' && session.engine.kind === 'phone';
   const state = version.isSuccess ? 'online' : version.isError ? 'offline' : 'checking';
 
   return (
@@ -19,11 +22,11 @@ export function EngineAvatar() {
       haptic
       shrink={0.9}
       onPress={() => router.push('/engine')}
-      accessibilityLabel={`Engine, ${state}`}
+      accessibilityLabel={`${phone ? "This phone's engine" : 'Engine'}, ${state}`}
       style={styles.avatar}
     >
       <Glass interactive style={styles.disc}>
-        <Icon name={HardDrive} size={18} tint={color.soft} />
+        <Icon name={phone ? Smartphone : HardDrive} size={18} tint={color.soft} />
       </Glass>
       <View
         style={[

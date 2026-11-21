@@ -346,10 +346,12 @@ export function Player({
 
           {buffering && !visible ? <ActivityIndicator style={styles.center} size="large" color={color.ink} /> : null}
 
-          {status === 'error' ? (
+          {status === 'error' || timeline.problem ? (
             <View style={[styles.center, styles.errorBox]}>
               <Icon name={icons.warning} size={28} tint={color.error} />
-              <Text style={styles.errorText}>{error?.message ?? 'This video does not play on this phone.'}</Text>
+              <Text style={styles.errorText}>
+                {timeline.problem ?? error?.message ?? 'This video does not play on this phone.'}
+              </Text>
             </View>
           ) : null}
 

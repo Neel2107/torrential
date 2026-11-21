@@ -103,6 +103,8 @@ export function useTimeline({
 }) {
   const [mode, setMode] = useState<Mode>(STARTS_DIRECT ? { kind: 'direct' } : { kind: 'pending' });
   const [loadedDuration, setLoadedDuration] = useState(0);
+  /** Why nothing can play, when no source will. */
+  const [problem, setProblem] = useState<string | null>(null);
   // A stream's timestamps are the file's own, but a player may count from zero; `base` is what to add.
   const base = useRef(0);
   const baseKnown = useRef(false);
@@ -121,7 +123,15 @@ export function useTimeline({
 
   const switchTo = useCallback(
     async (next: Mode, at: number) => {
-      if (next.kind === 'stream' && media && !(await readyFfmpeg(link, media))) return;
+      if (next.kind === 'stream' && media && !(await readyFfmpeg(link, media))) {
+        // An engine inside a phone app has no ffmpeg, so a file the player cannot read stays unplayable here.
+        setProblem(
+          media.ffmpeg === 'missing'
+            ? `This ${next.reason === 'audio' ? 'audio' : 'file'} needs converting, which the engine on a phone cannot do. Play it from a computer's engine.`
+            : 'The engine could not get ffmpeg to convert this file.',
+        );
+        return;
+      }
       base.current = 0;
       baseKnown.current = false;
       startedAt.current = null;
@@ -201,5 +211,5 @@ export function useTimeline({
 
   const duration = mode.kind === 'stream' ? (media?.duration ?? 0) : player.duration || loadedDuration;
 
-  return { mode, now, duration, seek, chooseAudio, base };
+  return { mode, now, duration, seek, chooseAudio, base, problem };
 }
