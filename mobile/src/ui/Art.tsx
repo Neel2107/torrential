@@ -22,6 +22,7 @@ export function Art({
   style,
   placeholder = true,
   fade = true,
+  onDisplay,
 }: {
   id: string;
   kind: ArtKind;
@@ -33,6 +34,8 @@ export function Art({
   placeholder?: boolean;
   /** Fade the image in over the placeholder. Off where a transition carries the same picture in. */
   fade?: boolean;
+  /** The picture is on screen. */
+  onDisplay?: () => void;
 }) {
   const link = useLink();
   // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
@@ -61,6 +64,7 @@ export function Art({
           cachePolicy="memory-disk"
           recyclingKey={uri}
           onError={() => setFailedUri(uri)}
+          onDisplay={onDisplay}
           accessible={false}
         />
       )}

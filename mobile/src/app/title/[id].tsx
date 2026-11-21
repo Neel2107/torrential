@@ -28,6 +28,8 @@ import { Burst, type BurstHandle } from '@/ui/Burst';
 import { Button } from '@/ui/Button';
 import { CastBar } from '@/ui/CastBar';
 import { EngineProblem } from '@/ui/EngineProblem';
+import { HeroTarget, useHeroPage } from '@/ui/hero';
+import { bannerHeight as bannerHeightOf, OVERLAP, POSTER, RING, RISE } from '@/ui/titleGeometry';
 import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
 import { rise } from '@/ui/rise';
@@ -35,17 +37,16 @@ import { Skeleton } from '@/ui/Skeleton';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
 
-const BANNER = 0.56;
-
 export default function Title() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const title = useTitle(id);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
-  const bannerHeight = Math.round(width * BANNER);
+  const bannerHeight = bannerHeightOf(width);
   const [refreshing, setRefreshing] = useState(false);
   const [docked, setDocked] = useState(0);
+  const hero = useHeroPage(id);
 
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
@@ -68,74 +69,79 @@ export default function Title() {
   }));
 
   return (
-    <View style={styles.screen}>
-      <Animated.View style={[styles.banner, { height: bannerHeight }, banner]}>
-        <Art id={id} kind="background" style={StyleSheet.absoluteFill} name={title.data?.name} />
-        <LinearGradient
-          colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']}
-          locations={[0, 0.4, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-
-      <Animated.ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: bannerHeight - 56, paddingBottom: insets.bottom + space.xxl + docked }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={async () => {
-              setRefreshing(true);
-              await title.refetch();
-              setRefreshing(false);
-            }}
-            tintColor={color.soft}
-            colors={[color.actionInk]}
-            progressBackgroundColor={color.action}
-            progressViewOffset={insets.top + 40}
+    <hero.Provider value={hero.slot}>
+      <Animated.View style={[styles.screen, hero.style]}>
+        <Animated.View style={[styles.banner, { height: bannerHeight }, banner]}>
+          <Art id={id} kind="background" style={StyleSheet.absoluteFill} name={title.data?.name} />
+          <LinearGradient
+            colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']}
+            locations={[0, 0.4, 1]}
+            style={StyleSheet.absoluteFill}
           />
-        }
-      >
-        {title.isPending ? (
-          <Loading id={id} />
-        ) : title.isError ? (
-          <View style={styles.sheet}>
-            <EngineProblem error={title.error} onRetry={() => title.refetch()} />
-          </View>
-        ) : (
-          <Body page={title.data} />
-        )}
-      </Animated.ScrollView>
-
-      <View style={[styles.header, { paddingTop: insets.top }]} pointerEvents="box-none">
-        <Animated.View style={[StyleSheet.absoluteFill, styles.headerShade, headerShade]} pointerEvents="none" />
-        <Tap shrink={0.88} haptic onPress={() => router.back()} accessibilityLabel="Back" style={styles.round}>
-          <Icon name={icons.back} size={22} tint={color.ink} />
-        </Tap>
-        <Animated.View style={[styles.headerTitle, headerName]} pointerEvents="none">
-          <Text style={type.headline} numberOfLines={1}>
-            {title.data?.name}
-          </Text>
-          {title.data?.year ? <Text style={type.caption}>{title.data.year}</Text> : null}
         </Animated.View>
-        <Tap
-          shrink={0.88}
-          haptic
-          onPress={() =>
-            router.push({
-              pathname: '/tv',
-              params: title.data?.play_target ? { video: title.data.play_target.video } : {},
-            })
+
+        <Animated.ScrollView
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={{
+            paddingTop: bannerHeight - OVERLAP,
+            paddingBottom: insets.bottom + space.xxl + docked,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={async () => {
+                setRefreshing(true);
+                await title.refetch();
+                setRefreshing(false);
+              }}
+              tintColor={color.soft}
+              colors={[color.actionInk]}
+              progressBackgroundColor={color.action}
+              progressViewOffset={insets.top + 40}
+            />
           }
-          accessibilityLabel="Play on TV"
-          style={styles.round}
         >
-          <Icon name={icons.cast} size={20} tint={color.ink} />
-        </Tap>
-      </View>
-      <CastBar bottom={insets.bottom + space.sm} onHeight={setDocked} />
-    </View>
+          {title.isPending ? (
+            <Loading id={id} />
+          ) : title.isError ? (
+            <View style={styles.sheet}>
+              <EngineProblem error={title.error} onRetry={() => title.refetch()} />
+            </View>
+          ) : (
+            <Body page={title.data} />
+          )}
+        </Animated.ScrollView>
+
+        <View style={[styles.header, { paddingTop: insets.top }]} pointerEvents="box-none">
+          <Animated.View style={[StyleSheet.absoluteFill, styles.headerShade, headerShade]} pointerEvents="none" />
+          <Tap shrink={0.88} haptic onPress={() => router.back()} accessibilityLabel="Back" style={styles.round}>
+            <Icon name={icons.back} size={22} tint={color.ink} />
+          </Tap>
+          <Animated.View style={[styles.headerTitle, headerName]} pointerEvents="none">
+            <Text style={type.headline} numberOfLines={1}>
+              {title.data?.name}
+            </Text>
+            {title.data?.year ? <Text style={type.caption}>{title.data.year}</Text> : null}
+          </Animated.View>
+          <Tap
+            shrink={0.88}
+            haptic
+            onPress={() =>
+              router.push({
+                pathname: '/tv',
+                params: title.data?.play_target ? { video: title.data.play_target.video } : {},
+              })
+            }
+            accessibilityLabel="Play on TV"
+            style={styles.round}
+          >
+            <Icon name={icons.cast} size={20} tint={color.ink} />
+          </Tap>
+        </View>
+        <CastBar bottom={insets.bottom + space.sm} onHeight={setDocked} />
+      </Animated.View>
+    </hero.Provider>
   );
 }
 
@@ -437,7 +443,9 @@ function PosterSlot({ id, name }: { id: string; name?: string }) {
   return (
     <View style={styles.posterWrap}>
       <Link.AppleZoomTarget>
-        <Art id={id} kind="poster" name={name} style={styles.poster} fade={false} />
+        <HeroTarget id={id}>
+          <Art id={id} kind="poster" name={name} style={styles.poster} fade={false} />
+        </HeroTarget>
       </Link.AppleZoomTarget>
     </View>
   );
@@ -486,10 +494,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20,18,15,0.6)',
   },
   sheet: { backgroundColor: color.paper, paddingHorizontal: space.page, minHeight: 600 },
-  identity: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: -64 },
+  identity: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: -RISE },
   posterWrap: {
     borderRadius: radius.md + 3,
-    borderWidth: 3,
+    borderWidth: RING,
     borderColor: color.paper,
     shadowColor: '#000',
     shadowOpacity: 0.5,
@@ -497,7 +505,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 10,
   },
-  poster: { width: 112, height: 168, borderRadius: radius.md },
+  poster: { ...POSTER, borderRadius: radius.md },
   save: {
     flexDirection: 'row',
     alignItems: 'center',

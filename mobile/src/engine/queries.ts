@@ -1,8 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { useCallback } from 'react';
 
 import type { Cast, CastAction, Home, Me, TitlePage, TitleSearch, TvList, Version } from '@web/wire';
 
-import { get, post, type Link } from './client';
+import { authHeaders, get, post, url, type Link } from './client';
 import { useLink } from './session';
 
 export const keys = {
@@ -29,6 +31,28 @@ export function useTitle(id: string, enabled = true) {
     enabled: enabled && id.length > 0,
     queryFn: ({ signal }) => get<TitlePage>(link, `/api/title?id=${encodeURIComponent(id)}`, signal),
   });
+}
+
+/**
+ * Starts loading a title page and its backdrop before it opens, from the moment a finger lands on
+ * its card, so the page arrives with them.
+ */
+export function usePrefetchTitle() {
+  const link = useLink();
+  const client = useQueryClient();
+  return useCallback(
+    (id: string) => {
+      client.prefetchQuery({
+        queryKey: [...keys.title(id), link.base],
+        queryFn: ({ signal }) => get<TitlePage>(link, `/api/title?id=${encodeURIComponent(id)}`, signal),
+      });
+      Image.prefetch(url(link, '/api/title/art', { id, kind: 'background' }), {
+        headers: authHeaders(link),
+        cachePolicy: 'memory-disk',
+      });
+    },
+    [client, link],
+  );
 }
 
 export function useTitleSearch(q: string) {

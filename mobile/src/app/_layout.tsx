@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { EngineError } from '@/engine/client';
 import { JobsProvider } from '@/engine/jobs';
 import { SessionProvider, useSession } from '@/engine/session';
+import { HERO, HeroLayer } from '@/ui/hero';
 import { PortalHost } from '@/ui/Portal';
 import { color } from '@/theme';
 
@@ -84,7 +85,18 @@ function Routes() {
         >
           <Stack.Protected guard={paired}>
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="title/[id]" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen
+              name="title/[id]"
+              options={
+                HERO
+                  ? {
+                      presentation: 'transparentModal',
+                      animation: 'none',
+                      contentStyle: { backgroundColor: 'transparent' },
+                    }
+                  : { animation: 'slide_from_right' }
+              }
+            />
             <Stack.Screen
               name="play"
               options={{
@@ -146,6 +158,7 @@ function Routes() {
             <Stack.Screen name="pair" />
           </Stack.Protected>
         </Stack>
+        <HeroLayer />
       </MaybeJobs>
     </QueryClientProvider>
   );

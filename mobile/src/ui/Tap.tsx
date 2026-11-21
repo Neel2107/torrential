@@ -18,6 +18,8 @@ export function Tap({
   haptic = false,
   highlight = false,
   onPress,
+  onPressIn,
+  onPressOut,
   ...rest
 }: Omit<PressableProps, 'style' | 'children'> & {
   children: ReactNode;
@@ -37,11 +39,13 @@ export function Tap({
     <AnimatedPressable
       hitSlop={hitSlop}
       accessibilityRole="button"
-      onPressIn={() => {
+      onPressIn={(event) => {
         pressed.value = withTiming(1, { duration: motion.press, easing: motion.out });
+        onPressIn?.(event);
       }}
-      onPressOut={() => {
+      onPressOut={(event) => {
         pressed.value = withSpring(0, motion.settle);
+        onPressOut?.(event);
       }}
       onPress={(event) => {
         if (haptic) Haptics.selectionAsync();

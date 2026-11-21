@@ -15,6 +15,7 @@ import type { Job } from '@web/wire';
 
 import { post } from '@/engine/client';
 import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
+import { qualityOf } from '@/engine/quality';
 import { Art } from '@/ui/Art';
 import { useLink } from '@/engine/session';
 import { cancel, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
@@ -126,6 +127,8 @@ export default function Downloads() {
 function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () => void }) {
   const name = useJobName(job);
   const copy = useCopy(job.id);
+  // Two downloads of one film read the same by name; the release's quality tells them apart.
+  const tags = job.name ? qualityOf(job.name) : [];
   const size = job.progress.size;
   const fraction = size ? job.progress.verified / size : 0;
   const downloading = job.state === 'downloading';
@@ -198,6 +201,19 @@ function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () =>
           <Text style={type.callout} numberOfLines={2}>
             {name.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{name.tags}</Text>
           </Text>
+          {tags.length > 0 ? (
+            <View style={styles.tags} accessibilityLabel={tags.map((tag) => tag.label).join(', ')}>
+              {tags.map((tag) => (
+                <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
+                  {tag.label}
+                </Text>
+              ))}
+            </View>
+          ) : job.name && name.poster ? (
+            <Text style={type.caption} numberOfLines={1}>
+              {job.name}
+            </Text>
+          ) : null}
           {job.state !== 'done' && job.state !== 'error' ? (
             <Progress fraction={fraction} paused={job.state === 'paused'} />
           ) : null}
@@ -436,6 +452,19 @@ function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  tag: {
+    fontFamily: font.semibold,
+    fontSize: 11,
+    letterSpacing: 0.2,
+    color: color.soft,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    overflow: 'hidden',
+    backgroundColor: color.lifted,
+  },
+  tagStrong: { color: color.actionInk, backgroundColor: color.action },
   screen: { flex: 1, backgroundColor: color.paper },
   row: {
     flexDirection: 'row',
