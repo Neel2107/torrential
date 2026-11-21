@@ -36,6 +36,7 @@ import { titleOf, videoOf } from '@web/lib/video';
 import { get, post } from '@/engine/client';
 import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
+import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
 import { PortalHost } from '@/ui/Portal';
 import { Tap } from '@/ui/Tap';
@@ -376,7 +377,9 @@ export function Player({
                   accessibilityLabel="Close the player"
                   style={styles.round}
                 >
-                  <Icon name={icons.back} size={24} tint={color.ink} />
+                  <Glass interactive fallback="transparent" style={styles.disc}>
+                    <Icon name={icons.back} size={24} tint={color.ink} />
+                  </Glass>
                 </Tap>
                 <View style={styles.heading}>
                   <Text style={styles.title} numberOfLines={1}>
@@ -386,47 +389,49 @@ export function Player({
                     {subheading}
                   </Text>
                 </View>
-                {videos.length > 1 ? (
+                <Glass fallback="transparent" style={styles.capsule}>
+                  {videos.length > 1 ? (
+                    <Tap
+                      shrink={0.88}
+                      onPress={() => setSheet('files')}
+                      accessibilityLabel="Videos in this torrent"
+                      style={styles.round}
+                    >
+                      <Icon name={icons.episodes} size={22} tint={color.ink} />
+                    </Tap>
+                  ) : null}
                   <Tap
                     shrink={0.88}
-                    onPress={() => setSheet('files')}
-                    accessibilityLabel="Videos in this torrent"
+                    onPress={() => setSheet('tracks')}
+                    accessibilityLabel="Subtitles and audio"
                     style={styles.round}
                   >
-                    <Icon name={icons.episodes} size={22} tint={color.ink} />
+                    <Icon name={icons.subtitles} size={22} tint={color.ink} />
                   </Tap>
-                ) : null}
-                <Tap
-                  shrink={0.88}
-                  onPress={() => setSheet('tracks')}
-                  accessibilityLabel="Subtitles and audio"
-                  style={styles.round}
-                >
-                  <Icon name={icons.subtitles} size={22} tint={color.ink} />
-                </Tap>
-                <Tap
-                  shrink={0.88}
-                  onPress={() => setSheet('settings')}
-                  accessibilityLabel="Settings"
-                  style={styles.round}
-                >
-                  <Icon name={icons.settings} size={22} tint={color.ink} />
-                </Tap>
-                <Tap
-                  shrink={0.88}
-                  onPress={() => {
-                    const at = String(Math.floor(timeline.now()));
-                    player.pause();
-                    router.push({
-                      pathname: '/tv',
-                      params: video ? { video, at } : { ref: play.id, file: String(play.video.index), at },
-                    });
-                  }}
-                  accessibilityLabel="Play on TV"
-                  style={styles.round}
-                >
-                  <Icon name={icons.cast} size={22} tint={color.ink} />
-                </Tap>
+                  <Tap
+                    shrink={0.88}
+                    onPress={() => setSheet('settings')}
+                    accessibilityLabel="Settings"
+                    style={styles.round}
+                  >
+                    <Icon name={icons.settings} size={22} tint={color.ink} />
+                  </Tap>
+                  <Tap
+                    shrink={0.88}
+                    onPress={() => {
+                      const at = String(Math.floor(timeline.now()));
+                      player.pause();
+                      router.push({
+                        pathname: '/tv',
+                        params: video ? { video, at } : { ref: play.id, file: String(play.video.index), at },
+                      });
+                    }}
+                    accessibilityLabel="Play on TV"
+                    style={styles.round}
+                  >
+                    <Icon name={icons.cast} size={22} tint={color.ink} />
+                  </Tap>
+                </Glass>
               </View>
 
               <View style={styles.middle} pointerEvents="box-none">
@@ -436,7 +441,9 @@ export function Player({
                   accessibilityLabel={`Back ${SKIP} seconds`}
                   style={styles.side}
                 >
-                  <Icon name={icons.rewind} size={30} tint={color.ink} />
+                  <Glass interactive fallback="transparent" style={styles.disc}>
+                    <Icon name={icons.rewind} size={30} tint={color.ink} />
+                  </Glass>
                 </Tap>
                 <PlayButton playing={isPlaying} buffering={buffering} onPress={toggle} />
                 <Tap
@@ -445,7 +452,9 @@ export function Player({
                   accessibilityLabel={`Forward ${SKIP} seconds`}
                   style={styles.side}
                 >
-                  <Icon name={icons.forward} size={30} tint={color.ink} />
+                  <Glass interactive fallback="transparent" style={styles.disc}>
+                    <Icon name={icons.forward} size={30} tint={color.ink} />
+                  </Glass>
                 </Tap>
               </View>
 
@@ -574,13 +583,15 @@ function PlayButton({ playing, buffering, onPress }: { playing: boolean; bufferi
 
   return (
     <Tap shrink={0.9} onPress={onPress} accessibilityLabel={playing ? 'Pause' : 'Play'} style={styles.playButton}>
-      {buffering ? (
-        <ActivityIndicator size="large" color={color.ink} />
-      ) : (
-        <Animated.View style={style}>
-          <Icon name={playing ? icons.pause : icons.play} size={38} tint={color.ink} filled />
-        </Animated.View>
-      )}
+      <Glass interactive fallback="rgba(20, 18, 15, 0.5)" style={styles.disc}>
+        {buffering ? (
+          <ActivityIndicator size="large" color={color.ink} />
+        ) : (
+          <Animated.View style={style}>
+            <Icon name={playing ? icons.pause : icons.play} size={38} tint={color.ink} filled />
+          </Animated.View>
+        )}
+      </Glass>
     </Tap>
   );
 }
@@ -624,14 +635,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(20, 18, 15, 0.5)',
-  },
+  playButton: { width: 76, height: 76 },
+  disc: { flex: 1, alignSelf: 'stretch', borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  capsule: { flexDirection: 'row', alignItems: 'center', borderRadius: 22 },
   bottom: { paddingTop: space.sm },
   center: { position: 'absolute', alignSelf: 'center', top: '45%' },
   errorBox: {
