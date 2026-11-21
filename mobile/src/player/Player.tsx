@@ -459,9 +459,9 @@ export function Player({
                 ]}
               >
                 <SeekBar
-                  position={time.currentTime}
+                  position={position}
                   duration={duration || player.duration || 0}
-                  buffered={time.bufferedPosition}
+                  buffered={timeline.base.current + time.bufferedPosition}
                   download={download}
                   downloaded={downloaded}
                   onScrubbing={setScrubbing}

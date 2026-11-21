@@ -44,22 +44,27 @@ function obstacle(media: MediaInfo): Reason | null {
   return null;
 }
 
+/** iOS needs the engine's HLS, which its own build of the engine serves at /api/hls. */
+const USES_HLS = Platform.OS === 'ios';
+
 /** iOS cannot try the file and fall back cheaply, so it waits for the engine's description first. */
 export const STARTS_DIRECT = Platform.OS !== 'ios';
 
 export function sourceFor(link: Link, play: PlayInfo, mode: Mode, metadata: VideoMetadata): VideoSourceObject | null {
   if (mode.kind === 'pending') return null;
-  const uri =
-    mode.kind === 'direct'
-      ? `${link.base}${encodeURI(play.video.url)}`
-      : url(link, '/api/stream', {
-          id: play.id,
-          file: play.video.index,
-          t: mode.from.toFixed(3),
-          video: mode.video,
-          audio: mode.audio,
-        });
-  return { uri, headers: authHeaders(link), metadata, contentType: 'progressive' };
+  if (mode.kind === 'direct') {
+    return {
+      uri: `${link.base}${encodeURI(play.video.url)}`,
+      headers: authHeaders(link),
+      metadata,
+      contentType: 'progressive',
+    };
+  }
+  const query = { id: play.id, file: play.video.index, t: mode.from.toFixed(3), video: mode.video, audio: mode.audio };
+  // AVPlayer plays a live conversion only as HLS; ExoPlayer reads the one fragmented MP4 stream.
+  return USES_HLS
+    ? { uri: url(link, '/api/hls/index.m3u8', query), headers: authHeaders(link), metadata, contentType: 'hls' }
+    : { uri: url(link, '/api/stream', query), headers: authHeaders(link), metadata, contentType: 'progressive' };
 }
 
 /** Fetches ffmpeg on the engine's computer when it is missing, which the stream needs. */
@@ -104,6 +109,7 @@ export function useTimeline({
   modeRef.current = mode;
   const decided = useRef(false);
   const directRetried = useRef(false);
+  const streamRetried = useRef(false);
 
   const now = useCallback(() => base.current + player.currentTime, [player]);
 
@@ -143,12 +149,16 @@ export function useTimeline({
   useEventListener(player, 'statusChange', ({ status }) => {
     if (status !== 'error') return;
     const current = modeRef.current;
-    const at = now();
+    // A source that failed before it loaded has a clock at zero; it was meant to start at `from`.
+    const at = current.kind === 'stream' ? Math.max(now(), current.from) : now();
     if (current.kind === 'direct' && !directRetried.current) {
       directRetried.current = true;
       setTimeout(() => switchTo({ kind: 'direct' }, at), 1500);
     } else if (current.kind === 'direct') {
       switchTo({ kind: 'stream', video: 'copy', from: at, audio: null, reason: 'failed' }, at);
+    } else if (current.kind === 'stream' && !streamRetried.current) {
+      streamRetried.current = true;
+      setTimeout(() => switchTo({ ...current, from: at }, at), 1500);
     } else if (current.kind === 'stream' && current.video === 'copy') {
       switchTo({ ...current, video: 'h264', from: at, reason: 'failed' }, at);
     }
