@@ -42,8 +42,10 @@ import { color, font, motion, space } from '@/theme';
 
 import { useDownloaded, usePlayingJob } from './downloaded';
 import { Ended } from './Ended';
+import { usePlayerPreferences } from './preferences';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
+import { SettingsSheet } from './SettingsSheet';
 import { SubtitleOverlay, useSubtitleFile, type SubtitleFile } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
 
@@ -129,11 +131,17 @@ export function Player({
   const [visible, setVisible] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [preferences, setPreferences] = usePlayerPreferences();
   // Each time this screen starts or resumes playback it claims the saved place, as the web player does.
   const resumed = useRef(true);
   const client = useQueryClient();
   const [subtitleFile, setSubtitleFile] = useState<SubtitleFile | null>(null);
   const cues = useSubtitleFile(play.id, subtitleFile);
+  /** Seconds each drawn subtitle shows later than written, by track, for this screen. */
+  const [offsets, setOffsets] = useState<Record<string, number>>({});
+  const drawn = subtitleFile ? `file:${subtitleFile.index}` : null;
+  const offset = drawn ? (offsets[drawn] ?? 0) : null;
   const subtitleFiles: SubtitleFile[] = play.subtitles.map((file) => ({
     index: file.index,
     name: file.path.split('/').pop() ?? file.path,
@@ -199,10 +207,14 @@ export function Player({
   }, [save, client, video]);
 
   useEffect(() => {
-    if (!visible || !isPlaying || scrubbing || tracksOpen) return;
+    if (!visible || !isPlaying || scrubbing || tracksOpen || settingsOpen) return;
     const timer = setTimeout(() => setVisible(false), HIDE_AFTER_MS);
     return () => clearTimeout(timer);
-  }, [visible, isPlaying, scrubbing, tracksOpen]);
+  }, [visible, isPlaying, scrubbing, tracksOpen, settingsOpen]);
+
+  useEffect(() => {
+    player.playbackRate = preferences.speed;
+  }, [player, preferences.speed]);
 
   const toggle = () => (player.playing ? player.pause() : player.play());
 
@@ -345,6 +357,14 @@ export function Player({
               </Tap>
               <Tap
                 shrink={0.88}
+                onPress={() => setSettingsOpen(true)}
+                accessibilityLabel="Settings"
+                style={styles.round}
+              >
+                <Icon name={icons.settings} size={22} tint={color.ink} />
+              </Tap>
+              <Tap
+                shrink={0.88}
                 onPress={() => {
                   const at = String(Math.floor(timeline.now()));
                   player.pause();
@@ -406,7 +426,12 @@ export function Player({
           </Animated.View>
         ) : null}
 
-        <SubtitleOverlay cues={cues} time={position} lifted={visible} />
+        <SubtitleOverlay
+          cues={cues}
+          time={position - (offset ?? 0)}
+          lifted={visible}
+          look={preferences.subtitleStyle}
+        />
 
         {ended ? (
           <Ended
@@ -437,6 +462,18 @@ export function Player({
               if (file) player.subtitleTrack = null;
             }}
             onClose={() => setTracksOpen(false)}
+          />
+        ) : null}
+
+        {settingsOpen ? (
+          <SettingsSheet
+            speed={preferences.speed}
+            onSpeed={(speed) => setPreferences({ speed })}
+            offset={offset}
+            onShift={(seconds) => drawn && setOffsets((previous) => ({ ...previous, [drawn]: seconds }))}
+            style={preferences.subtitleStyle}
+            onStyle={(change) => setPreferences({ subtitleStyle: { ...preferences.subtitleStyle, ...change } })}
+            onClose={() => setSettingsOpen(false)}
           />
         ) : null}
       </Animated.View>
