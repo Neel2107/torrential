@@ -154,16 +154,17 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
 
 /**
  * Starts a torrent picked by hand: a search result, or a magnet link shared from another app. The
- * engine waits up to a minute for a magnet's file list, then answers with the file to play.
+ * engine waits up to a minute for a magnet's file list, then answers with `file`, or the file it
+ * would play.
  */
-export function useTorrentPlay(ref: string, attempt: number): Start {
+export function useTorrentPlay(ref: string, attempt: number, file?: number): Start {
   const link = useLink();
   const [start, setStart] = useState<Start>({ phase: 'finding', title: null, episode: null });
 
   useEffect(() => {
     const controller = new AbortController();
     setStart({ phase: 'finding', title: null, episode: null });
-    post<PlayInfo>(link, '/api/play', { ref }, controller.signal).then(
+    post<PlayInfo>(link, '/api/play', file === undefined ? { ref } : { ref, file }, controller.signal).then(
       (play) => {
         const release: Release = {
           id: play.id,
@@ -195,7 +196,7 @@ export function useTorrentPlay(ref: string, attempt: number): Start {
       },
     );
     return () => controller.abort();
-  }, [link, ref, attempt]);
+  }, [link, ref, attempt, file]);
 
   return start;
 }

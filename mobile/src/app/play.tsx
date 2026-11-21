@@ -28,23 +28,39 @@ import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
 
 export default function Play() {
-  const { video, ref, source, stream } = useLocalSearchParams<{
+  const { video, ref, file, source, stream } = useLocalSearchParams<{
     video?: string;
     ref?: string;
+    file?: string;
     source?: string;
     stream?: string;
   }>();
   if (__DEV__) FORCE_STREAM.value = stream === '1';
   const [attempt, setAttempt] = useState(0);
   return ref ? (
-    <ByTorrent torrent={ref} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />
+    <ByTorrent
+      torrent={ref}
+      file={file ? Number(file) : undefined}
+      attempt={attempt}
+      retry={() => setAttempt((n) => n + 1)}
+    />
   ) : (
     <ByTitle video={video ?? ''} source={source} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />
   );
 }
 
-function ByTorrent({ torrent, attempt, retry }: { torrent: string; attempt: number; retry: () => void }) {
-  const start = useTorrentPlay(torrent, attempt);
+function ByTorrent({
+  torrent,
+  file,
+  attempt,
+  retry,
+}: {
+  torrent: string;
+  file?: number;
+  attempt: number;
+  retry: () => void;
+}) {
+  const start = useTorrentPlay(torrent, attempt, file);
   if (start.phase === 'ready') {
     return (
       <Player video={null} play={start.play} release={start.release} resumeAt={null} title={null} episode={null} />

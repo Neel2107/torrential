@@ -2,7 +2,7 @@ import { useEvent, useEventListener } from 'expo';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -42,6 +42,7 @@ import { color, font, motion, space } from '@/theme';
 
 import { useDownloaded, usePlayingJob } from './downloaded';
 import { Ended } from './Ended';
+import { FilesSheet, videosOf } from './FilesSheet';
 import { usePlayerPreferences } from './preferences';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
@@ -51,6 +52,9 @@ import { TracksSheet } from './TracksSheet';
 
 const HIDE_AFTER_MS = 3200;
 const SKIP = 10;
+
+/** The one sheet open over the player, if any. */
+type OpenSheet = 'tracks' | 'settings' | 'files';
 
 /** The aired episode after `video` in playing order, as the web player finds it. */
 function nextEpisode(page: TitlePage | null, video: string | null): { video: string; name: string } | null {
@@ -130,8 +134,7 @@ export function Player({
   const position = timeline.base.current + time.currentTime;
   const [visible, setVisible] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
-  const [tracksOpen, setTracksOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sheet, setSheet] = useState<OpenSheet | null>(null);
   const [preferences, setPreferences] = usePlayerPreferences();
   // Each time this screen starts or resumes playback it claims the saved place, as the web player does.
   const resumed = useRef(true);
@@ -148,6 +151,8 @@ export function Player({
     index: file.index,
     name: file.path.split('/').pop() ?? file.path,
   }));
+  // A title plays one film or episode; only a torrent played by hand offers its other videos, as on the web.
+  const videos = useMemo(() => (video ? [] : videosOf(play)), [video, play]);
 
   const [ended, setEnded] = useState(false);
   const page = useTitle(video ? titleOf(video) : '', Boolean(video && episode));
@@ -209,10 +214,10 @@ export function Player({
   }, [save, client, video]);
 
   useEffect(() => {
-    if (!visible || !isPlaying || scrubbing || tracksOpen || settingsOpen) return;
+    if (!visible || !isPlaying || scrubbing || sheet) return;
     const timer = setTimeout(() => setVisible(false), HIDE_AFTER_MS);
     return () => clearTimeout(timer);
-  }, [visible, isPlaying, scrubbing, tracksOpen, settingsOpen]);
+  }, [visible, isPlaying, scrubbing, sheet]);
 
   useEffect(() => {
     player.playbackRate = preferences.speed;
@@ -349,9 +354,19 @@ export function Player({
                   {subheading}
                 </Text>
               </View>
+              {videos.length > 1 ? (
+                <Tap
+                  shrink={0.88}
+                  onPress={() => setSheet('files')}
+                  accessibilityLabel="Videos in this torrent"
+                  style={styles.round}
+                >
+                  <Icon name={icons.episodes} size={22} tint={color.ink} />
+                </Tap>
+              ) : null}
               <Tap
                 shrink={0.88}
-                onPress={() => setTracksOpen(true)}
+                onPress={() => setSheet('tracks')}
                 accessibilityLabel="Subtitles and audio"
                 style={styles.round}
               >
@@ -359,7 +374,7 @@ export function Player({
               </Tap>
               <Tap
                 shrink={0.88}
-                onPress={() => setSettingsOpen(true)}
+                onPress={() => setSheet('settings')}
                 accessibilityLabel="Settings"
                 style={styles.round}
               >
@@ -448,7 +463,7 @@ export function Player({
           />
         ) : null}
 
-        {tracksOpen ? (
+        {sheet === 'tracks' ? (
           <TracksSheet
             player={player}
             media={media}
@@ -464,11 +479,11 @@ export function Player({
               setDrawn(choice);
               if (choice) player.subtitleTrack = null;
             }}
-            onClose={() => setTracksOpen(false)}
+            onClose={() => setSheet(null)}
           />
         ) : null}
 
-        {settingsOpen ? (
+        {sheet === 'settings' ? (
           <SettingsSheet
             speed={preferences.speed}
             onSpeed={(speed) => setPreferences({ speed })}
@@ -476,7 +491,19 @@ export function Player({
             onShift={(seconds) => drawnKey && setOffsets((previous) => ({ ...previous, [drawnKey]: seconds }))}
             style={preferences.subtitleStyle}
             onStyle={(change) => setPreferences({ subtitleStyle: { ...preferences.subtitleStyle, ...change } })}
-            onClose={() => setSettingsOpen(false)}
+            onClose={() => setSheet(null)}
+          />
+        ) : null}
+
+        {sheet === 'files' ? (
+          <FilesSheet
+            videos={videos}
+            current={play.video.index}
+            onPick={(file) => {
+              setSheet(null);
+              router.replace({ pathname: '/play', params: { ref: play.id, file: String(file.index) } });
+            }}
+            onClose={() => setSheet(null)}
           />
         ) : null}
       </Animated.View>
