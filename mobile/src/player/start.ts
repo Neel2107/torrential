@@ -59,7 +59,7 @@ export type Start =
  * The phone's screen and decoders, so the engine ranks sources for what this phone plays well. Phones
  * this app supports decode H.264 and HEVC in hardware.
  */
-function useViewer(): Viewer {
+export function useViewer(): Viewer {
   const { width, height } = useWindowDimensions();
   const scale = PixelRatio.get();
   return {
@@ -72,7 +72,7 @@ function useViewer(): Viewer {
 }
 
 /** Asks the engine to find and start a source for `video`, following each step it reports. */
-export function useTitlePlay(video: string, attempt: number): Start {
+export function useTitlePlay(video: string, attempt: number, source?: string): Start {
   const link = useLink();
   const viewer = useViewer();
   const [start, setStart] = useState<Start>({ phase: 'finding', title: null, episode: null });
@@ -84,7 +84,7 @@ export function useTitlePlay(video: string, attempt: number): Start {
     let found = 0;
     setStart({ phase: 'finding', title, episode });
 
-    const body: PlayTitle = { video, viewer };
+    const body: PlayTitle = source ? { video, viewer, source } : { video, viewer };
     stream<PlayMessage>(link, '/api/title/play', { method: 'POST', body, signal: controller.signal }, (message) => {
       switch (message.type) {
         case 'resolved':
@@ -147,7 +147,7 @@ export function useTitlePlay(video: string, attempt: number): Start {
     return () => controller.abort();
     // The viewer is read once per attempt; rotating the phone mid-start should not restart it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [link, video, attempt]);
+  }, [link, video, attempt, source]);
 
   return start;
 }

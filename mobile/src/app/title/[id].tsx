@@ -22,6 +22,7 @@ import { episodeCode, episodeName, findEpisode, seasonName } from '@web/titles/w
 import type { EpisodeInfo, TitlePage as Page, Watched } from '@web/wire';
 
 import { useSaveTitle, useTitle } from '@/engine/queries';
+import { SourcesSheet } from '@/player/SourcesSheet';
 import { Art } from '@/ui/Art';
 import { Burst, type BurstHandle } from '@/ui/Burst';
 import { Button } from '@/ui/Button';
@@ -153,6 +154,7 @@ function Body({ page }: { page: Page }) {
   const watched = useMemo(() => new Map(page.watched.map((w) => [w.video, w])), [page.watched]);
   const resume = target?.resume_at ?? null;
   const targetWatched = target ? watched.get(target.video) : undefined;
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   const playLabel = resume ? 'Resume' : 'Play';
   const playDetail = targetEpisode
@@ -210,6 +212,22 @@ function Body({ page }: { page: Page }) {
         </Animated.View>
       ) : null}
 
+      {target ? (
+        <Animated.View entering={rise(3)}>
+          <Tap
+            shrink={1}
+            highlight
+            onPress={() => setSourcesOpen(true)}
+            accessibilityLabel="Choose a source"
+            style={styles.sourcesRow}
+          >
+            <Icon name={icons.episodes} size={18} tint={color.soft} />
+            <Text style={[type.label, { flex: 1, color: color.ink }]}>Choose a source</Text>
+            <Icon name={icons.chevron} size={18} tint={color.pencil} />
+          </Tap>
+        </Animated.View>
+      ) : null}
+
       {page.synopsis ? (
         <Animated.View entering={rise(3)}>
           <Synopsis text={page.synopsis} />
@@ -224,6 +242,14 @@ function Body({ page }: { page: Page }) {
       ) : null}
 
       {page.kind === 'series' ? <Episodes page={page} watched={watched} current={target?.video ?? null} /> : null}
+
+      {sourcesOpen && target ? (
+        <SourcesSheet
+          video={target.video}
+          label={targetEpisode ? `${episodeCode(targetEpisode)} · ${episodeName(targetEpisode)}` : page.name}
+          onClose={() => setSourcesOpen(false)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -483,6 +509,16 @@ const styles = StyleSheet.create({
     borderColor: color.rule,
   },
   playDetail: { gap: space.sm, marginTop: space.md },
+  sourcesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    marginTop: space.md,
+    marginHorizontal: -space.sm,
+    paddingHorizontal: space.sm,
+    minHeight: 44,
+    borderRadius: radius.md,
+  },
   seasons: { gap: space.sm, paddingBottom: space.md },
   chip: {
     height: 36,
