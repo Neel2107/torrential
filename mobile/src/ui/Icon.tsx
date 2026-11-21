@@ -22,6 +22,7 @@ import {
   RotateCw,
   ScanQrCode,
   Search,
+  Smartphone,
   Square,
   Star,
   Subtitles,
@@ -74,6 +75,7 @@ export const icons = {
   magnet: Magnet,
   add: Plus,
   history: History,
+  phone: Smartphone,
 } satisfies Record<string, LucideIcon>;
 
 /**

@@ -94,6 +94,16 @@ function Routes() {
             }}
           />
           <Stack.Screen
+            name="offline"
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'fade',
+              orientation: 'landscape',
+              statusBarHidden: true,
+              navigationBarHidden: true,
+            }}
+          />
+          <Stack.Screen
             name="tv"
             options={{
               presentation: 'formSheet',
