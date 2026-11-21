@@ -76,6 +76,7 @@ function Routes() {
           />
           <Stack.Screen name="tv" options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: [0.92], sheetCornerRadius: 28 }} />
           <Stack.Screen name="add" options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents', sheetCornerRadius: 28 }} />
+          <Stack.Screen name="engine" options={{ presentation: 'formSheet', sheetGrabberVisible: true, sheetAllowedDetents: 'fitToContents', sheetCornerRadius: 28 }} />
         </Stack.Protected>
         <Stack.Protected guard={!paired}>
           <Stack.Screen name="pair" />

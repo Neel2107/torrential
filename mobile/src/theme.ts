@@ -1,4 +1,5 @@
 import { Platform, type TextStyle } from 'react-native';
+import { Easing } from 'react-native-reanimated';
 
 export const color = {
   paper: '#14120f',
@@ -58,9 +59,18 @@ export const type = {
 export const hitSlop = { top: 10, bottom: 10, left: 10, right: 10 } as const;
 
 export const motion = {
-  quick: 160,
+  press: 120,
+  quick: 180,
   standard: 240,
-  spring: { damping: 22, stiffness: 260, mass: 0.9 },
+  stagger: 40,
+  /** Strong ease-out: fast start, so the screen answers the finger at once. */
+  out: Easing.bezier(0.23, 1, 0.32, 1),
+  /** For things moving across the screen. */
+  inOut: Easing.bezier(0.77, 0, 0.175, 1),
+  /** Settles without wobble: bars, sheets, headers. */
+  settle: { damping: 26, stiffness: 320, mass: 0.8 },
+  /** A little life for selections and toggles. */
+  pop: { damping: 12, stiffness: 380, mass: 0.6 },
 } as const;
 
 export const isAndroid = Platform.OS === 'android';
