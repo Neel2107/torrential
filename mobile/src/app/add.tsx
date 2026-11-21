@@ -13,12 +13,20 @@ import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { color, font, radius, space, type } from '@/theme';
 
+function decoded(text: string): string {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+}
+
 function describe(ref: string): string {
   if (ref.startsWith('magnet:')) {
     const name = /[?&]dn=([^&]+)/.exec(ref)?.[1];
-    return name ? decodeURIComponent(name.replace(/\+/g, ' ')) : 'Magnet link';
+    return name ? decoded(name.replace(/\+/g, ' ')) : 'Magnet link';
   }
-  if (/^https?:/i.test(ref)) return decodeURIComponent(ref.split('/').pop()?.split('?')[0] ?? ref);
+  if (/^https?:/i.test(ref)) return decoded(ref.split('/').pop()?.split('?')[0] ?? ref);
   return `Infohash ${ref.slice(0, 10)}…`;
 }
 

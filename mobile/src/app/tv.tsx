@@ -41,7 +41,7 @@ const CONTAINERS: Record<string, string> = {
 const DECODES = { 'hevc-hdr': '4K HDR', hevc: '4K', h264: 'HD' } as const;
 
 export default function TvScreen() {
-  const params = useLocalSearchParams<{ video?: string; ref?: string; file?: string }>();
+  const params = useLocalSearchParams<{ video?: string; ref?: string; file?: string; at?: string }>();
   const link = useLink();
   const insets = useSafeAreaInsets();
   const client = useQueryClient();
@@ -50,10 +50,11 @@ export default function TvScreen() {
   const tvs = useTvs(true);
   const casts = tvs.data?.casts ?? [];
   const current = casts.find(live) ?? null;
+  const startAt = params.at ? Number(params.at) : undefined;
   const what = params.video
-    ? { video: params.video }
+    ? { video: params.video, start_at: startAt }
     : params.ref
-      ? { ref: params.ref, file: params.file ? Number(params.file) : undefined }
+      ? { ref: params.ref, file: params.file ? Number(params.file) : undefined, start_at: startAt }
       : null;
   const [problem, setProblem] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
@@ -61,7 +62,7 @@ export default function TvScreen() {
   useEffect(() => {
     let cancelled = false;
     findTvs(link, true)
-      .then((list) => !cancelled && client.setQueryData(keys.tvs, list))
+      .then((list) => !cancelled && client.setQueryData([...keys.tvs, link.base], list))
       .finally(() => !cancelled && setScanning(false));
     return () => {
       cancelled = true;
@@ -158,7 +159,7 @@ export default function TvScreen() {
                   onPress={() => {
                     setScanning(true);
                     findTvs(link, true)
-                      .then((list) => client.setQueryData(keys.tvs, list))
+                      .then((list) => client.setQueryData([...keys.tvs, link.base], list))
                       .finally(() => setScanning(false));
                   }}
                   style={{ alignSelf: 'flex-start', marginTop: space.sm }}
@@ -341,10 +342,10 @@ function Scrub({
       accessibilityRole="adjustable"
       accessibilityLabel="Position on the TV"
     >
-      <View style={styles.scrubTrack}>
+      <View style={styles.scrubTrack} pointerEvents="none">
         <View style={[styles.scrubFill, { width: `${fraction * 100}%` }]} />
       </View>
-      <View style={[styles.scrubKnob, { left: fraction * width - 9 }]} />
+      <View style={[styles.scrubKnob, { left: fraction * width - 9 }]} pointerEvents="none" />
     </View>
   );
 }

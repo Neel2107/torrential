@@ -1,7 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { pair as pairWithCode, PORT, type Link } from './client';
+import type { Me } from '@web/wire';
+
+import { get, pair as pairWithCode, PORT, type Link } from './client';
 
 const KEY = 'engine-link';
 
@@ -13,6 +15,8 @@ type SessionApi = {
   pair: (base: string, code: string) => Promise<void>;
   /** Uses an engine reached over loopback, which trusts the caller without pairing (USB during development). */
   useLoopback: () => Promise<void>;
+  /** Points a paired phone at the engine's new address, keeping its token: the engine moved networks, not the pairing. */
+  relocate: (base: string) => Promise<void>;
   forget: () => Promise<void>;
 };
 
@@ -37,6 +41,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       session,
       pair: async (base, code) => keep({ base, token: await pairWithCode(base, code) }),
       useLoopback: () => keep({ base: `http://127.0.0.1:${PORT}`, token: null }),
+      relocate: async (base) => {
+        if (session.state !== 'paired') return;
+        const link = { base, token: session.link.token };
+        await get<Me>(link, '/api/me');
+        await keep(link);
+      },
       forget: async () => {
         await SecureStore.deleteItemAsync(KEY);
         setSession({ state: 'unpaired' });

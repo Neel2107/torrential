@@ -12,7 +12,9 @@ export function Logo({ id, name, style }: { id: string; name: string; style?: St
   // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
   const { width, height } = useWindowDimensions();
   const orientation = width > height ? 'landscape' : 'portrait';
-  const [missing, setMissing] = useState(false);
+  const uri = url(link, '/api/title/art', { id, kind: 'logo' });
+  const [missingUri, setMissingUri] = useState<string | null>(null);
+  const missing = missingUri === uri;
 
   return (
     <View style={style} accessibilityLabel={name} accessibilityRole="text">
@@ -23,13 +25,13 @@ export function Logo({ id, name, style }: { id: string; name: string; style?: St
       ) : (
         <Image
           key={orientation}
-          source={{ uri: url(link, '/api/title/art', { id, kind: 'logo' }), headers: authHeaders(link) }}
+          source={{ uri, headers: authHeaders(link) }}
           style={StyleSheet.absoluteFill}
           contentFit="contain"
           contentPosition="left bottom"
           transition={200}
           cachePolicy="memory-disk"
-          onError={() => setMissing(true)}
+          onError={() => setMissingUri(uri)}
           accessible={false}
         />
       )}

@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { sentence } from '@web/lib/format';
@@ -11,7 +12,7 @@ import { Icon, icons } from './Icon';
 
 /** What went wrong talking to the engine, in words, with the one thing worth trying next. */
 export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () => void }) {
-  const { session, forget } = useSession();
+  const { session } = useSession();
   const engine = error instanceof EngineError;
   const base = session.state === 'paired' ? session.link.base.replace(/^https?:\/\//, '') : '';
 
@@ -27,7 +28,7 @@ export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () =>
       {engine && error.hint ? <Text style={[type.caption, styles.center]}>{sentence(error.hint)}</Text> : null}
       <View style={styles.actions}>
         <Button label="Try again" icon={icons.refresh} onPress={onRetry} />
-        {engine ? null : <Button label="Pair again" kind="quiet" onPress={forget} />}
+        {engine ? null : <Button label="Change address" kind="quiet" onPress={() => router.push('/relocate')} />}
       </View>
     </View>
   );

@@ -43,6 +43,7 @@ export function SeekBar({
   const shown = preview ?? position;
 
   const pick = (px: number, final: boolean) => {
+    if (duration <= 0) return onScrubbing(false);
     const seconds = Math.max(0, Math.min(duration, (px / Math.max(1, width)) * duration));
     if (final) {
       setPreview(null);

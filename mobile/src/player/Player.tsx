@@ -28,7 +28,12 @@ import {
   type TitleCard,
 } from '@web/wire';
 
+import { useQueryClient } from '@tanstack/react-query';
+
+import { titleOf } from '@web/lib/video';
+
 import { authHeaders, get, post } from '@/engine/client';
+import { keys } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
@@ -101,7 +106,9 @@ export function Player({
   const [visible, setVisible] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
-  const claimed = useRef(false);
+  // Each time this screen starts or resumes playback it claims the saved place, as the web player does.
+  const resumed = useRef(true);
+  const client = useQueryClient();
   const [subtitleFile, setSubtitleFile] = useState<SubtitleFile | null>(null);
   const cues = useSubtitleFile(play.id, subtitleFile);
   const subtitleFiles: SubtitleFile[] = play.subtitles.map((file) => ({
@@ -110,6 +117,9 @@ export function Player({
   }));
 
   useEventListener(player, 'sourceLoad', (event) => setDuration(event.duration));
+  useEventListener(player, 'playingChange', (event) => {
+    if (event.isPlaying) resumed.current = true;
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -123,17 +133,20 @@ export function Player({
   const save = useCallback(() => {
     const position = player.currentTime;
     const length = player.duration || duration || null;
-    if (!video || !length || position < 1) return;
+    if (!video || !length || position < 1) return Promise.resolve();
     const body: Position = {
       video,
       position: Math.min(position, length),
       duration: length,
       release: release.id,
       tab: TAB,
-      starts: !claimed.current,
+      starts: resumed.current,
     };
-    claimed.current = true;
-    post(link, '/api/watched', body).catch(() => {});
+    resumed.current = false;
+    return post(link, '/api/watched', body).then(
+      () => {},
+      () => {},
+    );
   }, [duration, link, player, release.id, video]);
 
   useEffect(() => {
@@ -149,9 +162,12 @@ export function Player({
     const subscription = AppState.addEventListener('change', (state) => state !== 'active' && save());
     return () => {
       subscription.remove();
-      save();
+      save().then(() => {
+        client.invalidateQueries({ queryKey: keys.home });
+        if (video) client.invalidateQueries({ queryKey: keys.title(titleOf(video)) });
+      });
     };
-  }, [save]);
+  }, [save, client, video]);
 
   useEffect(() => {
     if (!visible || !isPlaying || scrubbing || tracksOpen) return;
@@ -300,12 +316,14 @@ export function Player({
               </Tap>
               <Tap
                 shrink={0.88}
-                onPress={() =>
+                onPress={() => {
+                  const at = String(Math.floor(player.currentTime));
+                  player.pause();
                   router.push({
                     pathname: '/tv',
-                    params: video ? { video } : { ref: play.id, file: String(play.video.index) },
-                  })
-                }
+                    params: video ? { video, at } : { ref: play.id, file: String(play.video.index), at },
+                  });
+                }}
                 accessibilityLabel="Play on TV"
                 style={styles.round}
               >
@@ -350,6 +368,7 @@ export function Player({
                 download={download}
                 onScrubbing={setScrubbing}
                 onSeek={(seconds) => {
+                  if ((duration || player.duration || 0) <= 0) return;
                   player.currentTime = seconds;
                 }}
               />

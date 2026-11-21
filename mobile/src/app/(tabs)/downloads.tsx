@@ -16,7 +16,8 @@ import { readable } from '@web/lib/release';
 import type { Job } from '@web/wire';
 
 import { post } from '@/engine/client';
-import { useJobs, useTitle } from '@/engine/queries';
+import { useJobs } from '@/engine/jobs';
+import { useTitle } from '@/engine/queries';
 import { Art } from '@/ui/Art';
 import { useLink } from '@/engine/session';
 import { useChromeScroll } from '@/ui/chrome';

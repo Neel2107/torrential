@@ -26,16 +26,22 @@ function scan(data: Uint8Array): Scan {
   let name: string | null = null;
   const trackers: string[] = [];
 
+  const broken = () => new Error('This .torrent file is damaged or cut short.');
+  const byte = (): number => {
+    if (at >= data.length) throw broken();
+    return data[at]!;
+  };
+
   const digits = (until: number): number => {
     let n = 0;
     let negative = false;
-    if (data[at] === 0x2d) {
+    if (byte() === 0x2d) {
       negative = true;
       at++;
     }
-    while (data[at] !== until) {
+    while (byte() !== until) {
       const d = data[at]! - 0x30;
-      if (d < 0 || d > 9) throw new Error('This is not a .torrent file.');
+      if (d < 0 || d > 9) throw broken();
       n = n * 10 + d;
       at++;
     }
@@ -45,13 +51,14 @@ function scan(data: Uint8Array): Scan {
 
   const bytesAt = (): Uint8Array => {
     const length = digits(0x3a);
+    if (length < 0 || at + length > data.length) throw broken();
     const out = data.subarray(at, at + length);
     at += length;
     return out;
   };
 
   const value = (path: string): unknown => {
-    const kind = data[at];
+    const kind = byte();
     if (kind === 0x69) {
       at++;
       return digits(0x65);
@@ -59,13 +66,13 @@ function scan(data: Uint8Array): Scan {
     if (kind === 0x6c) {
       at++;
       const list: unknown[] = [];
-      while (data[at] !== 0x65) list.push(value(`${path}[]`));
+      while (byte() !== 0x65) list.push(value(`${path}[]`));
       at++;
       return list;
     }
     if (kind === 0x64) {
       at++;
-      while (data[at] !== 0x65) {
+      while (byte() !== 0x65) {
         const key = text.decode(bytesAt());
         const start = at;
         const child = value(`${path}.${key}`);
@@ -80,7 +87,7 @@ function scan(data: Uint8Array): Scan {
       at++;
       return null;
     }
-    if (kind !== undefined && kind >= 0x30 && kind <= 0x39) return bytesAt();
+    if (kind >= 0x30 && kind <= 0x39) return bytesAt();
     throw new Error('This is not a .torrent file.');
   };
 

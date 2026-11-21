@@ -1,11 +1,19 @@
 import { Tabs } from 'expo-router/js-tabs';
 
-import { useJobs } from '@/engine/queries';
+import { JobsProvider, useJobs } from '@/engine/jobs';
 import { ChromeProvider } from '@/ui/chrome';
 import { TabBar } from '@/ui/TabBar';
 import { color } from '@/theme';
 
 export default function TabsLayout() {
+  return (
+    <JobsProvider>
+      <Tabbed />
+    </JobsProvider>
+  );
+}
+
+function Tabbed() {
   const { jobs } = useJobs();
   const downloading = jobs.some((job) => job.state === 'downloading' || job.state === 'metadata');
 

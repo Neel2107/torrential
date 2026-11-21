@@ -13,6 +13,9 @@ export type Link = { base: string; token: string | null };
 export const PORT = 47919;
 export const COOKIE = 'torrential_device';
 
+/** How long a request may wait for the engine to start answering. A magnet's file list takes up to a minute. */
+const ANSWER_WITHIN_MS = 75_000;
+
 /** Names this phone when it pairs: the engine calls a device after what its User-Agent says it runs on. */
 export const USER_AGENT = `torrential-app (${Platform.OS === 'ios' ? (Device.deviceType === Device.DeviceType.TABLET ? 'iPad' : 'iPhone') : 'Android'}; ${Device.modelName ?? 'phone'})`;
 
@@ -68,15 +71,27 @@ async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; bo
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(init.body ?? {});
   }
-  const response = await fetch(`${link.base}${path}`, {
-    method: init.method,
-    headers,
-    body,
-    signal: init.signal,
-    redirect: 'manual',
-  });
-  if (!response.ok) throw await failure(response);
-  return response;
+  // A request whose answer never starts would wait on the OS for minutes, so it gets a deadline. Streams
+  // keep going once headers arrive: the timer only covers the wait for them.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ANSWER_WITHIN_MS);
+  const cancel = () => controller.abort();
+  if (init.signal?.aborted) controller.abort();
+  init.signal?.addEventListener('abort', cancel);
+  try {
+    const response = await fetch(`${link.base}${path}`, {
+      method: init.method,
+      headers,
+      body,
+      signal: controller.signal,
+      redirect: 'manual',
+    });
+    if (!response.ok) throw await failure(response);
+    return response;
+  } finally {
+    clearTimeout(timer);
+    init.signal?.removeEventListener('abort', cancel);
+  }
 }
 
 export async function get<T>(link: Link, path: string, signal?: AbortSignal): Promise<T> {

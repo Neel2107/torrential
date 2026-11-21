@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -37,7 +37,9 @@ const theme = {
 
 function Routes() {
   const { session, forget } = useSession();
-  const [client] = useState(
+  // One cache per engine and pairing: nothing from a removed or different engine survives a new pairing.
+  const engineKey = session.state === 'paired' ? `${session.link.base}|${session.link.token ?? ''}` : 'unpaired';
+  const client = useMemo(
     () =>
       new QueryClient({
         defaultOptions: {
@@ -47,6 +49,9 @@ function Routes() {
           },
         },
       }),
+    // A new engine key is the point: it throws the old cache away.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [engineKey],
   );
 
   useEffect(() => {
@@ -56,7 +61,8 @@ function Routes() {
   useEffect(
     () =>
       client.getQueryCache().subscribe((event) => {
-        const error = event.query.state.error;
+        if (event.type !== 'updated' || event.action.type !== 'error') return;
+        const error = event.action.error;
         if (error instanceof EngineError && error.unpaired) forget();
       }),
     [client, forget],
@@ -107,6 +113,15 @@ function Routes() {
           />
           <Stack.Screen
             name="engine"
+            options={{
+              presentation: 'formSheet',
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: 'fitToContents',
+              sheetCornerRadius: 28,
+            }}
+          />
+          <Stack.Screen
+            name="relocate"
             options={{
               presentation: 'formSheet',
               sheetGrabberVisible: true,

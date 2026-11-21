@@ -35,8 +35,9 @@ export function Art({
   // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
   const { width, height } = useWindowDimensions();
   const orientation = width > height ? 'landscape' : 'portrait';
-  const [failed, setFailed] = useState(false);
+  const [failedUri, setFailedUri] = useState<string | null>(null);
   const uri = url(link, '/api/title/art', { id, kind, season, episode });
+  const failed = failedUri === uri;
 
   return (
     <View style={[placeholder && styles.frame, style]}>
@@ -56,7 +57,7 @@ export function Art({
           transition={220}
           cachePolicy="memory-disk"
           recyclingKey={uri}
-          onError={() => setFailed(true)}
+          onError={() => setFailedUri(uri)}
           accessible={false}
         />
       )}
