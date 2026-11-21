@@ -19,6 +19,7 @@ import { CHECKS, episodeCode, episodeName } from '@web/titles/words';
 
 import { Player } from '@/player/Player';
 import { useTitlePlay, useTorrentPlay, type Start } from '@/player/start';
+import { FORCE_STREAM } from '@/player/timeline';
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
@@ -27,7 +28,13 @@ import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
 
 export default function Play() {
-  const { video, ref, source } = useLocalSearchParams<{ video?: string; ref?: string; source?: string }>();
+  const { video, ref, source, stream } = useLocalSearchParams<{
+    video?: string;
+    ref?: string;
+    source?: string;
+    stream?: string;
+  }>();
+  if (__DEV__) FORCE_STREAM.value = stream === '1';
   const [attempt, setAttempt] = useState(0);
   return ref ? (
     <ByTorrent torrent={ref} attempt={attempt} retry={() => setAttempt((n) => n + 1)} />

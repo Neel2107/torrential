@@ -25,6 +25,7 @@ function trackName(
 export function TracksSheet({
   player,
   media,
+  streamAudio,
   files,
   file,
   onFile,
@@ -32,6 +33,8 @@ export function TracksSheet({
 }: {
   player: VideoPlayer;
   media: MediaInfo | null;
+  /** In stream mode the engine picks the audio track, so the sheet lists the file's own tracks. */
+  streamAudio: { tracks: MediaInfo['audio']; selected: number | null; onSelect: (stream: number) => void } | null;
   files: SubtitleFile[];
   file: SubtitleFile | null;
   onFile: (file: SubtitleFile | null) => void;
@@ -80,27 +83,39 @@ export function TracksSheet({
         ) : null}
 
         <Text style={[type.title, styles.heading, { marginTop: space.lg }]}>Audio</Text>
-        {audio.map((track: AudioTrack, index) => {
-          const fromEngine = media?.audio[index];
-          return (
-            <Row
-              key={`${track.id ?? index}`}
-              label={
-                audio.length === 1 && !languageName(track.language) ? 'Original' : trackName(track, index, 'Audio')
-              }
-              detail={
-                fromEngine
-                  ? `${fromEngine.codec.toUpperCase()} · ${fromEngine.channels > 2 ? `${fromEngine.channels - 1}.1` : fromEngine.channels === 2 ? 'Stereo' : 'Mono'}`
-                  : null
-              }
-              selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
-              onPress={() => (player.audioTrack = track)}
-            />
-          );
-        })}
+        {streamAudio
+          ? streamAudio.tracks.map((track, index) => (
+              <Row
+                key={`stream-${track.stream}`}
+                label={track.title || languageName(track.language) || `Audio ${index + 1}`}
+                detail={`${track.codec.toUpperCase()} · ${channels(track.channels)} · converted by the engine`}
+                selected={
+                  streamAudio.selected === null ? track.default || index === 0 : streamAudio.selected === track.stream
+                }
+                onPress={() => streamAudio.onSelect(track.stream)}
+              />
+            ))
+          : audio.map((track: AudioTrack, index) => {
+              const fromEngine = media?.audio[index];
+              return (
+                <Row
+                  key={`${track.id ?? index}`}
+                  label={
+                    audio.length === 1 && !languageName(track.language) ? 'Original' : trackName(track, index, 'Audio')
+                  }
+                  detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${channels(fromEngine.channels)}` : null}
+                  selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
+                  onPress={() => (player.audioTrack = track)}
+                />
+              );
+            })}
       </ScrollView>
     </Sheet>
   );
+}
+
+function channels(count: number): string {
+  return count > 2 ? `${count - 1}.1` : count === 2 ? 'Stereo' : 'Mono';
 }
 
 function Row({

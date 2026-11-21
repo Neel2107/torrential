@@ -32,7 +32,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { titleOf } from '@web/lib/video';
 
-import { authHeaders, get, post } from '@/engine/client';
+import { get, post } from '@/engine/client';
 import { keys } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { Icon, icons } from '@/ui/Icon';
@@ -40,6 +40,7 @@ import { Tap } from '@/ui/Tap';
 import { color, font, motion, space } from '@/theme';
 
 import { SeekBar } from './SeekBar';
+import { sourceFor, useTimeline } from './timeline';
 import { SubtitleOverlay, useSubtitleFile, type SubtitleFile } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
 
@@ -66,27 +67,20 @@ export function Player({
 }) {
   const link = useLink();
   const insets = useSafeAreaInsets();
-  const source = `${link.base}${encodeURI(play.video.url)}`;
   const download = { id: play.id, file: play.video.index };
+  const [metadata] = useState(() => ({
+    title: title?.name ?? play.name,
+    artist: episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : undefined,
+  }));
 
-  const player = useVideoPlayer(
-    {
-      uri: source,
-      headers: authHeaders(link),
-      metadata: {
-        title: title?.name ?? play.name,
-        artist: episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : undefined,
-      },
-    },
-    (p) => {
-      p.timeUpdateEventInterval = 0.25;
-      p.showNowPlayingNotification = true;
-      p.staysActiveInBackground = false;
-      p.keepScreenOnWhilePlaying = true;
-      if (resumeAt && resumeAt > 5) p.currentTime = resumeAt;
-      p.play();
-    },
-  );
+  const player = useVideoPlayer(sourceFor(link, play, { kind: 'direct' }, metadata), (p) => {
+    p.timeUpdateEventInterval = 0.25;
+    p.showNowPlayingNotification = true;
+    p.staysActiveInBackground = false;
+    p.keepScreenOnWhilePlaying = true;
+    if (resumeAt && resumeAt > 5) p.currentTime = resumeAt;
+    p.play();
+  });
 
   const { isPlaying } = useEvent(player, 'playingChange', {
     isPlaying: player.playing,
@@ -101,8 +95,10 @@ export function Player({
     currentLiveTimestamp: null,
     currentOffsetFromLive: null,
   });
-  const [duration, setDuration] = useState(0);
   const [media, setMedia] = useState<MediaInfo | null>(null);
+  const timeline = useTimeline({ player, link, play, media, metadata });
+  const duration = timeline.duration;
+  const position = timeline.base.current + time.currentTime;
   const [visible, setVisible] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
@@ -116,7 +112,6 @@ export function Player({
     name: file.path.split('/').pop() ?? file.path,
   }));
 
-  useEventListener(player, 'sourceLoad', (event) => setDuration(event.duration));
   useEventListener(player, 'playingChange', (event) => {
     if (event.isPlaying) resumed.current = true;
   });
@@ -131,12 +126,12 @@ export function Player({
   }, [link, play.id, play.video.index]);
 
   const save = useCallback(() => {
-    const position = player.currentTime;
-    const length = player.duration || duration || null;
-    if (!video || !length || position < 1) return Promise.resolve();
+    const at = timeline.now();
+    const length = duration || null;
+    if (!video || !length || at < 1) return Promise.resolve();
     const body: Position = {
       video,
-      position: Math.min(position, length),
+      position: Math.min(at, length),
       duration: length,
       release: release.id,
       tab: TAB,
@@ -147,7 +142,7 @@ export function Player({
       () => {},
       () => {},
     );
-  }, [duration, link, player, release.id, video]);
+  }, [duration, link, timeline, release.id, video]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -184,7 +179,7 @@ export function Player({
     value.value = withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 520, easing: motion.out }));
   };
   const skip = (seconds: number) => {
-    player.currentTime = Math.max(0, Math.min(duration || Infinity, player.currentTime + seconds));
+    timeline.seek(Math.min(duration || Infinity, timeline.now() + seconds));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     flash(seconds < 0 ? 'left' : 'right');
   };
@@ -317,7 +312,7 @@ export function Player({
               <Tap
                 shrink={0.88}
                 onPress={() => {
-                  const at = String(Math.floor(player.currentTime));
+                  const at = String(Math.floor(timeline.now()));
                   player.pause();
                   router.push({
                     pathname: '/tv',
@@ -368,20 +363,25 @@ export function Player({
                 download={download}
                 onScrubbing={setScrubbing}
                 onSeek={(seconds) => {
-                  if ((duration || player.duration || 0) <= 0) return;
-                  player.currentTime = seconds;
+                  if (duration <= 0) return;
+                  timeline.seek(seconds);
                 }}
               />
             </View>
           </Animated.View>
         ) : null}
 
-        <SubtitleOverlay cues={cues} time={time.currentTime} lifted={visible} />
+        <SubtitleOverlay cues={cues} time={position} lifted={visible} />
 
         {tracksOpen ? (
           <TracksSheet
             player={player}
             media={media}
+            streamAudio={
+              timeline.mode.kind === 'stream' && media
+                ? { tracks: media.audio, selected: timeline.mode.audio, onSelect: timeline.chooseAudio }
+                : null
+            }
             files={subtitleFiles}
             file={subtitleFile}
             onFile={(file) => {
