@@ -10,6 +10,8 @@ import Animated, {
   useSharedValue,
   withDelay,
   withRepeat,
+  withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +40,7 @@ const CONTAINERS: Record<string, string> = {
   mpeg: 'MPEG',
   wmv: 'WMV',
 };
+const STARTED_SHOWN_MS = 2400;
 const DECODES = { 'hevc-hdr': '4K HDR', hevc: '4K', h264: 'HD' } as const;
 
 export default function TvScreen() {
@@ -214,6 +217,22 @@ function Remote({ cast }: { cast: Cast }) {
   const playing = cast.state === 'playing';
 
   const [unreached, setUnreached] = useState(false);
+  const pop = useSharedValue(1);
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const [justStarted, setJustStarted] = useState(false);
+  const wasPlaying = useRef(cast.state === 'playing');
+  useEffect(() => {
+    const now = cast.state === 'playing';
+    if (now && !wasPlaying.current) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      pop.value = withSequence(withTiming(1.18, { duration: 140 }), withSpring(1, { damping: 9, stiffness: 260 }));
+      setJustStarted(true);
+      const timer = setTimeout(() => setJustStarted(false), STARTED_SHOWN_MS);
+      wasPlaying.current = now;
+      return () => clearTimeout(timer);
+    }
+    wasPlaying.current = now;
+  }, [cast.state, pop]);
   const focused = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -238,12 +257,16 @@ function Remote({ cast }: { cast: Cast }) {
   return (
     <Animated.View entering={rise(0)} style={{ gap: space.xl }}>
       <View style={styles.nowRow}>
-        <View style={styles.livePill}>
-          <View style={styles.liveDot} />
+        <Animated.View style={[styles.livePill, popStyle]}>
+          {justStarted ? (
+            <Icon name={icons.check} size={12} tint={color.action} weight={3} />
+          ) : (
+            <View style={styles.liveDot} />
+          )}
           <Text style={styles.liveText}>
             {cast.state === 'finding' || cast.state === 'loading' ? 'Starting' : playing ? 'Playing' : 'Paused'}
           </Text>
-        </View>
+        </Animated.View>
         <Text style={type.label} numberOfLines={1}>
           on {cast.tv_name}
         </Text>
