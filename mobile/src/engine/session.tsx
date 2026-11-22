@@ -211,18 +211,26 @@ export function useLink(): Link {
   return session.link;
 }
 
+/** Reads what was typed or scanned to pair: an engine's address, with or without `http://` or `https://` and a port, then `#` and its six-digit code if it gave one. A bare IPv6 address is bracketed; with no port, http uses the engine's own and https its default. Any other scheme is no address. */
 export function parsePairing(input: string): { base: string; code: string | null } | null {
   const text = input.trim();
 
   if (!text) return null;
-  const bareIpv6 = /^[0-9a-f:]+$/i.test(text) && text.split(':').length > 2;
-  const host = bareIpv6 ? `[${text}]` : text;
-  const withScheme = /^https?:\/\//i.test(host) ? host : `http://${host}`;
+  const hashAt = text.indexOf('#');
+  const address = hashAt < 0 ? text : text.slice(0, hashAt);
+  const hash = hashAt < 0 ? '' : text.slice(hashAt);
+  const scheme = /^([a-z][a-z0-9+.-]*):\/\//i.exec(address)?.[1]?.toLowerCase();
+
+  if (scheme !== undefined && scheme !== 'http' && scheme !== 'https') return null;
+  const bareIpv6 = /^[0-9a-f:]+$/i.test(address) && address.split(':').length > 2;
+  const host = bareIpv6 ? `[${address}]` : address;
+  const withScheme = scheme ? host : `http://${host}`;
 
   try {
     const parsed = new URL(withScheme);
-    const code = /^#?(\d{6})$/.exec(parsed.hash)?.[1] ?? null;
-    const port = parsed.port || (parsed.protocol === 'https:' ? '' : String(PORT));
+    const code = /^#(\d{6})$/.exec(hash)?.[1] ?? null;
+    const namesPort = /^[a-z]+:\/\/(\[[^\]]*\]|[^/?:]*):\d+/i.test(withScheme);
+    const port = !namesPort && parsed.protocol === 'http:' ? String(PORT) : parsed.port;
     const base = `${parsed.protocol}//${parsed.hostname}${port ? `:${port}` : ''}`;
 
     return { base, code };

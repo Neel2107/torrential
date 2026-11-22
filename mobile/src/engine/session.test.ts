@@ -61,3 +61,18 @@ test('the scheme and host are read in any case', () => {
 test('a port and code with no scheme are both kept', () => {
   expect(parsePairing('192.168.1.5:9000#123456')).toEqual({ base: 'http://192.168.1.5:9000', code: '123456' });
 });
+
+test('a bare IPv6 address with a code gives the engine and the code', () => {
+  expect(parsePairing('fe80::1#123456')).toEqual({ base: 'http://[fe80::1]:47919', code: '123456' });
+});
+
+test('an http address that names port 80 keeps it', () => {
+  expect(parsePairing('http://engine.local:80')?.base).toBe('http://engine.local');
+});
+
+test.each(['ftp://engine.local', 'torrential://pair?code=123456', 'file:///engine'])(
+  'an address with a scheme other than http or https, %p, gives nothing',
+  (input) => {
+    expect(parsePairing(input)).toBe(null);
+  },
+);
