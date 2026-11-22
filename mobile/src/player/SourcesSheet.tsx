@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
 import Animated from 'react-native-reanimated';
 
@@ -10,7 +10,6 @@ import type { Release } from '@web/wire';
 import { qualityOf } from '@/engine/quality';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
-import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { Skeleton } from '@/ui/Skeleton';
 import { STAGE_DIFFERS, useStaged, useTone } from '@/ui/stage';
@@ -93,18 +92,8 @@ export function SourcesList({
     error: sources.error ? sources.error.message : null,
   };
 
-  return (
-    <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: space.md }}>
-      {state.releases.map((release, index) => (
-        <SourceRow
-          key={release.id}
-          release={release}
-          index={index}
-          why={index === 0 ? whyFirst(release, state.releases) : null}
-          playing={release.id === current}
-          onPress={() => onPick(release)}
-        />
-      ))}
+  const footer = (
+    <>
       {!state.done && state.releases.length === 0
         ? [0, 1, 2].map((row) => <Skeleton key={row} style={[styles.ghost, { backgroundColor: color.lifted }]} />)
         : null}
@@ -121,9 +110,34 @@ export function SourcesList({
           <Button label="Try again" kind="secondary" onPress={() => sources.refetch()} />
         </View>
       ) : null}
-    </ScrollView>
+    </>
+  );
+
+  return (
+    <Animated.FlatList
+      style={styles.list}
+      contentContainerStyle={{ paddingBottom: space.md }}
+      data={state.releases}
+      keyExtractor={(release) => release.id}
+      initialNumToRender={FIRST_ROWS}
+      maxToRenderPerBatch={FIRST_ROWS}
+      windowSize={5}
+      itemLayoutAnimation={reflow}
+      renderItem={({ item: release, index }) => (
+        <SourceRow
+          release={release}
+          why={index === 0 ? whyFirst(release, state.releases) : null}
+          playing={release.id === current}
+          onPress={() => onPick(release)}
+        />
+      )}
+      ListFooterComponent={footer}
+    />
   );
 }
+
+/** Rows mounted when the list opens, about a sheet's worth; the rest mount over the next frames. */
+const FIRST_ROWS = 8;
 
 function whyFirst(first: Release, all: Release[]): string {
   if (first.flags.includes('official') || first.flags.includes('trusted')) return 'Best · trusted';
@@ -149,13 +163,11 @@ function whyFirst(first: Release, all: Release[]): string {
 
 function SourceRow({
   release,
-  index,
   why,
   playing,
   onPress,
 }: {
   release: Release;
-  index: number;
   why: string | null;
   playing: boolean;
   onPress: () => void;
@@ -177,7 +189,7 @@ function SourceRow({
   ].filter(Boolean);
 
   return (
-    <Animated.View entering={rise(index)} layout={reflow}>
+    <View>
       <View style={styles.line}>
         <Tap
           shrink={1}
@@ -243,7 +255,7 @@ function SourceRow({
           {facts.length > 0 ? <Text style={styles.detail}>{facts.join(' · ')}</Text> : null}
         </Animated.View>
       ) : null}
-    </Animated.View>
+    </View>
   );
 }
 

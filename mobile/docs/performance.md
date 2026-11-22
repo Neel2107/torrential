@@ -40,6 +40,12 @@ What we know about the app's speed and what to do next, in order. The `measure-a
 
 ## Done
 
+- **Interactions, 2026-11-22** (Poco F6 at 120 Hz, release build, 5 runs each, medians):
+  - Home scroll: p50 7 ms, p99 15 ms, 0.4% janky. Title page scroll: p99 9 ms. Fine.
+  - Opening a title: worst frame 31 → 21 ms after icons stopped going through react-native-svg. On Android, react-native-svg draws every SVG into a bitmap on the main thread (`SvgView.drawOutput`), about 0.5 ms per icon, and 19 ms of one frame went to icons. `Icon` now hands Lucide's paths to `modules/glyph-android`, which records them on the hardware canvas. What's left is the screen mount (about 13 ms) and GPU fill while the page fades in over Home.
+  - Opening the source sheet: worst frame 65 → 57 ms after the list became a FlatList without per-row `entering`/`layout` animations; 44 ms when the app is fully compiled (`cmd package compile -m speed`), so about a quarter is code the phone hasn't compiled yet after a sideload. The rest is mounting and drawing text (84 text draws, 29 measures). It lands before the sheet moves, as tap delay, not as stutter mid-slide.
+  - After every `adb install`, measure twice: as installed (`speed-profile` from the baseline profile) and after `cmd package compile -f -m speed`, and say which.
+
 - **Cold start, 2026-11-22** (Poco F6, release build compiled with `speed-profile`, 6 cold starts each, medians):
   - Process start → JavaScript running: 970 → 300 ms.
   - First frame (`am start -W` WaitTime): 3,060 → 555 ms.
