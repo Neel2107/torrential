@@ -49,6 +49,19 @@ They need rustup's toolchain with the `aarch64-linux-android`, `aarch64-apple-io
 `aarch64-apple-ios-sim` targets, `cargo-ndk`, the Android NDK, Homebrew's Boost, and Xcode. OpenSSL
 for the three targets is built once into `target/mobile-deps` by `build-openssl.sh`.
 
+## A preview build to share
+
+`APP_VARIANT=preview` (app.config.js) makes "torrential preview", package
+`dev.torrential.app.preview`, which installs beside the development app:
+
+    mobile/scripts/build-engine.sh android
+    APP_VARIANT=preview CI=1 npx expo prebuild --platform android --clean
+    cd android && APP_VARIANT=preview ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+
+It is signed with Expo's shared debug key, so later previews install over it, and it runs on 64-bit
+ARM phones (almost every Android phone since 2017). Prebuild again without APP_VARIANT before the
+next development build.
+
 ## Log
 
 (dated entries as steps complete)
