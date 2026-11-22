@@ -445,30 +445,26 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
 
   return (
     <Sheet onClose={onClose}>
-      <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
-        <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
-          {name.title}
-        </Text>
-        {actions.map((action) => (
-          <MenuRow
-            key={action.id}
-            icon={action.icon}
-            label={action.label}
-            danger={action.danger}
-            disabled={busy}
-            onPress={async () => {
-              if (action.ask) {
-                onClose();
-                return runAsked(action);
-              }
-              setBusy(true);
-              await action.run();
-              setBusy(false);
-              onClose();
-            }}
-          />
-        ))}
-      </View>
+      {(close) => (
+        <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
+          <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
+            {name.title}
+          </Text>
+          {actions.map((action) => (
+            <MenuRow
+              key={action.id}
+              icon={action.icon}
+              label={action.label}
+              danger={action.danger}
+              disabled={busy}
+              onPress={() => {
+                setBusy(true);
+                close(() => runAsked(action));
+              }}
+            />
+          ))}
+        </View>
+      )}
     </Sheet>
   );
 }
@@ -631,58 +627,46 @@ function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
 
   return (
     <Sheet onClose={onClose}>
-      <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
-        <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
-          {copy.label.title}
-        </Text>
-        {copy.state === 'saved' ? (
+      {(close) => (
+        <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
+          <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
+            {copy.label.title}
+          </Text>
+          {copy.state === 'saved' ? (
+            <MenuRow
+              icon={icons.play}
+              label="Play"
+              onPress={() => close(() => router.push({ pathname: '/offline', params: { job } }))}
+            />
+          ) : null}
+          {copy.state === 'failed' ? (
+            <MenuRow icon={icons.refresh} label="Try again" onPress={() => close(() => save(link, job, copy.label))} />
+          ) : null}
           <MenuRow
-            icon={icons.play}
-            label="Play"
+            icon={copy.state === 'saving' ? icons.close : icons.trash}
+            label={
+              copy.state === 'saving' ? 'Stop saving' : copy.state === 'failed' ? 'Dismiss' : 'Delete from this phone'
+            }
+            danger={copy.state === 'saved'}
             onPress={() => {
-              onClose();
-              router.push({ pathname: '/offline', params: { job } });
+              const drop = () => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                remove(job);
+              };
+              if (copy.state !== 'saved') return close(drop);
+              close(() =>
+                ask({
+                  title: `Delete ${copy.label.title}?`,
+                  message: `This frees ${bytes(copy.size)} on this phone.`,
+                  confirm: 'Delete',
+                  danger: true,
+                  icon: icons.trash,
+                }).then((yes) => yes && drop()),
+              );
             }}
           />
-        ) : null}
-        {copy.state === 'failed' ? (
-          <MenuRow
-            icon={icons.refresh}
-            label="Try again"
-            onPress={() => {
-              save(link, job, copy.label);
-              onClose();
-            }}
-          />
-        ) : null}
-        <MenuRow
-          icon={copy.state === 'saving' ? icons.close : icons.trash}
-          label={
-            copy.state === 'saving' ? 'Stop saving' : copy.state === 'failed' ? 'Dismiss' : 'Delete from this phone'
-          }
-          danger={copy.state === 'saved'}
-          onPress={() => {
-            const go = () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              remove(job);
-              onClose();
-            };
-            if (copy.state !== 'saved') return go();
-            onClose();
-            ask({
-              title: `Delete ${copy.label.title}?`,
-              message: `This frees ${bytes(copy.size)} on this phone.`,
-              confirm: 'Delete',
-              danger: true,
-              icon: icons.trash,
-            }).then((yes) => {
-              if (!yes) return;
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              remove(job);
-            });
-          }}
-        />
-      </View>
+        </View>
+      )}
     </Sheet>
   );
 }

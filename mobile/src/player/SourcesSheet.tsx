@@ -16,6 +16,7 @@ import { Skeleton } from '@/ui/Skeleton';
 import { STAGE_DIFFERS, useStaged, useTone } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
 import {
+  alpha,
   color as themedColor,
   font,
   motion,
@@ -254,7 +255,7 @@ const sheet = (c: Palette, t: typeof themedType) =>
       paddingHorizontal: space.xl,
       paddingVertical: 14,
     },
-    rowPlaying: { backgroundColor: 'rgba(166, 199, 154, 0.08)' },
+    rowPlaying: { backgroundColor: alpha(c.action, 0.08) },
     body: { flex: 1, gap: 6 },
     tags: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
     tag: {

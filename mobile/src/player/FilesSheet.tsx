@@ -44,42 +44,45 @@ export function FilesSheet({
 
   return (
     <Sheet onClose={onClose}>
-      <View style={styles.head}>
-        <Text style={type.title} numberOfLines={1}>
-          {shared || 'Videos'}
-        </Text>
-        <Text style={type.caption}>{videos.length} videos in this torrent</Text>
-      </View>
-      <ScrollView contentContainerStyle={{ paddingBottom: space.md }}>
-        {videos.map((file, index) => {
-          const playing = file.index === current;
-          return (
-            <Animated.View key={file.index} entering={rise(index)}>
-              <Tap
-                shrink={1}
-                highlight
-                haptic={!playing}
-                disabled={playing}
-                onPress={() => onPick(file)}
-                accessibilityLabel={`Play ${spaced(file.path)}`}
-                accessibilityState={{ selected: playing }}
-                style={styles.row}
-              >
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[styles.name, playing && styles.playing]} numberOfLines={2}>
-                    {spaced(file.path).slice(shared.length).trim() || spaced(file.path)}
-                  </Text>
-                  <Text style={type.numeric}>
-                    {bytes(file.size)}
-                    {playing ? ' · playing' : ''}
-                  </Text>
-                </View>
-                <Icon name={icons.play} size={18} tint={playing ? color.action : color.soft} filled={playing} />
-              </Tap>
-            </Animated.View>
-          );
-        })}
-      </ScrollView>
+      {(close) => (
+        <>
+          <View style={styles.head}>
+            <Text style={type.title} numberOfLines={1}>
+              {shared || 'Videos'}
+            </Text>
+            <Text style={type.caption}>{videos.length} videos in this torrent</Text>
+          </View>
+          <ScrollView contentContainerStyle={{ paddingBottom: space.md }}>
+            {videos.map((file, index) => {
+              const playing = file.index === current;
+              return (
+                <Tap
+                  key={file.index}
+                  shrink={1}
+                  highlight
+                  haptic={!playing}
+                  disabled={playing}
+                  onPress={() => close(() => onPick(file))}
+                  accessibilityLabel={`Play ${spaced(file.path)}`}
+                  accessibilityState={{ selected: playing }}
+                  style={styles.row}
+                >
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[styles.name, playing && styles.playing]} numberOfLines={2}>
+                      {spaced(file.path).slice(shared.length).trim() || spaced(file.path)}
+                    </Text>
+                    <Text style={type.numeric}>
+                      {bytes(file.size)}
+                      {playing ? ' · playing' : ''}
+                    </Text>
+                  </View>
+                  <Icon name={icons.play} size={18} tint={playing ? color.action : color.soft} filled={playing} />
+                </Tap>
+              );
+            })}
+          </ScrollView>
+        </>
+      )}
     </Sheet>
   );
 }

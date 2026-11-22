@@ -8,6 +8,7 @@ import { CAN_RUN_LOCALLY } from '../../modules/torrential-engine';
 
 import { useMe, useVersion } from '@/engine/queries';
 import { useSession } from '@/engine/session';
+import { ask } from '@/ui/Ask';
 import { Button } from '@/ui/Button';
 import { Check } from '@/ui/Check';
 import { Icon, icons } from '@/ui/Icon';
@@ -135,7 +136,23 @@ export default function Engine() {
           current?.kind === 'phone' ? "Stop using this phone's engine" : `Remove ${current?.name ?? 'this engine'}`
         }
         kind="secondary"
-        onPress={() => forget()}
+        onPress={() =>
+          ask({
+            title:
+              current?.kind === 'phone'
+                ? "Stop using this phone's engine?"
+                : `Remove ${current?.name ?? 'this engine'}?`,
+            message:
+              current?.kind === 'phone'
+                ? 'What it downloaded stays on this phone until the app is removed.'
+                : 'The phone forgets this computer. You can pair it again later.',
+            confirm: current?.kind === 'phone' ? 'Stop using it' : 'Remove',
+            danger: true,
+            icon: icons.trash,
+          }).then((yes) => {
+            if (yes) forget();
+          })
+        }
       />
     </ScrollView>
   );
