@@ -3,9 +3,9 @@ import { File, Paths } from 'expo-file-system';
 import type { Position } from '@web/wire';
 
 import { EngineError, post, type Link } from './client';
-import { readStored, unsentPositions } from './stored';
+import { readStored, unsentPositions, type UnsentPositions } from './stored';
 
-type Unsent = Record<string, Record<string, Position>>;
+type Unsent = UnsentPositions;
 
 const outbox = new File(Paths.document, 'unsent-positions.json');
 let line: Promise<void> = Promise.resolve();

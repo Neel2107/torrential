@@ -12,14 +12,14 @@ import { useViewer } from '@/player/start';
 import { stream, type Link } from './client';
 import { useLink, useSession } from './session';
 import { covers, parseSpan, parseVideo } from './span';
-import { readStored, wantedCopies } from './stored';
+import { readStored, wantedCopies, type WantedCopies } from './stored';
 
 export type Fetching =
   { state: 'idle' } | { state: 'finding' } | { state: 'started'; job: string } | { state: 'failed'; message: string };
 
 const wanted = new File(Paths.document, 'save-when-done.json');
 
-type Wanted = Record<string, { label: Label; file: number }>;
+type Wanted = WantedCopies;
 
 let asked = 0;
 const askedListeners = new Set<() => void>();

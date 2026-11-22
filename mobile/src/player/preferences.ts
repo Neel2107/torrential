@@ -2,19 +2,23 @@ import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { SUBTITLE_STYLE, type SubtitleStyle } from '@web/lib/storage';
-import { NO_PREFERENCES, playerPreferences, readStored } from '@/engine/stored';
+import { NO_PREFERENCES, playerPreferences, readStored, type StoredPreferences } from '@/engine/stored';
 
-/** `subtitles` is the language last picked anywhere, or null for off; undefined until one is picked. */
-export type PlayerPreferences = {
+/** What the player keeps, as stored, with a speed and a whole subtitle style always there. `subtitles` is the language last picked anywhere, or null for off; undefined until one is picked. `shows` holds, per show by title ID, the subtitle language picked there (null for off) and the audio language. */
+export type PlayerPreferences = Omit<StoredPreferences, 'speed' | 'subtitleStyle'> & {
   speed: number;
   subtitleStyle: SubtitleStyle;
-  subtitles?: string | null;
-  /** Per show, by title ID: the subtitle language picked there (null for off), and the audio language. */
-  shows?: Record<string, { subtitles?: string | null; audio?: string }>;
 };
 
 const KEY = 'player-preferences';
 const DEFAULTS: PlayerPreferences = { speed: 1, subtitleStyle: SUBTITLE_STYLE };
+
+/** The preferences a stored file holds, over the defaults: a subtitle style it only partly gives keeps the default for the rest, and a file that does not read gives the defaults. */
+export function readPreferences(saved: string | null | undefined): PlayerPreferences {
+  const read = readStored(playerPreferences, saved, NO_PREFERENCES);
+
+  return { ...DEFAULTS, ...read, subtitleStyle: { ...SUBTITLE_STYLE, ...read.subtitleStyle } };
+}
 
 export function usePlayerPreferences(): [PlayerPreferences, (change: Partial<PlayerPreferences>) => void] {
   const [preferences, setPreferences] = useState(DEFAULTS);
@@ -24,8 +28,7 @@ export function usePlayerPreferences(): [PlayerPreferences, (change: Partial<Pla
     SecureStore.getItemAsync(KEY)
       .then((saved) => {
         if (!saved || changed.current) return;
-        const read = readStored(playerPreferences, saved, NO_PREFERENCES);
-        setPreferences({ ...DEFAULTS, ...read, subtitleStyle: { ...SUBTITLE_STYLE, ...read.subtitleStyle } });
+        setPreferences(readPreferences(saved));
       })
       .catch(() => {});
   }, []);

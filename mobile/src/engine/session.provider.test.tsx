@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
 
 import { keychain, SessionProvider, useSession } from './session';
+import { readStored, savedEngines } from './stored';
 
 const kept = { ...keychain };
 
@@ -61,11 +62,14 @@ function Engines() {
   );
 }
 
-const storedEngines = (values: Map<string, string>) => {
-  const text = values.get('engines');
-
-  return text ? JSON.parse(text) : null;
+const USB = {
+  id: 'http://127.0.0.1:47919',
+  name: 'Computer over USB',
+  kind: 'computer',
+  link: { base: 'http://127.0.0.1:47919', token: null },
 };
+
+const storedEngines = (values: Map<string, string>) => readStored(savedEngines, values.get('engines'), null);
 
 describe('the engines this phone has paired with', () => {
   test('are read back as they were saved, using the active one', async () => {
@@ -105,10 +109,7 @@ describe('the engines this phone has paired with', () => {
 
     expect(await screen.findByText('Engines: 192.168.1.5, Computer over USB')).toBeOnTheScreen();
     expect(values.has('engine-link')).toBe(false);
-    expect(storedEngines(values).engines.map((engine: { name: string }) => engine.name)).toEqual([
-      '192.168.1.5',
-      'Computer over USB',
-    ]);
+    expect(storedEngines(values)).toEqual({ engines: [computer, USB], active: USB.id });
   });
 
   test('an old link that no longer reads leaves the phone unpaired', async () => {
@@ -138,9 +139,6 @@ describe('the engines this phone has paired with', () => {
 
     expect(await screen.findByText('Using Computer over USB')).toBeOnTheScreen();
     expect(screen.getByText('Engines: 192.168.1.5, Computer over USB')).toBeOnTheScreen();
-    expect(storedEngines(values).engines.map((engine: { name: string }) => engine.name)).toEqual([
-      '192.168.1.5',
-      'Computer over USB',
-    ]);
+    expect(storedEngines(values)).toEqual({ engines: [computer, USB], active: USB.id });
   });
 });

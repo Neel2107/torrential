@@ -6,6 +6,11 @@ const engine = z.object({ id: z.string(), name: z.string(), kind: z.enum(['compu
 
 export const savedEngines = z.object({ engines: z.array(engine), active: z.string().nullable() });
 
+/** The engines this phone paired with, and the one in use, as the session saves them. */
+export type SavedEngines = z.infer<typeof savedEngines>;
+
+export type SavedEngine = z.infer<typeof engine>;
+
 export const oldLink = link;
 
 const position = z.object({
@@ -19,9 +24,18 @@ const position = z.object({
 
 export const unsentPositions = z.record(z.string(), z.record(z.string(), position));
 
+/** Positions not yet sent, by engine base and then video. */
+export type UnsentPositions = z.infer<typeof unsentPositions>;
+
 const label = z.object({ title: z.string(), tags: z.string(), poster: z.string().nullable() });
 
+/** How a saved copy is named on the phone. */
+export type StoredLabel = z.infer<typeof label>;
+
 export const wantedCopies = z.record(z.string(), z.object({ label, file: z.number() }));
+
+/** Copies asked for, by download, to save once each finishes. */
+export type WantedCopies = z.infer<typeof wantedCopies>;
 
 export const recentSearches = z.array(z.string());
 
@@ -37,6 +51,9 @@ export const savedCopies = z.array(
     subtitles: z.string().optional(),
   }),
 );
+
+/** The copies saved on the phone, as their manifest lists them. */
+export type SavedCopies = z.infer<typeof savedCopies>;
 
 const show = z.object({ subtitles: z.string().nullable().optional(), audio: z.string().optional() });
 

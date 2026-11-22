@@ -1,10 +1,10 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { answer, inBytes, inPieces, LINK, refusal } from '@/test/engine';
+import { answer, inBytes, inPieces, json, LINK, refusal } from '@/test/engine';
 import { aJob, anError } from '@/test/wire';
 import type { Event, Job } from '@web/wire';
 
-import { EngineError, events, get, stream } from './client';
+import { EngineError, events, get, pair, stream } from './client';
 
 const NEVER = new AbortController().signal;
 
@@ -106,5 +106,56 @@ describe('when the engine says no', () => {
     answer(() => new Response(null, { status: 500 }));
 
     await expect(get(LINK, '/api/jobs')).rejects.toMatchObject({ message: 'The engine answered 500.' });
+  });
+});
+
+describe('pairing with a code', () => {
+  const TOKEN = 'ab12'.repeat(16);
+
+  const paired = (cookie: string | null) => {
+    const reply = json({ device: { id: 'd1' } });
+
+    if (cookie) reply.headers.set('Set-Cookie', cookie);
+
+    return reply;
+  };
+
+  test('gives the device token the engine sets in its cookie', async () => {
+    answer(() => paired(`torrential_device=${TOKEN}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict`));
+
+    await expect(pair(LINK.base, '123456')).resolves.toBe(TOKEN);
+  });
+
+  test('sends the code, and no cookie of its own, to the engine’s pair route', async () => {
+    const asked = answer(() => paired(`torrential_device=${TOKEN}; Path=/`));
+    await pair(LINK.base, '123456');
+
+    expect(asked.map(({ address, init }) => [address, init.method, init.body, init.credentials])).toEqual([
+      [`${LINK.base}/api/pair`, 'POST', JSON.stringify({ code: '123456' }), 'omit'],
+    ]);
+  });
+
+  test.each([
+    ['no cookie', null],
+    ['a cookie of another name', `session=${TOKEN}; Path=/`],
+    ['a token too short', `torrential_device=${TOKEN.slice(1)}; Path=/`],
+  ])('an answer with %s is a failure, not a token', async (_, cookie) => {
+    answer(() => paired(cookie));
+
+    await expect(pair(LINK.base, '123456')).rejects.toMatchObject({
+      message: 'The engine paired this phone but sent no device token.',
+    });
+  });
+
+  test('a wrong code rejects with what the engine says', async () => {
+    answer(() =>
+      refusal(400, anError('not_paired', 'that is not the code torrential shows, so check it and enter it again')),
+    );
+
+    await expect(pair(LINK.base, '654321')).rejects.toMatchObject({
+      status: 400,
+      code: 'not_paired',
+      message: 'that is not the code torrential shows, so check it and enter it again',
+    });
   });
 });

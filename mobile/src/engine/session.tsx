@@ -8,14 +8,14 @@ import { once } from '@/perf';
 
 import { LocalEngine } from '../../modules/torrential-engine';
 import { get, pair as pairWithCode, PORT, type Link } from './client';
-import { oldLink, readStored, savedEngines } from './stored';
+import { oldLink, readStored, savedEngines, type SavedEngine, type SavedEngines } from './stored';
 
 const KEY = 'engines';
 const OLD_KEY = 'engine-link';
 
-export type Engine = { id: string; name: string; kind: 'computer' | 'phone'; link: Link };
+export type Engine = SavedEngine;
 
-type Saved = { engines: Engine[]; active: string | null };
+type Saved = SavedEngines;
 
 type Session = { state: 'loading' } | { state: 'unpaired' } | { state: 'paired'; link: Link; engine: Engine };
 

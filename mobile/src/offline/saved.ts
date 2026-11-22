@@ -8,9 +8,16 @@ import type { FilesReply, OnlineSubtitles } from '@web/wire';
 
 import { authHeaders, get, post, transport, url, type Download, type Link } from '@/engine/client';
 import { languageName, sameLanguage } from '@/player/languages';
-import { NO_PREFERENCES, playerPreferences, readStored, savedCopies } from '@/engine/stored';
+import {
+  NO_PREFERENCES,
+  playerPreferences,
+  readStored,
+  savedCopies,
+  type SavedCopies,
+  type StoredLabel,
+} from '@/engine/stored';
 
-export type Label = { title: string; tags: string; poster: string | null };
+export type Label = StoredLabel;
 
 /** A download's video copied to this phone. `file` is the file asked for, by index, kept in every state so trying again copies the same one; none means the largest video. */
 export type Copy = { job: string; label: Label; size: number; file?: number } & (
@@ -49,7 +56,7 @@ function drop(job: string) {
 }
 
 function keep() {
-  const saved = [...copies.values()].filter((copy): copy is Saved => copy.state === 'saved');
+  const saved: SavedCopies = [...copies.values()].filter((copy): copy is Saved => copy.state === 'saved');
 
   try {
     if (!manifest.exists) manifest.create({ intermediates: true });
