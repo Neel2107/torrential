@@ -19,6 +19,23 @@ import { Tap } from '@/ui/Tap';
 import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+/** When the player pauses for sleep: after some minutes, or at the end of the video. */
+export type Sleep = { kind: 'after'; minutes: number; at: number } | { kind: 'end' } | null;
+
+const SLEEPS: [label: string, minutes: number | null][] = [
+  ['Off', null],
+  ['15 min', 15],
+  ['30 min', 30],
+  ['1 hour', 60],
+  ['End of video', 0],
+];
+
+function sleepText(sleep: Sleep): string {
+  if (!sleep) return 'Off';
+  if (sleep.kind === 'end') return 'At the end';
+  return `Pauses in ${Math.max(1, Math.round((sleep.at - Date.now()) / 60_000))} min`;
+}
+
 function speedText(speed: number): string {
   return speed === 1 ? 'Normal' : `${speed}×`;
 }
@@ -28,12 +45,16 @@ export function SettingsSheet({
   onSources,
   speed,
   onSpeed,
+  sleep,
+  onSleep,
   onClose,
 }: {
   source: Release | null;
   onSources: () => void;
   speed: number;
   onSpeed: (speed: number) => void;
+  sleep: Sleep;
+  onSleep: (sleep: Sleep) => void;
   onClose: () => void;
 }) {
   return (
@@ -48,7 +69,7 @@ export function SettingsSheet({
               <Text style={type.caption} numberOfLines={1}>
                 {[
                   readable(source.name).title,
-                  source.quality.resolution?.toUpperCase(),
+                  source.quality.resolution,
                   source.size && bytes(source.size),
                 ]
                   .filter(Boolean)
@@ -69,6 +90,34 @@ export function SettingsSheet({
                 selected={choice === speed}
                 onPress={() => onSpeed(choice)}
                 accessibilityLabel={choice === 1 ? 'Normal speed' : `${choice} times speed`}
+              />
+            ))}
+          </ScrollView>
+        </Section>
+
+        <Section title="Sleep timer" value={sleepText(sleep)}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.line}>
+            {SLEEPS.map(([label, minutes]) => (
+              <Chip
+                key={label}
+                label={label}
+                selected={
+                  minutes === null
+                    ? sleep === null
+                    : minutes === 0
+                      ? sleep?.kind === 'end'
+                      : sleep?.kind === 'after' && sleep.minutes === minutes
+                }
+                onPress={() =>
+                  onSleep(
+                    minutes === null
+                      ? null
+                      : minutes === 0
+                        ? { kind: 'end' }
+                        : { kind: 'after', minutes, at: Date.now() + minutes * 60_000 },
+                  )
+                }
+                accessibilityLabel={minutes === null ? 'No sleep timer' : `Pause ${label.toLowerCase()}`}
               />
             ))}
           </ScrollView>

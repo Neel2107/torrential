@@ -9,6 +9,9 @@ import {
   ChevronRight,
   Ellipsis,
   History,
+  Lock,
+  LockOpen,
+  Moon,
   Film,
   House,
   Link,
@@ -77,6 +80,9 @@ export const icons = {
   add: Plus,
   history: History,
   settings: SlidersHorizontal,
+  lock: Lock,
+  unlock: LockOpen,
+  sleep: Moon,
   phone: Smartphone,
 } satisfies Record<string, LucideIcon>;
 

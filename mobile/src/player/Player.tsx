@@ -53,7 +53,7 @@ import { usePlayerPreferences } from './preferences';
 import { RecoveryNotice, useStallRecovery, type Takeover } from './recovery';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
-import { SettingsSheet } from './SettingsSheet';
+import { SettingsSheet, type Sleep } from './SettingsSheet';
 import { SwipeLevel, useSideSwipes } from './swipes';
 import { SubtitleLook } from './SubtitleLook';
 import { SourcesSheet } from './SourcesSheet';
@@ -82,6 +82,8 @@ function nextEpisode(page: TitlePage | null, video: string | null): UpNext | nul
       }
     : null;
 }
+
+const UNLOCK_SHOWN_MS = 3000;
 
 const TAB = Math.random().toString(36).slice(2, 10);
 
@@ -152,6 +154,9 @@ export function Player({
   const position = time.currentTime >= 0 ? timeline.now() : 0;
   const failed = status === 'error' || Boolean(timeline.problem);
   const [visible, setVisible] = useState(true);
+  const [sleep, setSleep] = useState<Sleep>(null);
+  const [locked, setLocked] = useState(false);
+  const [unlockShown, setUnlockShown] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
   const [preferences, setPreferences] = usePlayerPreferences();
@@ -277,6 +282,26 @@ export function Player({
     player.playbackRate = preferences.speed;
   }, [player, preferences.speed]);
 
+  useEffect(() => {
+    if (sleep?.kind !== 'after') return;
+    const timer = setTimeout(
+      () => {
+        player.pause();
+        setSleep(null);
+        setLocked(false);
+        setVisible(true);
+      },
+      Math.max(0, sleep.at - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [sleep, player]);
+
+  useEffect(() => {
+    if (!unlockShown) return;
+    const timer = setTimeout(() => setUnlockShown(false), UNLOCK_SHOWN_MS);
+    return () => clearTimeout(timer);
+  }, [unlockShown]);
+
   const toggle = () => {
     held.current = player.playing;
     if (player.playing) player.pause();
@@ -325,6 +350,9 @@ export function Player({
       }
     });
   const taps = Gesture.Race(pullDown, sides.swipe, Gesture.Exclusive(doubleTap, tap));
+  const lockedTap = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd(() => setUnlockShown(true));
   const dropStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: drop.value * 0.8 }, { scale: 1 - Math.min(drop.value, 400) / 2400 }],
     borderRadius: Math.min(drop.value / 6, 24),
@@ -360,7 +388,7 @@ export function Player({
             allowsPictureInPicture
             startsPictureInPictureAutomatically
           />
-          <GestureDetector gesture={taps}>
+          <GestureDetector gesture={locked ? lockedTap : taps}>
             <View style={StyleSheet.absoluteFill}>
               <SwipeLevel kind={sides.kind} percent={sides.percent} level={sides.level} shown={sides.shown} />
               <Animated.View style={[styles.skip, styles.skipLeft, leftStyle]} pointerEvents="none">
@@ -405,7 +433,7 @@ export function Player({
             </View>
           ) : null}
 
-          {visible ? (
+          {visible && !locked ? (
             <Animated.View
               entering={FadeIn.duration(motion.quick)}
               exiting={FadeOut.duration(motion.quick)}
@@ -452,6 +480,19 @@ export function Player({
                       <Icon name={icons.episodes} size={22} tint={color.ink} />
                     </Tap>
                   ) : null}
+                  <Tap
+                    shrink={0.88}
+                    haptic
+                    onPress={() => {
+                      setLocked(true);
+                      setVisible(false);
+                      setUnlockShown(true);
+                    }}
+                    accessibilityLabel="Lock the screen"
+                    style={styles.round}
+                  >
+                    <Icon name={icons.lock} size={21} tint={color.ink} />
+                  </Tap>
                   <Tap
                     shrink={0.88}
                     onPress={() => setSheet('tracks')}
@@ -543,11 +584,34 @@ export function Player({
             look={preferences.subtitleStyle}
           />
 
+          {locked && unlockShown ? (
+            <Animated.View
+              entering={FadeIn.duration(motion.quick)}
+              exiting={FadeOut.duration(motion.quick)}
+              style={[styles.unlockWrap, { top: Math.max(insets.top, space.lg) }]}
+            >
+              <Tap
+                haptic
+                shrink={0.92}
+                onPress={() => {
+                  setLocked(false);
+                  setUnlockShown(false);
+                  setVisible(true);
+                }}
+                accessibilityLabel="Unlock the screen"
+                style={styles.unlock}
+              >
+                <Icon name={icons.unlock} size={18} tint={color.ink} />
+                <Text style={styles.unlockText}>Unlock</Text>
+              </Tap>
+            </Animated.View>
+          ) : null}
+
           <RecoveryNotice recovery={recovery} switched={switched} onRetry={retry} />
 
           {ended ? (
             <Ended
-              next={next}
+              next={sleep?.kind === 'end' ? null : next}
               onNext={() => next && router.replace({ pathname: '/play', params: { video: next.video } })}
               onReplay={() => {
                 setEnded(false);
@@ -594,6 +658,8 @@ export function Player({
               onSources={() => setSheet('sources')}
               speed={preferences.speed}
               onSpeed={(speed) => setPreferences({ speed })}
+              sleep={sleep}
+              onSleep={setSleep}
               onClose={() => setSheet(null)}
             />
           ) : null}
@@ -699,6 +765,17 @@ const styles = StyleSheet.create({
   bottom: { paddingTop: space.sm },
   center: { position: 'absolute', alignSelf: 'center', top: '45%' },
   gone: { opacity: 0 },
+  unlockWrap: { position: 'absolute', alignSelf: 'center' },
+  unlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(20, 18, 15, 0.72)',
+  },
+  unlockText: { fontFamily: font.semibold, fontSize: 15, color: color.ink },
   errorBox: {
     zIndex: 2,
     alignItems: 'center',
