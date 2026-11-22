@@ -36,6 +36,7 @@ export function TracksSheet({
   drawn,
   onDraw,
   onLanguage,
+  onAudioLanguage,
   look,
   onClose,
 }: {
@@ -47,6 +48,7 @@ export function TracksSheet({
   drawn: SubtitleChoice | null;
   onDraw: (choice: SubtitleChoice | null) => void;
   onLanguage: (language: string | null) => void;
+  onAudioLanguage: (language: string) => void;
   look: ReactNode;
   onClose: () => void;
 }) {
@@ -122,7 +124,10 @@ export function TracksSheet({
                   }
                   detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${channels(fromEngine.channels)}` : null}
                   selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
-                  onPress={() => (player.audioTrack = track)}
+                  onPress={() => {
+                    player.audioTrack = track;
+                    if (track.language) onAudioLanguage(track.language);
+                  }}
                 />
               );
             })}

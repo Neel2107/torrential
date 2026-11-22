@@ -3,8 +3,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { SUBTITLE_STYLE, type SubtitleStyle } from '@web/lib/storage';
 
-/** `subtitles` is the language last picked, two letters, or null for off; undefined until one is picked. */
-export type PlayerPreferences = { speed: number; subtitleStyle: SubtitleStyle; subtitles?: string | null };
+/** `subtitles` is the language last picked anywhere, or null for off; undefined until one is picked. */
+export type PlayerPreferences = {
+  speed: number;
+  subtitleStyle: SubtitleStyle;
+  subtitles?: string | null;
+  /** Per show, by title ID: the subtitle language picked there (null for off), and the audio language. */
+  shows?: Record<string, { subtitles?: string | null; audio?: string }>;
+};
 
 const KEY = 'player-preferences';
 const DEFAULTS: PlayerPreferences = { speed: 1, subtitleStyle: SUBTITLE_STYLE };

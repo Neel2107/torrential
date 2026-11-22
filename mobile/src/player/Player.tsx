@@ -185,12 +185,39 @@ export function Player({
   const [drawn, setDrawn] = useState<SubtitleChoice | null>(null);
   const cues = useSubtitleCues(play, drawn);
   const online = useOnlineSubtitles(play.id, play.video.index);
-  const remember = (language: string | null) => setPreferences({ subtitles: language ? language.toLowerCase() : null });
+  const show = video ? titleOf(video) : null;
+  const remember = (language: string | null) => {
+    const subtitles = language ? language.toLowerCase() : null;
+    const shows = show
+      ? { ...preferences.shows, [show]: { ...preferences.shows?.[show], subtitles } }
+      : preferences.shows;
+    setPreferences({ subtitles, shows });
+  };
+  const rememberAudio = (language: string) => {
+    if (!show) return;
+    setPreferences({
+      shows: { ...preferences.shows, [show]: { ...preferences.shows?.[show], audio: language.toLowerCase() } },
+    });
+  };
   const { availableSubtitleTracks } = useEvent(player, 'availableSubtitleTracksChange', {
     availableSubtitleTracks: player.availableSubtitleTracks,
   });
   const picked = useRef(false);
-  const wanted = preferences.subtitles;
+  const own = show ? preferences.shows?.[show] : undefined;
+  const wanted = own && 'subtitles' in own ? own.subtitles : preferences.subtitles;
+  const wantedAudio = own?.audio;
+  const { availableAudioTracks } = useEvent(player, 'availableAudioTracksChange', {
+    availableAudioTracks: player.availableAudioTracks,
+  });
+  const pickedAudio = useRef(false);
+
+  useEffect(() => {
+    if (pickedAudio.current || !wantedAudio) return;
+    const track = availableAudioTracks.find((candidate) => sameLanguage(candidate.language, wantedAudio));
+    if (!track) return;
+    pickedAudio.current = true;
+    if (!sameLanguage(player.audioTrack?.language, wantedAudio)) player.audioTrack = track;
+  }, [availableAudioTracks, wantedAudio, player]);
 
   useEffect(() => {
     if (picked.current || !wanted || drawn || player.subtitleTrack) return;
@@ -653,6 +680,7 @@ export function Player({
                 if (choice?.kind === 'online') remember(choice.subtitle.language);
               }}
               onLanguage={remember}
+              onAudioLanguage={rememberAudio}
               look={
                 <SubtitleLook
                   offset={offset}
