@@ -6,7 +6,7 @@ import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-nativ
 import Animated, { Easing, useAnimatedStyle, useDerivedValue, withTiming } from 'react-native-reanimated';
 
 import { Button as NativeButton, Host, Image as SwiftImage, Menu as NativeMenu } from '@expo/ui/swift-ui';
-import { contentShape, frame, shapes } from '@expo/ui/swift-ui/modifiers';
+import * as modifiers from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { Menu } from '../../../modules/glass-menu-android';
@@ -90,7 +90,7 @@ export default function Downloads() {
               </Text>
             </Animated.View>
           }
-          renderItem={({ item, index }) => <CopyRow copy={item} index={index} onMenu={() => setCopyMenu(item.job)} />}
+          renderItem={({ item }) => <CopyRow copy={item} onMenu={() => setCopyMenu(item.job)} />}
         />
       </Pager>
       <TopBar
@@ -163,9 +163,7 @@ function JobList({
           <Connecting />
         )
       }
-      renderItem={({ item, index }) => (
-        <JobRow job={item} index={index} onMenu={() => onMenu(item)} landed={landed.has(item.id)} />
-      )}
+      renderItem={({ item }) => <JobRow job={item} onMenu={() => onMenu(item)} landed={landed.has(item.id)} />}
     />
   );
 }
@@ -177,28 +175,37 @@ function useLanded(jobs: Job[]): ReadonlySet<string> {
   useEffect(() => {
     const before = seen.current;
     seen.current = new Map(jobs.map((job) => [job.id, job.state]));
+
     if (!before) return;
     const fresh = jobs.filter((job) => job.state === 'done' && before.has(job.id) && before.get(job.id) !== 'done');
+
     if (fresh.length === 0) return;
+
     if (focused) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setLanded((now) => new Set([...now, ...fresh.map((job) => job.id)]));
+
     const timer = setTimeout(
       () => setLanded((now) => new Set([...now].filter((id) => !fresh.some((job) => job.id === id)))),
       4000,
     );
+
     return () => clearTimeout(timer);
   }, [jobs, focused]);
+
   return landed;
 }
 
 function roughly(seconds: number): string {
   if (seconds >= 86400) return `about ${Math.round(seconds / 86400)}d`;
+
   if (seconds >= 5400) return `about ${Math.round(seconds / 3600)}h`;
+
   if (seconds >= 120) return `${Math.round(seconds / 60)} min`;
+
   return 'under 2 min';
 }
 
-function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMenu: () => void; landed: boolean }) {
+function JobRow({ job, onMenu, landed }: { job: Job; onMenu: () => void; landed: boolean }) {
   const name = useJobName(job);
   const copy = useCopy(job.id);
   const tags = job.name ? qualityOf(job.name) : [];
@@ -216,6 +223,7 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
           : size
             ? `${STATE[job.state]} ${percent(fraction)}`
             : STATE[job.state];
+
   const numbers =
     job.state === 'done' && job.progress.up_rate > 0
       ? `${rate(job.progress.up_rate)} up`
@@ -242,6 +250,7 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
     accessibilityHint: 'Long press for pause, resume and remove.',
     style: styles.row,
   };
+
   const content = (
     <>
       {name.poster ? (
@@ -312,7 +321,9 @@ function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
   const value = useDerivedValue(() =>
     withTiming(Math.min(1, Math.max(0, fraction)), { duration: motion.tick, easing: Easing.linear }),
   );
+
   const fill = useAnimatedStyle(() => ({ transform: [{ scaleX: value.get() }] }));
+
   return (
     <View style={styles.track} accessibilityRole="progressbar" accessibilityValue={{ text: percent(fraction) }}>
       <Animated.View style={[styles.fill, { backgroundColor: paused ? color.pencil : color.action }, fill]} />
@@ -342,8 +353,10 @@ function useJobActions(job: Job): JobAction[] {
   const copy = useCopy(job.id);
   // On the phone's own engine nothing else can clear the files, so removing deletes them.
   const onPhone = session.state === 'paired' && session.engine.kind === 'phone';
+
   const running =
     job.state === 'downloading' || job.state === 'queued' || job.state === 'metadata' || job.state === 'checking';
+
   const send = async (path: '/api/pause' | '/api/resume' | '/api/remove') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const body = path === '/api/remove' && onPhone ? { refs: [job.id], delete: true } : { refs: [job.id] };
@@ -359,6 +372,7 @@ function useJobActions(job: Job): JobAction[] {
       run: () => router.push({ pathname: '/play', params: { ref: job.id } }),
     },
   ];
+
   if (copy?.state === 'saved') {
     actions.push({
       id: 'offline',
@@ -387,6 +401,7 @@ function useJobActions(job: Job): JobAction[] {
       },
     });
   }
+
   if (running)
     actions.push({
       id: 'pause',
@@ -395,6 +410,7 @@ function useJobActions(job: Job): JobAction[] {
       icon: icons.pause,
       run: () => send('/api/pause'),
     });
+
   if (job.state === 'paused' || job.state === 'error') {
     actions.push({
       id: 'resume',
@@ -404,6 +420,7 @@ function useJobActions(job: Job): JobAction[] {
       run: () => send('/api/resume'),
     });
   }
+
   actions.push({
     id: 'remove',
     symbol: 'trash',
@@ -429,6 +446,7 @@ function useJobActions(job: Job): JobAction[] {
         },
     run: () => send('/api/remove'),
   });
+
   return actions;
 }
 
@@ -438,8 +456,9 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
 
   return (
-    <Sheet onClose={onClose}>
-      {(close) => (
+    <Sheet
+      onClose={onClose}
+      render={(close) => (
         <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
           <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
             {name.title}
@@ -459,13 +478,14 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
           ))}
         </View>
       )}
-    </Sheet>
+    />
   );
 }
 
 function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
   const actions = useJobActions(job);
   const name = useJobName(job);
+
   if (Platform.OS === 'ios') {
     return (
       <Host matchContents>
@@ -475,7 +495,10 @@ function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
               systemName="ellipsis"
               size={18}
               color={color.pencil}
-              modifiers={[frame({ width: 44, height: 44 }), contentShape(shapes.rectangle())]}
+              modifiers={[
+                modifiers.frame({ width: 44, height: 44 }),
+                modifiers.contentShape(modifiers.shapes.rectangle()),
+              ]}
             />
           }
         >
@@ -492,6 +515,7 @@ function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
       </Host>
     );
   }
+
   if (Platform.OS !== 'android') {
     return (
       <Tap
@@ -504,11 +528,13 @@ function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
       </Tap>
     );
   }
+
   return (
     <Menu
       colorScheme={scheme}
       onSelect={({ id }) => {
         const action = actions.find((candidate) => candidate.id === id);
+
         if (action) runAsked(action);
       }}
     >
@@ -538,6 +564,7 @@ function CopyState({ copy }: { copy: Copy }) {
       </View>
     );
   }
+
   if (copy.state === 'failed') {
     return (
       <Text style={[type.numeric, { color: color.error }]} numberOfLines={2}>
@@ -545,6 +572,7 @@ function CopyState({ copy }: { copy: Copy }) {
       </Text>
     );
   }
+
   return (
     <View style={styles.onPhone}>
       <Icon name={icons.phone} size={13} tint={color.action} />
@@ -555,11 +583,13 @@ function CopyState({ copy }: { copy: Copy }) {
 
 function FreeSpace() {
   const free = freeSpace();
+
   if (free === null) return null;
+
   return <Text style={styles.free}>{bytes(free)} free on this phone</Text>;
 }
 
-function CopyRow({ copy, index, onMenu }: { copy: Copy; index: number; onMenu: () => void }) {
+function CopyRow({ copy, onMenu }: { copy: Copy; onMenu: () => void }) {
   const facts =
     copy.state === 'saved'
       ? `${bytes(copy.size)}  ·  saved ${ago(copy.saved_at)}`
@@ -617,11 +647,13 @@ function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
   useEffect(() => {
     if (gone) onClose();
   }, [gone, onClose]);
+
   if (!copy) return null;
 
   return (
-    <Sheet onClose={onClose}>
-      {(close) => (
+    <Sheet
+      onClose={onClose}
+      render={(close) => (
         <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
           <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
             {copy.label.title}
@@ -651,6 +683,7 @@ function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 remove(job);
               };
+
               if (copy.state !== 'saved') return close(drop);
               close(() =>
                 ask({
@@ -665,7 +698,7 @@ function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
           />
         </View>
       )}
-    </Sheet>
+    />
   );
 }
 

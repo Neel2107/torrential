@@ -25,6 +25,7 @@ function trackName(
   kind: string,
 ): string {
   const label = track.label && track.label !== 'und' ? track.label : null;
+
   return label || track.name || languageName(track.language) || `${kind} ${index + 1}`;
 }
 
@@ -39,18 +40,22 @@ function namesOf(
 ): string[] {
   const names = tracks.map((track, index) => trackName(track, index, kind));
   const total = new Map<string, number>();
+
   for (const name of names) total.set(name, (total.get(name) ?? 0) + 1);
   const seen = new Map<string, number>();
+
   return names.map((name) => {
     if (total.get(name) === 1) return name;
     const nth = (seen.get(name) ?? 0) + 1;
     seen.set(name, nth);
+
     return nth === 1 ? name : `${name} ${nth}`;
   });
 }
 
 function languageDetail(language: string | null | undefined, label: string): string | null {
   const name = languageName(language);
+
   return name && name.length > 3 && !label.toLowerCase().startsWith(name.toLowerCase()) ? name : null;
 }
 
@@ -99,6 +104,7 @@ export function TracksSheet({
       }}
     />
   );
+
   const embedded = (track: SubtitleTrack, index: number) => (
     <OptionRow
       key={`${track.id ?? index}`}
@@ -108,10 +114,12 @@ export function TracksSheet({
       onPress={() => {
         onDraw(null);
         chooseSubtitles(player, track);
+
         if (track.language) onLanguage(track.language);
       }}
     />
   );
+
   const file = (candidate: FileChoice) => (
     <OptionRow
       key={`file-${candidate.index}`}
@@ -137,6 +145,7 @@ export function TracksSheet({
       ))
     : audio.map((track: AudioTrack, index) => {
         const fromEngine = media?.audio[index];
+
         return (
           <OptionRow
             key={`${track.id ?? index}`}
@@ -145,6 +154,7 @@ export function TracksSheet({
             selected={audioTrack ? audioTrack.id === track.id && audioTrack.label === track.label : index === 0}
             onPress={() => {
               chooseAudio(player, track);
+
               if (track.language) onAudioLanguage(track.language);
             }}
           />
@@ -152,13 +162,16 @@ export function TracksSheet({
       });
 
   const wanted = [phoneLanguage(), 'en'];
+
   const current = subtitles.findIndex(
     (track) => !drawn && subtitleTrack?.id === track.id && subtitleTrack?.label === track.label,
   );
+
   const suggested = subtitles
     .map((track, index) => ({ track, index }))
     .filter(({ track, index }) => index !== current && wanted.some((tag) => sameLanguage(track.language, tag)))
     .slice(0, current >= 0 || drawn ? 1 : 2);
+
   const found = online.kind === 'found' ? online.subtitles.length : 0;
   const allSubtitles = subtitles.length + files.length + found;
   const audioCount = streamAudio ? streamAudio.tracks.length : audio.length;
@@ -182,6 +195,7 @@ export function TracksSheet({
       <NavRow label="All subtitles" count={allSubtitles} onPress={() => setPage('subtitles')} />
     </View>
   );
+
   const audioColumn = (
     <View style={styles.column}>
       {audioCount > 0 ? <Text style={[type.title, styles.heading]}>Audio</Text> : null}
@@ -197,6 +211,7 @@ export function TracksSheet({
       <NavRow label="Timing and style" onPress={() => setPage('style')} />
     </View>
   );
+
   const menu = (
     <ScrollView style={styles.scroll} contentContainerStyle={[styles.page, wide && styles.wide]}>
       {subtitleColumn}
@@ -234,6 +249,7 @@ export function TracksSheet({
       onBack={() => {
         if (page === 'menu') return false;
         setPage('menu');
+
         return true;
       }}
     >
@@ -243,9 +259,9 @@ export function TracksSheet({
             menu
           ) : (
             <>
-              <PageHeader title={pages[shown as Exclude<Page, 'menu'>].title} onBack={() => setPage('menu')} />
+              <PageHeader title={pages[shown].title} onBack={() => setPage('menu')} />
               <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
-                {pages[shown as Exclude<Page, 'menu'>].body}
+                {pages[shown].body}
               </ScrollView>
             </>
           )
@@ -275,6 +291,7 @@ function OnlineRows({
       </View>
     );
   }
+
   if (lookup.kind !== 'found') {
     return (
       <Text style={[type.caption, styles.empty]}>
@@ -287,9 +304,11 @@ function OnlineRows({
 
   const chosen = drawn?.kind === 'online' ? drawn.subtitle : null;
   const byLanguage = new Map<string, OnlineSubtitle[]>();
+
   for (const subtitle of lookup.subtitles) {
     byLanguage.set(subtitle.language, [...(byLanguage.get(subtitle.language) ?? []), subtitle]);
   }
+
   const languages = [...byLanguage.keys()].sort((a, b) => languageLabel(a).localeCompare(languageLabel(b)));
   const wanted = [phoneLanguage(), 'en'];
   const near = languages.filter((tag) => wanted.includes(tag.slice(0, 2).toLowerCase()) || tag === chosen?.language);
@@ -305,8 +324,10 @@ function OnlineRows({
       onPress={() => onDraw({ kind: 'online', subtitle })}
     />
   );
+
   const best = (tag: string) => {
     const subtitle = chosen?.language === tag ? chosen : byLanguage.get(tag)![0]!;
+
     return row(subtitle, languageLabel(tag), subtitle.name);
   };
 

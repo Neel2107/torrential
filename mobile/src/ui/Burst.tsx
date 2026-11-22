@@ -61,6 +61,7 @@ function Dot({
 }) {
   const style = useAnimatedStyle(() => {
     const travel = Math.min(1, t.get() * 1.4);
+
     return {
       opacity: t.get() === 0 || t.get() === 1 ? 0 : t.get() < 0.35 ? 0 : 1 - (t.get() - 0.35) / 0.65,
       transform: [
@@ -70,6 +71,7 @@ function Dot({
       ],
     };
   });
+
   return <Animated.View style={[styles.dot, { backgroundColor: tint }, style]} />;
 }
 

@@ -4,6 +4,7 @@ import { alpha, color, radius } from '@/theme';
 
 export function Meter({ fraction, tint = color.action }: { fraction: number; tint?: string }) {
   const clamped = Math.min(1, Math.max(0, fraction));
+
   return (
     <View
       style={styles.track}

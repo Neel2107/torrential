@@ -29,13 +29,17 @@ export function needsAudioConversion(media: MediaInfo, audio: number | null): bo
     audio === null
       ? (media.audio.find((a) => a.default) ?? media.audio[0])
       : media.audio.find((a) => a.stream === audio);
+
   return Boolean(track && SILENT.test(track.codec));
 }
 
 function obstacle(media: MediaInfo): Reason | null {
   if (__DEV__ && FORCE_STREAM.value) return 'audio';
+
   if (Platform.OS === 'ios' && !APPLE_CONTAINER.test(media.container)) return 'container';
+
   if (needsAudioConversion(media, null)) return 'audio';
+
   return null;
 }
 
@@ -46,6 +50,7 @@ export const STARTS_DIRECT = Platform.OS !== 'ios';
 
 export function sourceFor(link: Link, play: PlayInfo, mode: Mode, metadata: VideoMetadata): VideoSourceObject | null {
   if (mode.kind === 'pending') return null;
+
   if (mode.kind === 'direct') {
     return {
       uri: `${link.base}${encodeURI(play.video.url)}`,
@@ -54,7 +59,9 @@ export function sourceFor(link: Link, play: PlayInfo, mode: Mode, metadata: Vide
       contentType: 'progressive',
     };
   }
+
   const query = { id: play.id, file: play.video.index, t: mode.from.toFixed(3), video: mode.video, audio: mode.audio };
+
   // AVPlayer plays a live conversion only as HLS; ExoPlayer reads the one fragmented MP4 stream.
   return USES_HLS
     ? { uri: url(link, '/api/hls/index.m3u8', query), headers: authHeaders(link), metadata, contentType: 'hls' }
@@ -67,6 +74,7 @@ async function readyFfmpeg(link: Link, media: MediaInfo): Promise<boolean> {
   await stream<FfmpegMessage>(link, '/api/ffmpeg', { method: 'POST', body: {} }, (message) => {
     if (message.type === 'ready') ready = true;
   }).catch(() => {});
+
   return ready;
 }
 
@@ -101,15 +109,19 @@ export function useTimeline({
 
   useEffect(() => {
     alive.current = true;
+
     return () => {
       alive.current = false;
+
       if (retryTimer.current) clearTimeout(retryTimer.current);
     };
   }, []);
 
   const now = useCallback(() => {
     const current = modeRef.current;
+
     if (current.kind === 'stream' && !baseKnown.current) return current.from;
+
     return base.current + player.currentTime;
   }, [player]);
 
@@ -121,21 +133,28 @@ export function useTimeline({
             ? `This ${next.reason === 'audio' ? 'audio' : 'file'} needs converting, which the engine on a phone cannot do. Play it from a computer's engine.`
             : 'The engine could not get ffmpeg to convert this file.',
         );
+
         return;
       }
+
       base.current = 0;
       baseKnown.current = false;
       startedAt.current = null;
       setMode(next);
       const source = sourceFor(link, play, next, metadata);
+
       if (!source || !alive.current) return;
+
       try {
         await player.replaceAsync(source);
       } catch {
         return;
       }
+
       if (!alive.current) return;
+
       if (next.kind === 'direct' && at > 0) jumpTo(player, at);
+
       if (resume) player.play();
     },
     [link, media, metadata, play, player],
@@ -146,6 +165,7 @@ export function useTimeline({
     decided.current = true;
     const reason = obstacle(media);
     const at = modeRef.current.kind === 'pending' ? resumeAt : player.currentTime;
+
     if (reason) switchTo({ kind: 'stream', video: 'copy', from: at, audio: null, reason }, at);
     else if (modeRef.current.kind === 'pending') switchTo({ kind: 'direct' }, at);
   }, [media, player, resumeAt, switchTo]);
@@ -158,7 +178,9 @@ export function useTimeline({
   // buffering stall moves them.
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     const current = modeRef.current;
+
     if (current.kind !== 'stream' || !player.playing || currentTime <= 0.05) return;
+
     if (startedAt.current === null) startedAt.current = Date.now();
     const elapsed = ((Date.now() - startedAt.current) / 1000) * (player.playbackRate || 1);
     const asZeroBased = Math.abs(currentTime - elapsed);
@@ -171,6 +193,7 @@ export function useTimeline({
     if (status !== 'error') return;
     const current = modeRef.current;
     const at = current.kind === 'stream' ? Math.max(now(), current.from) : now();
+
     if (current.kind === 'direct' && !directRetried.current) {
       directRetried.current = true;
       retryTimer.current = setTimeout(() => switchTo({ kind: 'direct' }, at), 1500);
@@ -188,6 +211,7 @@ export function useTimeline({
     (seconds: number) => {
       const current = modeRef.current;
       const target = Math.max(0, seconds);
+
       if (current.kind === 'stream') switchTo({ ...current, from: target }, target, player.playing);
       else jumpTo(player, target);
     },
@@ -199,6 +223,7 @@ export function useTimeline({
       const current = modeRef.current;
       const from = now();
       const playing = player.playing;
+
       if (current.kind === 'stream') switchTo({ ...current, from, audio: track }, from, playing);
       else switchTo({ kind: 'stream', video: 'copy', from, audio: track, reason: 'audio' }, from, playing);
     },

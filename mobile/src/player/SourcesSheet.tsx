@@ -47,9 +47,11 @@ export function SourcesSheet({
 }) {
   const styles = useStaged(themed, staged);
   const type = useStaged(themedType, stageType);
+
   return (
-    <Sheet onClose={onClose}>
-      {(close) => (
+    <Sheet
+      onClose={onClose}
+      render={(close) => (
         <>
           <View style={styles.head}>
             <Text style={type.title}>{heading}</Text>
@@ -66,7 +68,7 @@ export function SourcesSheet({
           />
         </>
       )}
-    </Sheet>
+    />
   );
 }
 
@@ -84,6 +86,7 @@ export function SourcesList({
   const color = useTone();
   const type = useStaged(themedType, stageType);
   const sources = useSources(video);
+
   const state: Sources = sources.data ?? {
     releases: [],
     done: sources.isError,
@@ -124,11 +127,14 @@ export function SourcesList({
 
 function whyFirst(first: Release, all: Release[]): string {
   if (first.flags.includes('official') || first.flags.includes('trusted')) return 'Best · trusted';
+
   if (first.sources.includes('archive.org')) return 'Best · Internet Archive';
   const seeds = (release: Release) => release.seeders ?? -1;
+
   if (all.length > 1 && all.every((other) => other === first || seeds(other) < seeds(first)))
     return 'Best · most seeds';
   const peers = all.filter((other) => other.quality.resolution === first.quality.resolution && other.size);
+
   if (
     first.size &&
     first.quality.resolution &&
@@ -137,6 +143,7 @@ function whyFirst(first: Release, all: Release[]): string {
   ) {
     return `Best · smallest at ${first.quality.resolution}`;
   }
+
   return 'Best';
 }
 
@@ -161,6 +168,7 @@ function SourceRow({
   const seeds = release.seeders;
   const health = seeds === null ? color.pencil : seeds >= 20 ? color.action : seeds >= 5 ? color.soft : color.error;
   const [open, setOpen] = useState(false);
+
   const facts = [
     seeds !== null ? `${seeds} seeds` : null,
     release.leechers !== null ? `${release.leechers} peers` : null,

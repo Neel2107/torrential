@@ -7,12 +7,14 @@ const Context = createContext<Host | null>(null);
 
 export function PortalHost({ children }: { children: ReactNode }) {
   const [nodes, setNodes] = useState<Map<string, ReactNode>>(new Map());
+
   const [host] = useState<Host>(() => ({
     mount: (id, node) => setNodes((previous) => new Map(previous).set(id, node)),
     unmount: (id) =>
       setNodes((previous) => {
         const next = new Map(previous);
         next.delete(id);
+
         return next;
       }),
   }));

@@ -48,14 +48,17 @@ export function Ended({
   useEffect(() => {
     if (!next || cancelled) return;
     const deadline = Date.now() + UP_NEXT_SECONDS * 1000;
+
     const tick = setInterval(() => {
       const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setLeft(remaining);
+
       if (remaining === 0) {
         clearInterval(tick);
         go.current();
       }
     }, 250);
+
     return () => clearInterval(tick);
   }, [next, cancelled]);
 

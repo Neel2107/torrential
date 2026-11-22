@@ -11,6 +11,7 @@ import { color, space } from '@/theme';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+
   const downloading = useJobsSelect(({ jobs }) =>
     jobs.some((job) => job.state === 'downloading' || job.state === 'metadata'),
   );
@@ -37,6 +38,7 @@ export default function TabsLayout() {
 function DockedCastBar() {
   const insets = useSafeAreaInsets();
   const { hidden, setDocked } = useChrome();
+
   return (
     <CastBar
       bottom={insets.bottom + TAB_BAR_HEIGHT + space.sm}

@@ -22,14 +22,16 @@ type Close = (after?: () => void) => void;
 export const SHEET_SHARE = 0.88;
 export const SHEET_CHROME = 28 + space.xs;
 
-/** A sheet from the bottom. Its content gets `close`, which slides it away before running what was picked, once. `onBack` takes the back button first, for a sheet with pages of its own (see Pages). */
+/** A sheet from the bottom. Content given as `render` gets `close`, which slides it away before running what was picked, once. `onBack` takes the back button first, for a sheet with pages of its own (see Pages). */
 export function Sheet({
   children,
+  render,
   onClose,
   onBack,
   maxWidth = 560,
 }: {
-  children: ReactNode | ((close: Close) => ReactNode);
+  children?: ReactNode;
+  render?: (close: Close) => ReactNode;
   onClose: () => void;
   onBack?: () => boolean;
   maxWidth?: number;
@@ -48,6 +50,7 @@ export function Sheet({
     after?.();
     onClose();
   };
+
   const close: Close = (after) => {
     if (leaving.get()) return;
     leaving.set(true);
@@ -60,8 +63,10 @@ export function Sheet({
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!onBack?.()) close();
+
       return true;
     });
+
     return () => subscription.remove();
   });
 
@@ -86,6 +91,7 @@ export function Sheet({
   const sheet = useAnimatedStyle(() => ({
     transform: [{ translateY: offset.get() }],
   }));
+
   const backdrop = useAnimatedStyle(() => ({
     opacity: interpolate(offset.get(), [0, height.get()], [1, 0]),
   }));
@@ -99,6 +105,7 @@ export function Sheet({
         <Animated.View
           onLayout={(event) => {
             height.set(event.nativeEvent.layout.height);
+
             if (offset.get() >= screen) offset.set(withSpring(0, motion.settle));
           }}
           style={[
@@ -116,7 +123,7 @@ export function Sheet({
               <View style={styles.grabber} />
             </View>
           </GestureDetector>
-          <View style={styles.body}>{typeof children === 'function' ? children(close) : children}</View>
+          <View style={styles.body}>{render ? render(close) : children}</View>
         </Animated.View>
       </View>
     </Portal>

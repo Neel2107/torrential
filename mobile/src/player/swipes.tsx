@@ -22,14 +22,17 @@ type Readout = { get: () => number; set: (percent: number) => void; subscribe: (
 function createReadout(): Readout {
   let percent = 0;
   const listeners = new Set<() => void>();
+
   return {
     get: () => percent,
     set: (next) => {
       percent = next;
+
       for (const listener of listeners) listener();
     },
     subscribe: (listener) => {
       listeners.add(listener);
+
       return () => listeners.delete(listener);
     },
   };
@@ -48,6 +51,7 @@ export function useSideSwipes({ width, height }: { width: number; height: number
     Brightness.getBrightnessAsync()
       .then((value) => (before.current = value))
       .catch(() => {});
+
     return () => {
       if (Platform.OS === 'android') Brightness.restoreSystemBrightnessAsync().catch(() => {});
       else if (before.current !== null) Brightness.setBrightnessAsync(before.current).catch(() => {});
@@ -56,10 +60,12 @@ export function useSideSwipes({ width, height }: { width: number; height: number
 
   const begin = async (side: Kind) => {
     setKind(side);
+
     const now =
       side === 'brightness'
         ? await Brightness.getBrightnessAsync().catch(() => 0.5)
         : ((await VolumeManager.getVolume().catch(() => null))?.volume ?? 0.5);
+
     start.current = now;
     written.current = Math.round(now * 100);
     readout.set(written.current);
@@ -71,9 +77,11 @@ export function useSideSwipes({ width, height }: { width: number; height: number
     const next = Math.min(1, Math.max(0, start.current - (translationY / height) * TRAVEL));
     level.set(next);
     const percent = Math.round(next * 100);
+
     if (percent === written.current) return;
     written.current = percent;
     readout.set(percent);
+
     if (side === 'brightness') Brightness.setBrightnessAsync(Math.max(0.01, next)).catch(() => {});
     else VolumeManager.setVolume(next, { showUI: false }).catch(() => {});
   };
@@ -91,6 +99,7 @@ export function useSideSwipes({ width, height }: { width: number; height: number
       .onStart(() => begin(which))
       .onUpdate((event) => move(which, event.translationY))
       .onFinalize(end);
+
   const swipe = Gesture.Simultaneous(side('brightness'), side('volume'));
 
   return { swipe, kind, readout, level, shown, middle: { left: -width * SIDE, right: -width * SIDE } };
@@ -112,6 +121,7 @@ export function SwipeLevel({
 
   const percent = useSyncExternalStore(readout.subscribe, readout.get);
   const icon = kind === 'brightness' ? Sun : percent === 0 ? VolumeX : Volume2;
+
   return (
     <View pointerEvents="none" style={[styles.wrap, kind === 'brightness' ? styles.left : styles.right]}>
       <Animated.View style={[styles.pill, pill]}>

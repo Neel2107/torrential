@@ -52,6 +52,7 @@ import { appear, reflow, vanish } from '@/ui/presets';
 
 const TABS = ['Films & shows', 'Torrents'] as const;
 const SHOWN = 3;
+
 const CATEGORIES: Record<Category, string> = {
   video: 'Video',
   audio: 'Audio',
@@ -69,8 +70,10 @@ function useDebounced<T>(value: T, ms: number): T {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
     const timer = setTimeout(() => setSettled(value), ms);
+
     return () => clearTimeout(timer);
   }, [value, ms]);
+
   return settled;
 }
 
@@ -79,8 +82,10 @@ function useLingering(busy: boolean, ms: number): boolean {
   useEffect(() => {
     if (!busy) return setShown(false);
     const timer = setTimeout(() => setShown(true), ms);
+
     return () => clearTimeout(timer);
   }, [busy, ms]);
+
   return shown;
 }
 
@@ -97,6 +102,7 @@ export default function Search() {
   const recents = useRecentSearches();
   const remember = () => recents.remember(text);
   const pickup = usePickup();
+
   const idle =
     pickup.unfinished.length > 0 || pickup.downloads.length > 0 || recents.recent.length > 0 ? (
       <Recent
@@ -176,6 +182,7 @@ function SearchHeader({
   useFocusEffect(
     useCallback(() => {
       const timer = empty.current ? setTimeout(() => input.current?.focus(), 120) : undefined;
+
       return () => {
         clearTimeout(timer);
         Keyboard.dismiss();
@@ -184,6 +191,7 @@ function SearchHeader({
   );
   const focus = useSharedValue(0);
   const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.get() * BAR_HEIGHT }] }));
+
   const field = useAnimatedStyle(() => ({
     borderColor: interpolateColor(focus.get(), [0, 1], [`${color.action}00`, color.action]),
   }));
@@ -259,6 +267,7 @@ function Titles({
   const result = useTitleSearch(query);
   const titles = result.data?.titles ?? [];
   const fetching = result.isFetching && query.length > 0;
+
   const stale = useAnimatedStyle(() => ({
     opacity: withTiming(result.isPlaceholderData ? 0.5 : 1, { duration: motion.quick }),
   }));
@@ -299,16 +308,16 @@ function Titles({
           <RowsLoading />
         )
       }
-      renderItem={({ item, index }) => (
+      renderItem={({ item }) => (
         <Animated.View style={stale} pointerEvents={result.isPlaceholderData ? 'none' : 'auto'}>
-          <TitleRow title={item} index={index} onOpen={onOpen} />
+          <TitleRow title={item} onOpen={onOpen} />
         </Animated.View>
       )}
     />
   );
 }
 
-function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; onOpen: () => void }) {
+function TitleRow({ title, onOpen }: { title: TitleCard; onOpen: () => void }) {
   return (
     <Animated.View>
       <TitleTap
@@ -381,12 +390,14 @@ function Torrents({
   const link = useLink();
   const onScroll = useChromeScroll();
   const { bottom } = useChrome();
+
   const [state, setState] = useState<{ releases: Release[]; pending: string[]; done: boolean; error: string | null }>({
     releases: [],
     pending: [],
     done: false,
     error: null,
   });
+
   const [notVideo, setNotVideo] = useState<Release | null>(null);
 
   useEffect(() => {
@@ -400,8 +411,10 @@ function Torrents({
       (message) => {
         if (message.type === 'update')
           setState({ releases: message.result.releases, pending: message.pending, done: false, error: null });
+
         if (message.type === 'done')
           setState({ releases: message.result.releases, pending: [], done: true, error: null });
+
         if (message.type === 'error')
           setState((previous) => ({ ...previous, done: true, error: message.error.message }));
       },
@@ -409,6 +422,7 @@ function Torrents({
       (error: Error) =>
         !controller.signal.aborted && setState((previous) => ({ ...previous, done: true, error: error.message })),
     );
+
     return () => controller.abort();
   }, [link, query, everything]);
 
@@ -460,10 +474,9 @@ function Torrents({
             />
           ) : undefined
         }
-        renderItem={({ item, index }) => (
+        renderItem={({ item }) => (
           <ReleaseRow
             release={item}
-            index={index}
             onOpen={onOpen}
             onNotVideo={() => {
               Keyboard.dismiss();
@@ -490,6 +503,7 @@ function Scope({
     <View style={styles.scope} accessibilityRole="radiogroup" accessibilityLabel="What to search">
       {[false, true].map((all) => {
         const on = everything === all;
+
         return (
           <Tap
             key={String(all)}
@@ -549,6 +563,7 @@ function NotVideo({ release, onClose }: { release: Release; onClose: () => void 
             label="Share the magnet link"
             onPress={() => {
               const magnet = release.magnet;
+
               if (magnet) Share.share({ message: magnet }).catch(() => {});
             }}
           />
@@ -558,25 +573,16 @@ function NotVideo({ release, onClose }: { release: Release; onClose: () => void 
   );
 }
 
-function ReleaseRow({
-  release,
-  index,
-  onOpen,
-  onNotVideo,
-}: {
-  release: Release;
-  index: number;
-  onOpen: () => void;
-  onNotVideo: () => void;
-}) {
+function ReleaseRow({ release, onOpen, onNotVideo }: { release: Release; onOpen: () => void; onNotVideo: () => void }) {
   const name = readable(release.name);
   const playable = isVideo(release);
+
   const chips = [
     playable ? null : CATEGORIES[release.category ?? 'other'],
     release.quality.resolution?.toUpperCase(),
     release.quality.codec?.toUpperCase(),
     release.quality.hdr ? 'HDR' : null,
-  ].filter(Boolean) as string[];
+  ].flatMap((chip) => (chip ? [chip] : []));
 
   return (
     <Animated.View>
@@ -586,6 +592,7 @@ function ReleaseRow({
         onPress={() => {
           onOpen();
           Keyboard.dismiss();
+
           if (playable) router.push({ pathname: '/play', params: { ref: release.magnet ?? release.id } });
           else onNotVideo();
         }}
@@ -615,14 +622,16 @@ function ReleaseRow({
 
 const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((id, i) => id === b[i]);
 
-function usePickup(): { unfinished: Continue[]; downloads: string[]; more: boolean } {
+function usePickup() {
   const home = useHome();
   const unfinished = (home.data?.continue ?? []).slice(0, SHOWN);
   const watching = new Set(unfinished.map((item) => item.title.id));
+
   const others = useJobsSelect(
     ({ jobs }) => jobs.filter((job) => !(job.title && watching.has(job.title.title))).map((job) => job.id),
     sameIds,
   );
+
   return { unfinished, downloads: others.slice(0, SHOWN), more: others.length > SHOWN };
 }
 
@@ -645,6 +654,7 @@ function Recent({
 }) {
   const afterUnfinished = unfinished.length > 0 ? unfinished.length + 1 : 0;
   const afterDownloads = afterUnfinished + (downloads.length > 0 ? downloads.length + 1 : 0);
+
   return (
     <View style={{ gap: space.md }}>
       {unfinished.length > 0 ? (
@@ -723,6 +733,7 @@ function UnfinishedRow({ item }: { item: Continue }) {
   const client = useQueryClient();
   const progress = progressOf(item);
   const subtitle = subtitleOf(item);
+
   const forget = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await post(link, '/api/watched/forget', { video: item.video }).catch(() => {});
@@ -763,21 +774,28 @@ function summary(job: Job): string {
   if (job.waiting_for) return `Waiting for ${job.waiting_for}`;
   const { size, verified, down_rate } = job.progress;
   const share = size ? percent(verified / size) : null;
+
   if (job.state === 'downloading') return [share, down_rate > 0 ? rate(down_rate) : null].filter(Boolean).join(' · ');
+
   if (job.state === 'done') return size ? bytes(size) : STATE.done;
+
   if (job.state === 'paused') return [STATE.paused, share].filter(Boolean).join(' · ');
+
   return STATE[job.state];
 }
 
 function DownloadRow({ id }: { id: string }) {
   const job = useJob(id);
+
   if (!job) return null;
+
   return <DownloadRowOf job={job} />;
 }
 
 function DownloadRowOf({ job }: { job: Job }) {
   const name = useJobName(job);
   const said = summary(job);
+
   const content = (
     <>
       {name.poster ? (
@@ -799,7 +817,9 @@ function DownloadRowOf({ job }: { job: Job }) {
       </View>
     </>
   );
+
   const label = `${name.title}, ${said}`;
+
   return job.title ? (
     <TitleTap id={job.title.title} shrink={1} highlight accessibilityLabel={label} style={styles.pickRow}>
       {content}

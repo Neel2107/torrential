@@ -26,11 +26,13 @@ export function useTopInset(withTabs: boolean): number {
 export function TopBar({
   left,
   title,
+  mark,
   right,
   tabs,
 }: {
   left?: ReactNode;
-  title: ReactNode;
+  title?: string;
+  mark?: ReactNode;
   right?: ReactNode;
   tabs?: { labels: string[]; index: number; position: SharedValue<number>; onChange: (index: number) => void };
 }) {
@@ -49,12 +51,12 @@ export function TopBar({
         <Animated.View style={[styles.row, stretch, fade]}>
           <View style={styles.side}>{left}</View>
           <View style={styles.middle}>
-            {typeof title === 'string' ? (
+            {title ? (
               <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
                 {title}
               </Text>
             ) : (
-              title
+              mark
             )}
           </View>
           <View style={[styles.side, styles.end]}>{right}</View>

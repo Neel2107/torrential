@@ -48,8 +48,10 @@ export function Pager({
 
   useEffect(() => {
     near(index);
+
     if (!preload) return;
     const timer = setTimeout(() => setMounted((seen) => new Set([...seen, index - 1, index + 1])), NEIGHBOURS_AFTER_MS);
+
     return () => clearTimeout(timer);
   }, [index, preload]);
 
@@ -70,6 +72,7 @@ export function Pager({
     onScroll: (event) => {
       const at = event.contentOffset.x / width;
       position.set(at);
+
       for (const page of [Math.floor(at), Math.ceil(at)]) {
         if (page < 0 || asked.get() & (1 << page)) continue;
         asked.set(asked.get() | (1 << page));
@@ -157,6 +160,7 @@ export function TabStrip({
         setSpots((previous) => {
           const next = [...previous];
           next[i] = { x: x + (width - line) / 2, width: line };
+
           return next;
         });
       }}
@@ -173,6 +177,7 @@ export function TabStrip({
       </View>
     );
   }
+
   return (
     <Animated.ScrollView
       ref={strip}
@@ -192,8 +197,10 @@ export function TabStrip({
 function TabLabel({ label, at, position }: { label: string; at: number; position: SharedValue<number> }) {
   const style = useAnimatedStyle(() => {
     const near = Math.max(0, 1 - Math.abs(position.get() - at));
+
     return { color: interpolateColor(near, [0, 1], [color.pencil, color.ink]) };
   });
+
   return (
     <Animated.Text style={[styles.label, style]} numberOfLines={1}>
       {label}

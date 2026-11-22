@@ -37,7 +37,7 @@ import Volume2 from 'lucide-react-native/icons/volume-2';
 import Wifi from 'lucide-react-native/icons/wifi';
 import X from 'lucide-react-native/icons/x';
 import { type LucideIcon } from 'lucide-react-native';
-import type { ColorValue, StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 
 import { useTone } from './stage';
 
@@ -94,13 +94,14 @@ export function Icon({
 }: {
   name: LucideIcon;
   size?: number;
-  tint?: ColorValue;
+  tint?: string;
   filled?: boolean;
   weight?: number;
   style?: StyleProp<ViewStyle>;
 }) {
   const tone = useTone();
-  const ink = (tint ?? tone.ink) as string;
+  const ink = tint ?? tone.ink;
+
   return (
     <Glyph
       size={size}

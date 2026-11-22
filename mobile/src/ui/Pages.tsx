@@ -21,12 +21,13 @@ import { Tap } from './Tap';
 const RESIZE = { duration: 340, dampingRatio: 1 } as const;
 const SHIFT = 14;
 
-type Layer = { key: string; depth: number; side: 1 | -1 };
+type Layer<K extends string> = { key: K; depth: number; side: 1 | -1 };
 
 /** The room a sheet leaves for its content, so a page knows where to start scrolling. */
 export function useSheetRoom(): number {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+
   return Math.floor(height * SHEET_SHARE - SHEET_CHROME - insets.bottom - space.lg);
 }
 
@@ -35,17 +36,17 @@ export function useSheetRoom(): number {
  * page's, eased whenever it changes: another page, or the same page growing. Moving deeper, the old page fades away
  * toward the left before the new one comes in from the right; going back runs the other way.
  */
-export function Pages({
+export function Pages<K extends string>({
   page,
   depth,
   children,
 }: {
-  page: string;
+  page: K;
   depth: number;
-  children: (page: string) => ReactNode;
+  children: (page: K) => ReactNode;
 }) {
   const room = useSheetRoom();
-  const [layers, setLayers] = useState<Layer[]>([{ key: page, depth, side: 1 }]);
+  const [layers, setLayers] = useState<Layer<K>[]>([{ key: page, depth, side: 1 }]);
   const height = useSharedValue(-1);
   const [moved, setMoved] = useState(false);
   const current = layers[layers.length - 1]!;
@@ -56,10 +57,11 @@ export function Pages({
     setMoved(true);
   }
 
-  const gone = (key: string) => setLayers((now) => now.filter((layer) => layer.key !== key || layer === now.at(-1)));
+  const gone = (key: K) => setLayers((now) => now.filter((layer) => layer.key !== key || layer === now.at(-1)));
 
-  const measured = (key: string, value: number) => {
+  const measured = (key: K, value: number) => {
     if (key !== page) return;
+
     if (height.get() < 0) height.set(value);
     else height.set(withSpring(value, RESIZE));
   };
@@ -110,8 +112,10 @@ function Page({
   useEffect(() => {
     if (!opened) {
       setOpened(true);
+
       if (first) return;
     }
+
     if (active) {
       toward.set(side);
       shown.set(withDelay(40, withTiming(1, { duration: 220, easing: motion.out })));
@@ -141,6 +145,7 @@ function Page({
 export function PageHeader({ title, detail, onBack }: { title: string; detail?: string; onBack: () => void }) {
   const tone = useTone();
   const type = useStaged(themedType, stageType);
+
   return (
     <View style={styles.header}>
       <Tap shrink={0.97} onPress={onBack} accessibilityLabel={`Back from ${title}`} style={styles.back}>

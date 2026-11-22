@@ -11,11 +11,13 @@ import { Icon, icons } from './Icon';
 
 export const TAB_BAR_HEIGHT = 56;
 
-const TABS: Record<string, { icon: LucideIcon; label: string }> = {
-  index: { icon: icons.home, label: 'Home' },
-  search: { icon: icons.search, label: 'Search' },
-  downloads: { icon: icons.downloads, label: 'Downloads' },
-};
+const TABS = new Map(
+  Object.entries({
+    index: { icon: icons.home, label: 'Home' },
+    search: { icon: icons.search, label: 'Search' },
+    downloads: { icon: icons.downloads, label: 'Downloads' },
+  }),
+);
 
 export function TabBar({
   state,
@@ -35,9 +37,11 @@ export function TabBar({
   return (
     <Animated.View style={[styles.bar, { height, paddingBottom: insets.bottom }, slide]}>
       {state.routes.map((route, index) => {
-        const tab = TABS[route.name];
+        const tab = TABS.get(route.name);
+
         if (!tab) return null;
         const focused = state.index === index;
+
         return (
           <TabButton
             key={route.key}
@@ -47,10 +51,12 @@ export function TabBar({
             badge={badges[route.name] ?? false}
             onPress={() => {
               const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+
               if (!focused && !event.defaultPrevented) {
                 Haptics.selectionAsync();
                 navigateToTab(route.key);
               }
+
               hidden.set(withSpring(0, motion.settle));
             }}
             onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}

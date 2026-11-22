@@ -24,6 +24,7 @@ const KINDS = [
 
 export function qualityOf(name: string): Tag[] {
   const plain = ` ${name.toLowerCase().replace(/[._\-[\]()]+/g, ' ')} `;
-  const found = RULES.filter((rule) => rule.test.test(plain)).map((rule) => rule.tag);
+  const found = RULES.flatMap((rule) => (rule.test.test(plain) ? [rule.tag] : []));
+
   return KINDS.flatMap((kind) => found.filter((tag) => kind.includes(tag.label)).slice(0, 1));
 }

@@ -16,6 +16,7 @@ import { Tap } from '@/ui/Tap';
 import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+
 /** When the player pauses for sleep: after some minutes, or at the end of the video. */
 export type Sleep = { kind: 'after'; minutes: number; at: number } | { kind: 'end' } | null;
 
@@ -29,7 +30,9 @@ const SLEEPS: [label: string, minutes: number | null][] = [
 
 function sleepText(sleep: Sleep): string {
   if (!sleep) return 'Off';
+
   if (sleep.kind === 'end') return 'At the end';
+
   return `Pauses in ${Math.max(1, Math.round((sleep.at - Date.now()) / 60_000))} min`;
 }
 
@@ -60,6 +63,7 @@ export function SettingsSheet({
 }) {
   const [page, setPage] = useState<'menu' | 'sources'>('menu');
   useSources(video);
+
   const menu = (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <Text style={[type.title, styles.heading]}>Settings</Text>
@@ -126,10 +130,11 @@ export function SettingsSheet({
       onBack={() => {
         if (page === 'menu') return false;
         setPage('menu');
+
         return true;
       }}
-    >
-      {(close) => (
+
+      render={(close) => (
         <Pages page={page} depth={page === 'menu' ? 0 : 1}>
           {(shown) =>
             shown === 'menu' || !video ? (
@@ -143,7 +148,7 @@ export function SettingsSheet({
           }
         </Pages>
       )}
-    </Sheet>
+    />
   );
 }
 
@@ -174,9 +179,11 @@ export function Chip({
   useEffect(() => {
     on.set(withTiming(selected ? 1 : 0, { duration: motion.quick, easing: motion.out }));
   }, [selected, on]);
+
   const fill = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(on.get(), [0, 1], [color.lifted, color.ink]),
   }));
+
   const text = useAnimatedStyle(() => ({ color: interpolateColor(on.get(), [0, 1], [color.soft, color.paper]) }));
 
   return (

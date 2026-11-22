@@ -40,34 +40,49 @@ export function url(
   query?: Record<string, string | number | boolean | null | undefined>,
 ): string {
   const search = new URLSearchParams();
+
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== null && value !== undefined) search.set(key, String(value));
   }
+
   const qs = search.toString();
+
   return `${link.base}${path}${qs ? `?${qs}` : ''}`;
+}
+
+/** The engine's reply as the type its route answers with. */
+function fromEngine<T>(text: string): T {
+  // SAFETY: the engine is the only server these calls reach, and web/src/wire.ts is generated from the Rust types it serializes, so each route's JSON is that route's wire type.
+  return JSON.parse(text) as T;
 }
 
 async function failure(response: Response): Promise<EngineError> {
   const text = await response.text().catch(() => '');
   let wire: WireError | null = null;
+
   try {
-    wire = (JSON.parse(text) as { error?: WireError }).error ?? null;
+    wire = fromEngine<{ error?: WireError }>(text).error ?? null;
   } catch {}
+
   return new EngineError(response.status, wire, text.trim() || `The engine answered ${response.status}.`);
 }
 
-async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal }) {
-  const headers: Record<string, string> = { ...authHeaders(link), Accept: 'application/json' };
-  let body: string | undefined;
-  if (init.method === 'POST') {
-    headers['Content-Type'] = 'application/json';
-    body = JSON.stringify(init.body ?? {});
-  }
+async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; body?: object; signal?: AbortSignal }) {
+  const posting = init.method === 'POST';
+
+  const headers = posting
+    ? { ...authHeaders(link), Accept: 'application/json', 'Content-Type': 'application/json' }
+    : { ...authHeaders(link), Accept: 'application/json' };
+
+  const body = posting ? JSON.stringify(init.body ?? {}) : undefined;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ANSWER_WITHIN_MS);
   const cancel = () => controller.abort();
+
   if (init.signal?.aborted) controller.abort();
   init.signal?.addEventListener('abort', cancel);
+
   try {
     const response = await fetch(`${link.base}${path}`, {
       method: init.method,
@@ -76,7 +91,9 @@ async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; bo
       signal: controller.signal,
       redirect: 'manual',
     });
+
     if (!response.ok) throw await failure(response);
+
     return response;
   } finally {
     clearTimeout(timer);
@@ -85,44 +102,57 @@ async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; bo
 }
 
 export async function get<T>(link: Link, path: string, signal?: AbortSignal): Promise<T> {
-  return (await send(link, path, { method: 'GET', signal })).json() as Promise<T>;
+  return fromEngine<T>(await (await send(link, path, { method: 'GET', signal })).text());
 }
 
-export async function post<T>(link: Link, path: string, body: unknown, signal?: AbortSignal): Promise<T> {
-  return (await send(link, path, { method: 'POST', body, signal })).json() as Promise<T>;
+export async function post<T, B extends object = object>(
+  link: Link,
+  path: string,
+  body: B,
+  signal?: AbortSignal,
+): Promise<T> {
+  return fromEngine<T>(await (await send(link, path, { method: 'POST', body, signal })).text());
 }
 
 async function readLines(response: Response, onLine: (line: string) => void): Promise<void> {
   const reader = response.body?.getReader();
+
   if (!reader) {
     for (const line of (await response.text()).split('\n')) if (line.trim()) onLine(line);
+
     return;
   }
+
   const decoder = new TextDecoder();
   let buffered = '';
+
   for (;;) {
     const { done, value } = await reader.read();
+
     if (done) break;
     buffered += decoder.decode(value, { stream: true });
     let newline = buffered.indexOf('\n');
+
     while (newline >= 0) {
       const line = buffered.slice(0, newline).replace(/\r$/, '');
       buffered = buffered.slice(newline + 1);
+
       if (line.trim()) onLine(line);
       newline = buffered.indexOf('\n');
     }
   }
+
   if (buffered.trim()) onLine(buffered);
 }
 
 export async function stream<T>(
   link: Link,
   path: string,
-  init: { method: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal },
+  init: { method: 'GET' | 'POST'; body?: object; signal?: AbortSignal },
   onMessage: (message: T) => void,
 ): Promise<void> {
   const response = await send(link, path, init);
-  await readLines(response, (line) => onMessage(JSON.parse(line) as T));
+  await readLines(response, (line) => onMessage(fromEngine<T>(line)));
 }
 
 export async function events<T>(link: Link, path: string, signal: AbortSignal, onMessage: (message: T) => void) {
@@ -130,9 +160,10 @@ export async function events<T>(link: Link, path: string, signal: AbortSignal, o
     headers: { ...authHeaders(link), Accept: 'text/event-stream' },
     signal,
   });
+
   if (!response.ok) throw await failure(response);
   await readLines(response, (line) => {
-    if (line.startsWith('data:')) onMessage(JSON.parse(line.slice(5)) as T);
+    if (line.startsWith('data:')) onMessage(fromEngine<T>(line.slice(5)));
   });
 }
 
@@ -143,9 +174,12 @@ export async function pair(base: string, code: string): Promise<string> {
     body: JSON.stringify({ code }),
     credentials: 'omit',
   });
+
   if (!response.ok) throw await failure(response);
   const cookie = response.headers.get('set-cookie') ?? '';
   const token = new RegExp(`${COOKIE}=([0-9a-f]{64})`).exec(cookie)?.[1];
+
   if (!token) throw new EngineError(500, null, 'The engine paired this phone but sent no device token.');
+
   return token;
 }

@@ -23,8 +23,10 @@ import { Icon, icons } from './Icon';
  */
 export function JobBadge({ job, landed }: { job: Job; landed: boolean }) {
   const share = job.progress.size ? job.progress.verified / job.progress.size : 0;
+
   const filling =
     job.state === 'downloading' || job.state === 'metadata' || job.state === 'queued' || job.state === 'checking';
+
   const progress = useSharedValue(share);
   const pop = useSharedValue(1);
 
@@ -46,6 +48,7 @@ export function JobBadge({ job, landed }: { job: Job; landed: boolean }) {
 
   if (filling)
     return <BandsMark size={15} bands={[top, middle, last]} label={`${Math.round(share * 100)}% downloaded`} />;
+
   return (
     <Animated.View style={popStyle}>
       {seeding ? <Ping /> : null}

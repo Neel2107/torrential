@@ -24,10 +24,13 @@ export function Glass({
   fallback?: ColorValue;
 }) {
   const onStage = use(Stage);
+
   if (!LIQUID_GLASS) {
     const surface = tint ?? fallback ?? (onStage ? stage : color).lifted;
+
     return <View style={[{ backgroundColor: surface }, style]}>{children}</View>;
   }
+
   return (
     <GlassView style={style} isInteractive={interactive} tintColor={tint} colorScheme={onStage ? 'dark' : scheme}>
       {children}

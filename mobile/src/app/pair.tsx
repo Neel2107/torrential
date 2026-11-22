@@ -28,14 +28,19 @@ import { appear, vanish } from '@/ui/presets';
 
 type Mode = 'scan' | 'type';
 
-function explain(error: unknown): string {
-  if (error instanceof EngineError) {
-    if (error.status === 400) return 'That code is not the one your computer shows. Check it and try again.';
-    if (error.status === 410) return 'That code has run out. Make a new one on your computer.';
-    if (error.status === 429) return 'Too many tries. Wait a minute, then try again.';
-    if (error.status === 404) return 'This phone is already paired with that computer.';
-    return sentence(error.message);
+function explain(cause: unknown): string {
+  if (cause instanceof EngineError) {
+    if (cause.status === 400) return 'That code is not the one your computer shows. Check it and try again.';
+
+    if (cause.status === 410) return 'That code has run out. Make a new one on your computer.';
+
+    if (cause.status === 429) return 'Too many tries. Wait a minute, then try again.';
+
+    if (cause.status === 404) return 'This phone is already paired with that computer.';
+
+    return sentence(cause.message);
   }
+
   return "Can't reach that address. Check that this phone is on the same network as the computer.";
 }
 
@@ -55,6 +60,7 @@ export default function Pair() {
   const startPhone = async () => {
     setStarting(true);
     setPhoneProblem(false);
+
     try {
       await runOnPhone();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -63,12 +69,14 @@ export default function Pair() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setPhoneProblem(true);
     }
+
     setStarting(false);
   };
 
   const attempt = async (base: string, pairingCode: string) => {
     setBusy(true);
     setProblem(null);
+
     try {
       await pair(base, pairingCode);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -78,12 +86,14 @@ export default function Pair() {
       setProblem(explain(error));
       scanned.current = false;
     }
+
     setBusy(false);
   };
 
   const onScan = (data: string) => {
     if (scanned.current || busy) return;
     const found = parsePairing(data);
+
     if (!found?.code) return;
     scanned.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -93,7 +103,9 @@ export default function Pair() {
   const submit = () => {
     const found = parsePairing(address);
     const digits = code.replace(/\D/g, '');
+
     if (!found) return setProblem('Type the address your computer shows, such as mac.local or 192.168.1.20.');
+
     if (digits.length !== 6) return setProblem('The code has six digits.');
     attempt(found.base, digits);
   };
@@ -193,6 +205,7 @@ function Scanner({ onScan, busy }: { onScan: (data: string) => void; busy: boole
   const [permission, request] = useCameraPermissions();
 
   if (!permission) return <View style={styles.viewfinder} />;
+
   if (!permission.granted) {
     return (
       <View style={[styles.viewfinder, styles.center]}>
@@ -202,6 +215,7 @@ function Scanner({ onScan, busy }: { onScan: (data: string) => void; busy: boole
       </View>
     );
   }
+
   return (
     <View style={styles.viewfinder}>
       <CameraView
@@ -225,11 +239,13 @@ function Reticle({ locked }: { locked: boolean }) {
   useEffect(() => {
     lock.set(locked ? withSpring(1, motion.pop) : withTiming(0, { duration: motion.quick }));
   }, [locked, lock]);
+
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: 1 - 0.12 * lock.get() }],
     borderColor: interpolateColor(lock.get(), [0, 1], ['rgba(240, 233, 220, 0.85)', color.action]),
     borderWidth: 2 + lock.get(),
   }));
+
   return <Animated.View style={[styles.reticle, style]} pointerEvents="none" />;
 }
 
@@ -249,6 +265,7 @@ function Typed({
   busy: boolean;
 }) {
   const codeInput = useRef<React.ComponentRef<typeof TextInput>>(null);
+
   return (
     <View style={styles.form}>
       <Text style={type.label}>Address</Text>
@@ -257,6 +274,7 @@ function Typed({
         onChangeText={(text) => {
           setAddress(text);
           const pasted = parsePairing(text)?.code;
+
           if (pasted) setCode(pasted);
         }}
         placeholder="mac.local or 192.168.1.20"

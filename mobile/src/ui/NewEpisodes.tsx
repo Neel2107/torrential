@@ -31,9 +31,11 @@ function useFresh(saved: TitleCard[]): Fresh[] {
   const [settled, setSettled] = useState<number | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setSettled(Date.now()), AFTER_HOME_MS);
+
     return () => clearTimeout(timer);
   }, []);
   const shows = settled !== null ? saved.filter((title) => title.kind === 'series') : [];
+
   const pages = useQueries({
     queries: shows.map((show) => ({
       queryKey: [...keys.title(show.id), link.base],
@@ -42,11 +44,14 @@ function useFresh(saved: TitleCard[]): Fresh[] {
       staleTime: 30 * 60_000,
     })),
   });
+
   const since = (settled ?? 0) / 1000 - RECENT_DAYS * 86_400;
+
   return pages
     .flatMap(({ data: page }) => {
       if (!page) return [];
       const seen = new Set(page.watched.filter((w) => w.finished).map((w) => w.video));
+
       return page.seasons
         .filter((season) => season.number > 0)
         .flatMap((season) => season.episodes)
@@ -60,6 +65,7 @@ function useFresh(saved: TitleCard[]): Fresh[] {
 
 export function NewEpisodes({ saved, index }: { saved: TitleCard[]; index: number }) {
   const fresh = useFresh(saved);
+
   if (fresh.length === 0) return null;
 
   return (

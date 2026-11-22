@@ -37,6 +37,7 @@ const listeners = new Set<() => void>();
 
 function dismiss(cast: Cast) {
   dismissed = new Set(dismissed).add(key(cast));
+
   for (const listener of listeners) listener();
 }
 
@@ -44,6 +45,7 @@ function useDismissed(): ReadonlySet<string> {
   return useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
+
       return () => listeners.delete(listener);
     },
     () => dismissed,
@@ -63,9 +65,11 @@ export function CastBar({
 }) {
   const casts = useCasts();
   const gone = useDismissed();
+
   const shown = (casts.data?.casts ?? []).filter(
     (cast) => (cast.state !== 'ended' || cast.error) && !gone.has(key(cast)),
   );
+
   const empty = shown.length === 0;
 
   useEffect(() => {
@@ -75,6 +79,7 @@ export function CastBar({
   const slide = useAnimatedStyle(() => ({ transform: [{ translateY: (hidden?.get() ?? 0) * travel }] }));
 
   if (empty) return null;
+
   return (
     <Animated.View
       pointerEvents="box-none"
@@ -92,6 +97,7 @@ function Live({ cast }: { cast: Cast }) {
   const control = useCastControl();
   const started = cast.state === 'playing' || cast.state === 'paused';
   const playing = cast.state === 'playing';
+
   const status = control.error
     ? sentence(control.error.message)
     : cast.state === 'finding'
@@ -173,6 +179,7 @@ function Failed({ cast }: { cast: Extract<Cast, { state: 'ended' }> }) {
 
 function Thumb({ cast }: { cast: Cast }) {
   if (cast.video) return <Art id={titleOf(cast.video)} kind="poster" style={styles.thumb} />;
+
   return (
     <View style={styles.thumb}>
       <Icon name={icons.tv} size={20} tint={color.soft} />
@@ -184,7 +191,9 @@ function Line({ fraction }: { fraction: number }) {
   const value = useDerivedValue(() =>
     withTiming(Math.min(1, Math.max(0, fraction)), { duration: motion.tick, easing: Easing.linear }),
   );
+
   const fill = useAnimatedStyle(() => ({ width: `${value.get() * 100}%` }));
+
   return (
     <View style={styles.line} pointerEvents="none">
       <Animated.View style={[styles.lineFill, fill]} />

@@ -69,6 +69,7 @@ export function useViewer(): Viewer {
   const small = saver && network.type === Network.NetworkStateType.CELLULAR;
   const long = Math.round(Math.max(width, height) * scale);
   const short = Math.round(Math.min(width, height) * scale);
+
   return {
     width: small ? Math.min(long, SAVER_WIDTH) : long,
     height: small ? Math.min(short, SAVER_HEIGHT) : short,
@@ -87,16 +88,20 @@ export async function replaceStalled(
 ): Promise<Replacement> {
   const body: PlayTitle = { video: request.video, viewer: request.viewer, replace: request.stalled };
   let outcome: Replacement | null = null;
+
   try {
     await stream<PlayMessage>(link, '/api/title/play', { method: 'POST', body, signal }, (message) => {
       if (message.type === 'playing') outcome = { play: message.play, release: message.release };
+
       if (message.type === 'failed') outcome = { error: message.error };
     });
   } catch (error) {
     if (signal.aborted) throw error;
     const message = error instanceof EngineError ? error.message : 'Lost the engine while looking for another source.';
+
     return outcome ?? { error: { code: 'interrupted', message } };
   }
+
   return outcome ?? { error: { code: 'interrupted', message: 'The engine stopped answering before a source played.' } };
 }
 
@@ -116,6 +121,7 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
     const body: PlayTitle = source ? { video, viewer, source } : { video, viewer };
     stream<PlayMessage>(link, '/api/title/play', { method: 'POST', body, signal: controller.signal }, (message) => {
       lap('play', `play ${message.type}`);
+
       switch (message.type) {
         case 'resolved':
           title = message.title;
@@ -175,15 +181,15 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
           tried: 0,
         });
       })
-      .catch((error: unknown) => {
+      .catch((cause: unknown) => {
         if (controller.signal.aborted) return;
-        const engine = error instanceof EngineError;
+        const engine = cause instanceof EngineError;
         setStart({
           phase: 'failed',
           title,
           episode,
-          message: engine ? error.message : 'Lost the engine while starting the video.',
-          hint: engine ? error.hint : null,
+          message: engine ? cause.message : 'Lost the engine while starting the video.',
+          hint: engine ? cause.hint : null,
           tried: 0,
         });
       });
@@ -218,20 +224,22 @@ export function useTorrentPlay(ref: string, attempt: number, file?: number): Sta
           torrent_url: null,
           info_url: null,
         };
+
         setStart({ phase: 'ready', title: null, episode: null, release, play, resumeAt: null });
       },
-      (error: unknown) => {
+      (cause: unknown) => {
         if (controller.signal.aborted) return;
         setStart({
           phase: 'failed',
           title: null,
           episode: null,
-          message: error instanceof EngineError ? error.message : 'Lost the engine while starting the torrent.',
-          hint: error instanceof EngineError ? error.hint : null,
+          message: cause instanceof EngineError ? cause.message : 'Lost the engine while starting the torrent.',
+          hint: cause instanceof EngineError ? cause.hint : null,
           tried: 0,
         });
       },
     );
+
     return () => controller.abort();
   }, [link, ref, attempt, file]);
 

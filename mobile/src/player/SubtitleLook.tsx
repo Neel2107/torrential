@@ -12,15 +12,18 @@ const SIZES: [short: string, label: string, scale: number][] = [
   ['L', 'Large', 1.3],
   ['XL', 'Extra large', 1.65],
 ];
+
 const BACKINGS: [label: string, backing: SubtitleBacking][] = [
   ['Shadow', 'shadow'],
   ['Outline', 'outline'],
   ['Box', 'box'],
 ];
+
 const SHIFTS = [-0.5, -0.1, 0.1, 0.5];
 
 function offsetText(seconds: number): string {
   if (seconds === 0) return 'In sync';
+
   return `${Math.abs(seconds).toFixed(1)} s ${seconds > 0 ? 'later' : 'earlier'}`;
 }
 

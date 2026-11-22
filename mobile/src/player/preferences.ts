@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { SUBTITLE_STYLE, type SubtitleStyle } from '@web/lib/storage';
+import { NO_PREFERENCES, playerPreferences, readStored } from '@/engine/stored';
 
 /** `subtitles` is the language last picked anywhere, or null for off; undefined until one is picked. */
 export type PlayerPreferences = {
@@ -23,7 +24,7 @@ export function usePlayerPreferences(): [PlayerPreferences, (change: Partial<Pla
     SecureStore.getItemAsync(KEY)
       .then((saved) => {
         if (!saved || changed.current) return;
-        const read = JSON.parse(saved) as Partial<PlayerPreferences>;
+        const read = readStored(playerPreferences, saved, NO_PREFERENCES);
         setPreferences({ ...DEFAULTS, ...read, subtitleStyle: { ...SUBTITLE_STYLE, ...read.subtitleStyle } });
       })
       .catch(() => {});
@@ -34,6 +35,7 @@ export function usePlayerPreferences(): [PlayerPreferences, (change: Partial<Pla
     setPreferences((previous) => {
       const merged = { ...previous, ...next };
       SecureStore.setItemAsync(KEY, JSON.stringify(merged)).catch(() => {});
+
       return merged;
     });
   }, []);

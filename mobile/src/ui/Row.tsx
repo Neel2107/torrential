@@ -11,7 +11,7 @@ import { Tap } from './Tap';
 
 type Common = {
   label: string;
-  detail?: ReactNode;
+  detail?: string | null;
   disabled?: boolean;
   onPress: () => void;
   accessibilityLabel?: string;
@@ -28,6 +28,7 @@ export function OptionRow({
 }: Common & { selected: boolean }) {
   const styles = useStaged(themed, staged);
   const type = useStaged(themedType, stageType);
+
   return (
     <Tap
       shrink={1}
@@ -42,7 +43,7 @@ export function OptionRow({
     >
       <View style={styles.text}>
         <Text style={[styles.label, selected && styles.picked]}>{label}</Text>
-        {typeof detail === 'string' ? <Text style={type.caption}>{detail}</Text> : detail}
+        {detail ? <Text style={type.caption}>{detail}</Text> : null}
       </View>
       <Check shown={selected} />
     </Tap>
@@ -64,6 +65,7 @@ export function NavRow({
   const styles = useStaged(themed, staged);
   const tone = useTone();
   const type = useStaged(themedType, stageType);
+
   return (
     <Tap
       shrink={1}
@@ -78,13 +80,11 @@ export function NavRow({
       {leading}
       <View style={styles.text}>
         <Text style={[styles.label, styles.lead]}>{label}</Text>
-        {typeof detail === 'string' ? (
+        {detail ? (
           <Text style={type.caption} numberOfLines={1}>
             {detail}
           </Text>
-        ) : (
-          detail
-        )}
+        ) : null}
       </View>
       {value ? <Text style={type.label}>{value}</Text> : null}
       {count !== undefined ? <Text style={type.numeric}>{count}</Text> : null}
@@ -109,6 +109,7 @@ export function ActionRow({
   const styles = useStaged(themed, staged);
   const tone = useTone();
   const tint = danger ? tone.error : tone.ink;
+
   return (
     <Tap
       shrink={1}
@@ -132,6 +133,7 @@ function Turn({ open, tint }: { open: boolean; tint: string }) {
     turn.set(withTiming(open ? 1 : 0, { duration: motion.quick, easing: motion.out }));
   }, [open, turn]);
   const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get() * 180}deg` }] }));
+
   return (
     <Animated.View style={style}>
       <Icon name={icons.expand} size={18} tint={tint} />

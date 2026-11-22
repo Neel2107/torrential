@@ -68,16 +68,19 @@ export default function Title() {
 
   const banner = useAnimatedStyle(() => {
     const y = scrollY.get();
+
     return {
       transform: [{ translateY: y < 0 ? y / 2 : -y * 0.5 }, { scale: y < 0 ? 1 + -y / bannerHeight : 1 }],
     };
   });
+
   const headerName = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.get(), [bannerHeight + 40, bannerHeight + 90], [0, 1], Extrapolation.CLAMP),
     transform: [
       { translateY: interpolate(scrollY.get(), [bannerHeight + 40, bannerHeight + 90], [8, 0], Extrapolation.CLAMP) },
     ],
   }));
+
   const headerShade = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.get(), [bannerHeight - 120, bannerHeight - 40], [0, 1], Extrapolation.CLAMP),
   }));
@@ -184,6 +187,7 @@ function Body({ page }: { page: Page }) {
   const onComputer = session.state === 'paired' && session.engine.kind !== 'phone';
 
   const playLabel = resume ? 'Resume' : 'Play';
+
   const playDetail = targetEpisode
     ? `${episodeCode(targetEpisode)} · ${episodeName(targetEpisode)}`
     : resume && targetWatched?.duration
@@ -326,6 +330,7 @@ function DownloadButton({
   }, [job, held.state]);
   const gone = job !== null && seen === job && held.state === 'none';
   const shown: Fetching = gone ? { state: 'idle' } : asked;
+
   const state =
     asked.state === 'finding'
       ? 'finding'
@@ -334,7 +339,9 @@ function DownloadButton({
         : held.state === 'downloading' || (asked.state === 'started' && !gone)
           ? 'downloading'
           : 'idle';
+
   useEffect(() => onState(shown), [shown.state, onState]);
+
   return (
     <>
       <Tap
@@ -395,6 +402,7 @@ function SaveButton({ id, saved }: { id: string; saved: boolean }) {
       onPress={() => {
         Haptics.impactAsync(saved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
         pop.set(withSequence(withTiming(0.7, { duration: 90 }), withSpring(1, motion.pop)));
+
         if (!saved) burst.current?.fire();
         save.mutate(!saved);
       }}
@@ -418,6 +426,7 @@ function SaveButton({ id, saved }: { id: string; saved: boolean }) {
 function Synopsis({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   const long = text.length > 170;
+
   return (
     <Tap
       shrink={1}
@@ -438,13 +447,16 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
   const { width } = useWindowDimensions();
   const seasons = page.seasons.filter((s) => s.episodes.length > 0);
   const currentSeason = current ? findEpisode(page, current)?.season : undefined;
+
   const [season, setSeason] = useState(
     () => currentSeason ?? seasons.find((s) => s.number > 0)?.number ?? seasons[0]?.number ?? 1,
   );
+
   const at = Math.max(
     0,
     seasons.findIndex((s) => s.number === season),
   );
+
   const position = usePagerPosition(at);
   const link = useLink();
   const drag = useSharedValue(0);
@@ -453,26 +465,32 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
     Haptics.selectionAsync();
     setSeason(seasons[next].number);
   };
+
   const last = seasons.length - 1;
 
   useEffect(() => {
     const near = [seasons[at - 1], seasons[at + 1]].flatMap((s) => s?.episodes.slice(0, NEAR_STILLS) ?? []);
-    const stills = near
-      .filter((episode) => episode.thumbnail)
-      .map((episode) =>
-        url(link, '/api/title/art', {
-          id: page.id,
-          kind: 'thumbnail',
-          season: episode.season,
-          episode: episode.episode,
-        }),
-      );
+
+    const stills = near.flatMap((episode) =>
+      episode.thumbnail
+        ? [
+            url(link, '/api/title/art', {
+              id: page.id,
+              kind: 'thumbnail',
+              season: episode.season,
+              episode: episode.episode,
+            }),
+          ]
+        : [],
+    );
+
     if (stills.length) Image.prefetch(stills, { cachePolicy: 'memory-disk', headers: authHeaders(link) });
   }, [at, link, page.id, seasons]);
 
   useEffect(() => {
     if (currentSeason === undefined) return;
     const next = seasons.findIndex((s) => s.number === currentSeason);
+
     if (next >= 0) position.set(next);
     setSeason(currentSeason);
   }, [currentSeason]);
@@ -488,6 +506,7 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
     .onEnd((event) => {
       const far = Math.abs(event.translationX) > width * 0.25 || Math.abs(event.velocityX) > 600;
       const next = at + (event.translationX < 0 ? 1 : -1);
+
       if (far && next >= 0 && next <= last) {
         drag.set(Math.sign(event.translationX) * -width * 0.15);
         position.set(withTiming(next, GLIDE));
@@ -495,6 +514,7 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
       } else {
         position.set(withTiming(at, GLIDE));
       }
+
       drag.set(withSpring(0, { ...motion.snap, velocity: event.velocityX }));
     });
 

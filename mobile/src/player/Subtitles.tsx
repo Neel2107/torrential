@@ -19,6 +19,7 @@ export function choiceKey(choice: SubtitleChoice): string {
 export function useSubtitleCues(play: PlayInfo, choice: SubtitleChoice | null): Cue[] {
   const link = useLink();
   const [cues, setCues] = useState<Cue[]>([]);
+
   const address = !choice
     ? null
     : choice.kind === 'file'
@@ -27,6 +28,7 @@ export function useSubtitleCues(play: PlayInfo, choice: SubtitleChoice | null): 
 
   useEffect(() => {
     setCues([]);
+
     if (!address) return;
     const controller = new AbortController();
     fetch(address, { headers: authHeaders(link), signal: controller.signal })
@@ -36,6 +38,7 @@ export function useSubtitleCues(play: PlayInfo, choice: SubtitleChoice | null): 
         setCues([...parser.feed(text), ...parser.finish()].sort((a, b) => a.start - b.start));
       })
       .catch(() => {});
+
     return () => controller.abort();
   }, [address, link]);
 
@@ -54,17 +57,21 @@ export function useOnlineSubtitles(id: string, file: number): OnlineLookup {
   useEffect(() => {
     const stop = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
+
     const ask = () =>
       get<OnlineSubtitles>(link, `/api/subtitles/online?id=${id}&file=${file}`, stop.signal)
         .then((found) => {
           const subtitles = [...found.subtitles].sort((a, b) => Number(b.exact) - Number(a.exact));
           setLookup(subtitles.length ? { kind: 'found', subtitles } : { kind: 'nothing' });
+
           if (!found.hashed) timer = setTimeout(ask, LOOK_AGAIN_MS);
         })
         .catch(() => {
           if (!stop.signal.aborted) setLookup((before) => (before.kind === 'found' ? before : { kind: 'failed' }));
         });
+
     ask();
+
     return () => {
       stop.abort();
       clearTimeout(timer);
@@ -88,6 +95,7 @@ export function SubtitleOverlay({
   look: SubtitleStyle;
 }) {
   const showing = cues.filter((cue) => cue.start <= time && time < cue.end);
+
   if (showing.length === 0) return null;
   const size = Math.round(BASE_SIZE * look.scale);
   const text = [styles.line, styles[look.backing], { fontSize: size, lineHeight: Math.round(size * 1.35) }];

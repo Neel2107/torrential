@@ -8,6 +8,7 @@ import type { FilesReply, OnlineSubtitles } from '@web/wire';
 
 import { authHeaders, get, post, url, type Link } from '@/engine/client';
 import { languageName, sameLanguage } from '@/player/languages';
+import { NO_PREFERENCES, playerPreferences, readStored, savedCopies } from '@/engine/stored';
 
 export type Label = { title: string; tags: string; poster: string | null };
 
@@ -32,6 +33,7 @@ const tasks = new Map<string, DownloadTask>();
 
 function publish(next: Map<string, Copy>) {
   copies = next;
+
   for (const listener of listeners) listener();
 }
 
@@ -47,6 +49,7 @@ function drop(job: string) {
 
 function keep() {
   const saved = [...copies.values()].filter((copy): copy is Saved => copy.state === 'saved');
+
   try {
     if (!manifest.exists) manifest.create({ intermediates: true });
     manifest.writeSync(JSON.stringify(saved));
@@ -56,11 +59,14 @@ function keep() {
 function load() {
   if (loaded) return;
   loaded = true;
+
   try {
     if (!folder.exists) return;
+
     for (const entry of folder.list()) if (entry instanceof File && entry.name.endsWith('.part')) entry.delete();
+
     if (!manifest.exists) return;
-    const saved = (JSON.parse(manifest.textSync()) as Saved[]).filter((copy) => new File(copy.uri).exists);
+    const saved = readStored(savedCopies, manifest.textSync(), []).filter((copy) => new File(copy.uri).exists);
     publish(new Map(saved.map((copy) => [copy.job, copy])));
   } catch {}
 }
@@ -68,11 +74,13 @@ function load() {
 function subscribe(listener: () => void) {
   load();
   listeners.add(listener);
+
   return () => listeners.delete(listener);
 }
 
 export function useCopies(): Copy[] {
   const all = useSyncExternalStore(subscribe, () => copies);
+
   return [...all.values()].sort((a, b) => order(b) - order(a));
 }
 
@@ -102,8 +110,10 @@ const claimed = new Set<string>();
 /** Copies a finished download's video to this phone; `file` picks which video when the download holds several. */
 export async function save(link: Link, job: string, label: Label, file?: number): Promise<void> {
   const before = copies.get(job);
+
   if (claimed.has(job) || before?.state === 'saving' || before?.state === 'saved') return;
   claimed.add(job);
+
   try {
     await copy(link, job, label, file);
   } finally {
@@ -115,16 +125,20 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
   const fail = (error: string) => put({ job, label, size: 0, state: 'failed', error });
 
   let reply: FilesReply;
+
   try {
     reply = await post<FilesReply>(link, '/api/files', { ref: job });
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'Could not reach the engine.');
   }
+
   const file =
     (index === undefined ? null : reply.files.find((candidate) => candidate.index === index)) ??
     savedVideo(reply.files);
+
   if (!file) return fail('This download has no video to save.');
   const free = freeSpace();
+
   if (free !== null && file.size > free - KEEP_FREE) {
     return fail(`It needs ${bytes(file.size)}, and this phone has ${bytes(Math.max(0, free - KEEP_FREE))} to spare.`);
   }
@@ -133,8 +147,10 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
   const extension = name.includes('.') ? name.slice(name.lastIndexOf('.')) : '';
   const part = new File(folder, `${job}.part`);
   const size = file.size;
+
   try {
     if (!folder.exists) folder.create({ intermediates: true });
+
     if (part.exists) part.delete();
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'The phone would not make room for the file.');
@@ -143,11 +159,13 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
   put({ job, label, size, state: 'saving', written: 0 });
   let shown = 0;
   let task: DownloadTask | null = null;
+
   try {
     task = File.createDownloadTask(url(link, fileUrl(job, file)), part, {
       headers: authHeaders(link),
       onProgress: ({ bytesWritten }) => {
         const now = Date.now();
+
         if (now - shown < PROGRESS_MS || copies.get(job)?.state !== 'saving') return;
         shown = now;
         put({ job, label, size, state: 'saving', written: bytesWritten });
@@ -157,6 +175,7 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
     await task.downloadAsync();
     const whole = `${job}${extension}`;
     const target = new File(folder, whole);
+
     if (target.exists) target.delete();
     part.rename(whole);
     const subtitles = await keepSubtitles(link, job, file.index, reply, label.poster).catch(() => null);
@@ -167,13 +186,14 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
       state: 'saved',
       saved_at: Date.now() / 1000,
       uri: target.uri,
-      ...(subtitles ? { subtitles } : {}),
+      subtitles: subtitles ?? undefined,
     });
     keep();
   } catch (error) {
     try {
       if (part.exists) part.delete();
     } catch {}
+
     if (task?.state === 'cancelled') drop(job);
     else fail(error instanceof Error ? error.message : 'The copy stopped.');
   } finally {
@@ -186,12 +206,13 @@ const SUBTITLE_FILE = /\.(srt|vtt|ass|ssa)$/i;
 /** The subtitle language the player keeps for this show, or the last one picked anywhere. */
 async function wantedLanguage(title: string | null): Promise<string | null> {
   const saved = await SecureStore.getItemAsync('player-preferences').catch(() => null);
+
   if (!saved) return null;
-  const preferences = JSON.parse(saved) as {
-    subtitles?: string | null;
-    shows?: Record<string, { subtitles?: string | null }>;
-  };
+
+  const preferences = readStored(playerPreferences, saved, NO_PREFERENCES);
+
   const own = title ? preferences.shows?.[title] : undefined;
+
   return (own && 'subtitles' in own ? own.subtitles : preferences.subtitles) ?? null;
 }
 
@@ -204,27 +225,37 @@ async function keepSubtitles(
   title: string | null,
 ): Promise<string | null> {
   const language = await wantedLanguage(title);
+
   if (!language) return null;
+
   const own = reply.files.find(
     (candidate) =>
       SUBTITLE_FILE.test(candidate.path) &&
       new RegExp(`\\b(${language}|${languageName(language) ?? language})\\b`, 'i').test(candidate.path),
   );
+
   let address: string | null = own ? url(link, '/api/subtitles', { id: job, file: own.index }) : null;
+
   if (!address) {
     const online = await get<OnlineSubtitles>(link, `/api/subtitles/online?id=${job}&file=${video}`);
+
     const match = [...online.subtitles]
       .sort((a, b) => Number(b.exact) - Number(a.exact))
       .find((subtitle) => sameLanguage(subtitle.language, language));
+
     if (!match) return null;
     address = url(link, '/api/subtitles/online/fetch', { id: job, file: video, subtitle: match.id });
   }
+
   const response = await fetch(address, { headers: authHeaders(link) });
+
   if (!response.ok) return null;
   const text = await response.text();
+
   if (!text.trim()) return null;
   const target = new File(folder, `${job}.vtt`);
   target.writeSync(text);
+
   return target.uri;
 }
 
@@ -234,16 +265,21 @@ export function cancel(job: string) {
 
 export function remove(job: string) {
   const copy = copies.get(job);
+
   if (copy?.state === 'saving') return cancel(job);
+
   if (copy?.state === 'saved') {
     for (const uri of [copy.uri, copy.subtitles]) {
       if (!uri) continue;
+
       try {
         const file = new File(uri);
+
         if (file.exists) file.delete();
       } catch {}
     }
   }
+
   drop(job);
   keep();
 }

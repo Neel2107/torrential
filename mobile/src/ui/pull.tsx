@@ -24,6 +24,7 @@ import { BandsMark, fill } from './Bands';
 const MOST = 130;
 const LINE = 70;
 const FLIP = 650;
+
 type Pull = {
   pull: SharedValue<number>;
   spin: SharedValue<number>;
@@ -39,21 +40,25 @@ export function PullProvider({ children }: { children: ReactNode }) {
   const busy = useSharedValue(0);
   const holding = useSharedValue(0);
   const value = useMemo(() => ({ pull, spin, busy, holding }), [pull, spin, busy, holding]);
+
   return <Context value={value}>{children}</Context>;
 }
 
 function usePull(): Pull {
   const value = use(Context);
+
   if (!value) throw new Error('pull outside PullProvider');
+
   return value;
 }
 
 function resist(distance: number): number {
   'worklet';
+
   return MOST * (1 - Math.exp(-Math.max(0, distance) / (MOST * 1.6)));
 }
 
-export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => Promise<unknown>) {
+export function usePullToRefresh<T>(offset: SharedValue<number>, onRefresh: () => Promise<T>) {
   const { pull, spin, busy: lit, holding } = usePull();
   const bounced = useSharedValue(false);
   const busy = useRef(false);
@@ -91,6 +96,7 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
         crossed.set(true);
         scheduleOnRN(tick);
       }
+
       if (!over) crossed.set(false);
     },
   );
@@ -100,6 +106,7 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
     holding.set(0);
     const go = pull.get() >= LINE;
     pull.set(withSpring(0, { ...motion.snap, overshootClamping: true }));
+
     if (go) scheduleOnRN(refresh);
   };
 
@@ -119,21 +126,27 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
       .onFinalize(() => {
         'worklet';
         holding.set(0);
+
         if (pull.get() > 0 && pull.get() < LINE) pull.set(withSpring(0, { ...motion.snap, overshootClamping: true }));
       });
+
     return Gesture.Simultaneous(Gesture.Native(), pan);
   }, [offset, pull, refresh, holding]);
 
   const fromBounce = (y: number) => {
     'worklet';
+
     if (Platform.OS !== 'ios') return;
     pull.set(Math.min(MOST, Math.max(0, -y)));
+
     // The bounce back after letting go is not a finger pulling.
     if (y >= 0) bounced.set(false);
     else if (!bounced.get()) holding.set(1);
   };
+
   const endBounce = () => {
     'worklet';
+
     if (Platform.OS !== 'ios') return;
     bounced.set(true);
     release();
@@ -146,11 +159,13 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
 
 export function usePullHeight() {
   const { pull } = usePull();
+
   return pull;
 }
 
 export function PullMark({ size = 30 }: { size?: number }) {
   const { pull, spin, busy, holding } = usePull();
+
   const style = useAnimatedStyle(() => ({
     transform: [
       { perspective: 600 },
@@ -158,14 +173,18 @@ export function PullMark({ size = 30 }: { size?: number }) {
       { rotateY: `${spin.get() * 360 * busy.get()}deg` },
     ],
   }));
+
   const top = useAnimatedStyle(() => ({
     opacity: holding.get() && pull.get() > 0 ? fill(pull.get() / LINE, 0) : 1,
   }));
+
   const middle = useAnimatedStyle(() => ({
     opacity: holding.get() && pull.get() > 0 ? fill(pull.get() / LINE, 1) : 1,
   }));
+
   const last = useAnimatedStyle(() => ({
     opacity: holding.get() && pull.get() > 0 ? fill(pull.get() / LINE, 2) : 1,
   }));
+
   return <BandsMark size={size} bands={[top, middle, last]} style={style} />;
 }

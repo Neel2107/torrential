@@ -22,11 +22,13 @@ export default function Settings() {
   const version = useVersion();
   const [saver, setSaver] = useDataSaver();
   const engine = session.state === 'paired' ? session.engine : null;
+
   const status = version.isSuccess
     ? `Online · torrential ${version.data.version}`
     : version.isError
       ? 'Not answering'
       : 'Checking…';
+
   const tint = version.isSuccess ? color.action : version.isError ? color.error : color.pencil;
 
   return (

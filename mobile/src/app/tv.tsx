@@ -31,16 +31,19 @@ import { leave } from '@/ui/leave';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
 import { appear } from '@/ui/presets';
 
-const CONTAINERS: Record<string, string> = {
-  mkv: 'MKV',
-  mp4: 'MP4',
-  webm: 'WebM',
-  avi: 'AVI',
-  ts: 'TS',
-  mov: 'MOV',
-  mpeg: 'MPEG',
-  wmv: 'WMV',
-};
+const CONTAINERS = new Map(
+  Object.entries({
+    mkv: 'MKV',
+    mp4: 'MP4',
+    webm: 'WebM',
+    avi: 'AVI',
+    ts: 'TS',
+    mov: 'MOV',
+    mpeg: 'MPEG',
+    wmv: 'WMV',
+  }),
+);
+
 const STARTED_SHOWN_MS = 2400;
 const DECODES = { 'hevc-hdr': '4K HDR', hevc: '4K', h264: 'HD' } as const;
 
@@ -55,30 +58,35 @@ export default function TvScreen() {
   const casts = tvs.data?.casts ?? [];
   const current = casts.find(live) ?? null;
   const [opened] = useState(() => Date.now() / 1000);
+
   const failedCast = casts
     .filter(
       (cast): cast is Extract<Cast, { state: 'ended' }> & { error: NonNullable<unknown> } =>
         cast.state === 'ended' && Boolean(cast.error) && cast.started_at >= opened - 60,
     )
     .sort((a, b) => b.started_at - a.started_at)[0];
+
   const startAt = params.at ? Number(params.at) : undefined;
+
   const what = params.video
     ? { video: params.video, start_at: startAt }
     : params.ref
       ? { ref: params.ref, file: params.file ? Number(params.file) : undefined, start_at: startAt }
       : null;
+
   const [problem, setProblem] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
 
   const [scanFailed, setScanFailed] = useState<string | null>(null);
+
   const scan = (alive: () => boolean = () => true) => {
     setScanning(true);
     setScanFailed(null);
     findTvs(link, true)
       .then((list) => alive() && client.setQueryData([...keys.tvs, link.base], list))
-      .catch((error: unknown) => {
+      .catch((cause: unknown) => {
         if (!alive()) return;
-        setScanFailed(error instanceof EngineError ? sentence(error.message) : 'The engine did not answer.');
+        setScanFailed(cause instanceof EngineError ? sentence(cause.message) : 'The engine did not answer.');
       })
       .finally(() => alive() && setScanning(false));
   };
@@ -86,6 +94,7 @@ export default function TvScreen() {
   useEffect(() => {
     let cancelled = false;
     scan(() => !cancelled);
+
     return () => {
       cancelled = true;
     };
@@ -96,6 +105,7 @@ export default function TvScreen() {
     setStarting(tv.id);
     setProblem(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
       const body: CastStart = { tv: tv.id, ...what };
       await post<{ cast: Cast }>(link, '/api/cast', body);
@@ -103,6 +113,7 @@ export default function TvScreen() {
     } catch (error) {
       setProblem(error instanceof EngineError ? sentence(error.message) : 'Could not reach the engine.');
     }
+
     setStarting(null);
   };
 
@@ -160,7 +171,7 @@ export default function TvScreen() {
                       {[
                         tv.address.replace(/^https?:\/\//, '').replace(/[:/].*$/, ''),
                         DECODES[tv.decodes],
-                        tv.plays.map((c) => CONTAINERS[c] ?? c).join(', '),
+                        tv.plays.map((c) => CONTAINERS.get(c) ?? c).join(', '),
                       ]
                         .filter(Boolean)
                         .join(' · ')}
@@ -217,6 +228,7 @@ function Ring({ delay }: { delay: number }) {
     t.set(withDelay(delay, withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false)));
   }, [delay, t]);
   const style = useAnimatedStyle(() => ({ opacity: 0.6 * (1 - t.get()), transform: [{ scale: 0.6 + t.get() * 1.4 }] }));
+
   return <Animated.View style={[styles.ring, style]} />;
 }
 
@@ -240,6 +252,7 @@ function Remote({ cast }: { cast: Cast }) {
     pop.set(withSequence(withTiming(1.18, { duration: 140 }), withSpring(1, motion.pop)));
     setJustStarted(true);
     const timer = setTimeout(() => setJustStarted(false), STARTED_SHOWN_MS);
+
     return () => clearTimeout(timer);
   }, [cast.state, pop]);
   const [moving, setMoving] = useState(false);
@@ -247,20 +260,26 @@ function Remote({ cast }: { cast: Cast }) {
   useFocusEffect(
     useCallback(() => {
       focused.current = true;
+
       return () => {
         focused.current = false;
       };
     }, []),
   );
+
   const control = async (action: CastAction): Promise<boolean> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     const reached = await post(link, '/api/cast/control', { tv: cast.tv, ...action }).then(
       () => true,
       () => false,
     );
+
     setUnreached(!reached);
+
     if (!reached) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     client.invalidateQueries({ queryKey: keys.tvs });
+
     return reached;
   };
 
@@ -306,6 +325,7 @@ function Remote({ cast }: { cast: Cast }) {
             setMoving(true);
             const stopped = await control({ action: 'stop' });
             setMoving(false);
+
             if (!stopped || !focused.current) return;
             router.replace({
               pathname: '/play',
@@ -409,6 +429,7 @@ function Scrub({
   const [width, setWidth] = useState(1);
   const fraction = duration > 0 ? Math.min(1, position / duration) : 0;
   const at = (x: number) => Math.max(0, Math.min(duration, (x / width) * duration));
+
   return (
     <View
       style={styles.scrub}

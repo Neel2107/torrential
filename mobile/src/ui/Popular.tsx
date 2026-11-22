@@ -29,10 +29,12 @@ export function PopularRow({
   const [settled, setSettled] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setSettled(true), AFTER_HOME_MS);
+
     return () => clearTimeout(timer);
   }, []);
   const popular = usePopular(kind, settled);
   const titles: TitleCard[] = (popular.data?.titles ?? []).filter((card) => !skip.has(card.id)).slice(0, SHOWN);
+
   if (titles.length === 0) return null;
 
   return (

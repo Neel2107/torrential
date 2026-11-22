@@ -15,6 +15,7 @@ export function Connecting() {
   const [slow, setSlow] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setSlow(true), PATIENT_MS);
+
     return () => clearTimeout(timer);
   }, []);
 

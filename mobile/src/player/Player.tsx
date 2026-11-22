@@ -72,10 +72,12 @@ type OpenSheet = 'tracks' | 'settings' | 'sources' | 'files';
 
 function nextEpisode(page: TitlePage | null, video: string | null): UpNext | null {
   const here = page && video ? findEpisode(page, video) : null;
+
   if (!page || !here) return null;
   const order = playingOrder(page, here.season === 0);
   const at = order.findIndex((e) => e.season === here.season && e.episode === here.episode);
   const following = at === -1 ? undefined : order[at + 1];
+
   return following
     ? {
         video: videoOf(page.id, following),
@@ -119,6 +121,7 @@ export function Player({
   const download = { id: play.id, file: play.video.index };
   const job = usePlayingJob(play.job);
   const downloaded = useDownloaded(job, play.video, play.total_size);
+
   const [metadata] = useState(() => ({
     title: title?.name ?? play.name,
     artist: episode ? `${episodeCode(episode)} · ${episodeName(episode)}` : undefined,
@@ -131,6 +134,7 @@ export function Player({
       p.showNowPlayingNotification = true;
       p.staysActiveInBackground = false;
       p.keepScreenOnWhilePlaying = true;
+
       if (resumeAt && resumeAt > 5) p.currentTime = resumeAt;
       p.play();
     },
@@ -139,17 +143,21 @@ export function Player({
   const { isPlaying } = useEvent(player, 'playingChange', {
     isPlaying: player.playing,
   });
+
   const { status, error } = useEvent(player, 'statusChange', {
     status: player.status,
     error: undefined,
   });
+
   const time = useEvent(player, 'timeUpdate', {
     currentTime: player.currentTime,
     bufferedPosition: player.bufferedPosition,
     currentLiveTimestamp: null,
     currentOffsetFromLive: null,
   });
+
   const [media, setMedia] = useState<MediaInfo | null>(null);
+
   const timeline = useTimeline({
     player,
     link,
@@ -158,17 +166,21 @@ export function Player({
     metadata,
     resumeAt: resumeAt && resumeAt > 5 ? resumeAt : 0,
   });
+
   const duration = timeline.duration;
   const position = time.currentTime >= 0 ? timeline.now() : 0;
   const failed = status === 'error' || Boolean(timeline.problem);
   const [visible, setVisible] = useState(true);
+
   const [sleep, keepSleep] = useState<Sleep>(() =>
     carriedSleep?.kind === 'after' && carriedSleep.at <= Date.now() ? null : carriedSleep,
   );
+
   const setSleep = (next: Sleep) => {
     carriedSleep = next;
     keepSleep(next);
   };
+
   const [locked, setLocked] = useState(false);
   const [unlockShown, setUnlockShown] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
@@ -176,6 +188,7 @@ export function Player({
   const [preferences, setPreferences] = usePlayerPreferences();
   const resumed = useRef(true);
   const held = useRef(false);
+
   const { recovery, retry } = useStallRecovery({
     video: onTakeover ? video : null,
     play,
@@ -186,54 +199,69 @@ export function Player({
     now: timeline.now,
     onTakeover: (takeover) => onTakeover?.(takeover),
   });
+
   const client = useQueryClient();
   const [drawn, setDrawn] = useState<SubtitleChoice | null>(null);
   const cues = useSubtitleCues(play, drawn);
   const online = useOnlineSubtitles(play.id, play.video.index);
   const show = video ? titleOf(video) : null;
+
   const remember = (language: string | null) => {
     const subtitles = language ? language.toLowerCase() : null;
+
     const shows = show
       ? { ...preferences.shows, [show]: { ...preferences.shows?.[show], subtitles } }
       : preferences.shows;
+
     setPreferences({ subtitles, shows });
   };
+
   const rememberAudio = (language: string) => {
     if (!show) return;
     setPreferences({
       shows: { ...preferences.shows, [show]: { ...preferences.shows?.[show], audio: language.toLowerCase() } },
     });
   };
+
   const { availableSubtitleTracks } = useEvent(player, 'availableSubtitleTracksChange', {
     availableSubtitleTracks: player.availableSubtitleTracks,
   });
+
   const picked = useRef(false);
   const own = show ? preferences.shows?.[show] : undefined;
   const wanted = own && 'subtitles' in own ? own.subtitles : preferences.subtitles;
   const wantedAudio = own?.audio;
+
   const { availableAudioTracks } = useEvent(player, 'availableAudioTracksChange', {
     availableAudioTracks: player.availableAudioTracks,
   });
+
   const pickedAudio = useRef(false);
 
   useEffect(() => {
     if (pickedAudio.current || !wantedAudio) return;
     const track = availableAudioTracks.find((candidate) => sameLanguage(candidate.language, wantedAudio));
+
     if (!track) return;
     pickedAudio.current = true;
+
     if (!sameLanguage(player.audioTrack?.language, wantedAudio)) chooseAudio(player, track);
   }, [availableAudioTracks, wantedAudio, player]);
 
   useEffect(() => {
     if (picked.current || !wanted || drawn || player.subtitleTrack) return;
     const own = availableSubtitleTracks.find((track) => sameLanguage(track.language, wanted));
+
     if (own) {
       picked.current = true;
       chooseSubtitles(player, own);
+
       return;
     }
+
     if (online.kind !== 'found' || status !== 'readyToPlay') return;
     const found = online.subtitles.find((subtitle) => sameLanguage(subtitle.language, wanted));
+
     if (found) {
       picked.current = true;
       setDrawn({ kind: 'online', subtitle: found });
@@ -242,11 +270,13 @@ export function Player({
   const [offsets, setOffsets] = useState<Record<string, number>>({});
   const drawnKey = drawn ? choiceKey(drawn) : null;
   const offset = drawnKey ? (offsets[drawnKey] ?? 0) : null;
+
   const subtitleFiles = play.subtitles.map((file) => ({
     kind: 'file' as const,
     index: file.index,
     name: file.path.split('/').pop() ?? file.path,
   }));
+
   const videos = useMemo(() => (video ? [] : videosOf(play)), [video, play]);
 
   const [ended, setEnded] = useState(false);
@@ -285,14 +315,18 @@ export function Player({
       setMedia,
       () => {},
     );
+
     return () => controller.abort();
   }, [link, play.id, play.video.index]);
 
   const now = timeline.now;
+
   const save = useCallback(() => {
     const at = now();
     const length = duration || null;
+
     if (!video || !length || at < 1) return Promise.resolve();
+
     const body: Position = {
       video,
       position: Math.min(at, length),
@@ -301,25 +335,32 @@ export function Player({
       tab: TAB,
       starts: resumed.current,
     };
+
     resumed.current = false;
+
     return report(link, body);
   }, [duration, link, now, release.id, video]);
 
   useEffect(() => {
     if (!isPlaying) {
       save();
+
       return;
     }
+
     const timer = setInterval(save, SAVE_EVERY_MS);
+
     return () => clearInterval(timer);
   }, [isPlaying, save]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => state !== 'active' && save());
+
     return () => {
       subscription.remove();
       save().then(() => {
         client.invalidateQueries({ queryKey: keys.home });
+
         if (video) client.invalidateQueries({ queryKey: keys.title(titleOf(video)) });
       });
     };
@@ -340,6 +381,7 @@ export function Player({
   useEffect(() => {
     if (!visible || !isPlaying || scrubbing || sheet) return;
     const timer = setTimeout(() => setVisible(false), HIDE_AFTER_MS);
+
     return () => clearTimeout(timer);
   }, [visible, isPlaying, scrubbing, sheet, touched]);
 
@@ -349,6 +391,7 @@ export function Player({
 
   useEffect(() => {
     if (sleep?.kind !== 'after') return;
+
     const timer = setTimeout(
       () => {
         player.pause();
@@ -358,34 +401,40 @@ export function Player({
       },
       Math.max(0, sleep.at - Date.now()),
     );
+
     return () => clearTimeout(timer);
   }, [sleep, player]);
 
   useEffect(() => {
     if (!ended) return;
     setLocked(false);
+
     if (sleep?.kind === 'end') carriedSleep = null;
   }, [ended, sleep]);
 
   useEffect(() => {
     if (!unlockShown) return;
     const timer = setTimeout(() => setUnlockShown(false), UNLOCK_SHOWN_MS);
+
     return () => clearTimeout(timer);
   }, [unlockShown]);
 
   const toggle = () => {
     poke();
     held.current = player.playing;
+
     if (player.playing) player.pause();
     else player.play();
   };
 
   const leftSkip = useSharedValue(0);
   const rightSkip = useSharedValue(0);
+
   const flash = (side: 'left' | 'right') => {
     const value = side === 'left' ? leftSkip : rightSkip;
     value.set(withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 520, easing: motion.out })));
   };
+
   const skip = (seconds: number) => {
     poke();
     timeline.seek(Math.min(duration || Infinity, timeline.now() + seconds));
@@ -394,18 +443,22 @@ export function Player({
   };
 
   const [{ width, height: screenHeight }, setSize] = useState({ width: 1, height: 1 });
+
   const tap = Gesture.Tap()
     .numberOfTaps(1)
     .maxDuration(250)
     .runOnJS(true)
     .onEnd(() => setVisible((shown) => !shown));
+
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .maxDelay(240)
     .runOnJS(true)
     .onEnd((event) => skip(event.x < width / 2 ? -SKIP : SKIP));
+
   const drop = useSharedValue(0);
   const sides = useSideSwipes({ width, height: screenHeight });
+
   const pullDown = Gesture.Pan()
     .hitSlop(sides.middle)
     .activeOffsetY(18)
@@ -421,10 +474,13 @@ export function Player({
         drop.set(withSpring(0, { ...motion.snap, velocity: event.velocityY }));
       }
     });
+
   const taps = Gesture.Race(pullDown, sides.swipe, Gesture.Exclusive(doubleTap, tap));
+
   const lockedTap = Gesture.Tap()
     .runOnJS(true)
     .onEnd(() => setUnlockShown(true));
+
   const dropStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: drop.get() * 0.8 }, { scale: 1 - Math.min(drop.get(), 400) / 2400 }],
     borderRadius: Math.min(drop.get() / 6, 24),
@@ -440,7 +496,9 @@ export function Player({
       time.bufferedPosition >= 0 &&
       time.bufferedPosition < time.currentTime + 0.5 &&
       status !== 'readyToPlay');
+
   const heading = title?.name ?? play.name;
+
   const subheading = episode
     ? `${episodeCode(episode)} · ${episodeName(episode)}`
     : title?.year
@@ -704,10 +762,14 @@ export function Player({
               drawn={drawn}
               onDraw={(choice) => {
                 setDrawn(choice);
+
                 if (choice) chooseSubtitles(player, null);
+
                 if (choice?.kind === 'online') remember(choice.subtitle.language);
+
                 if (choice?.kind === 'file') {
                   const language = languageInName(choice.name);
+
                   if (language) remember(language);
                 }
               }}

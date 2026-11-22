@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { DevSettings, Modal, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 
-import { color, font, motion, radius, saveTheme, space, themeId, themes, type, type ThemeId } from '@/theme';
+import { color, font, isThemeId, motion, radius, saveTheme, space, themeId, themes, type, type ThemeId } from '@/theme';
 
 import { Mark } from './Mark';
 import { Tap } from './Tap';
 
-const IDS = Object.keys(themes) as ThemeId[];
+const IDS = Object.keys(themes).filter(isThemeId);
 
 const COVER_MS = motion.standard;
 const HOLD_MS = 160;
@@ -29,11 +29,13 @@ export function ThemePicker() {
 
   const choose = (id: ThemeId) => {
     if (id === shown || covered) return;
+
     try {
       saveTheme(id);
     } catch {
       return;
     }
+
     const chosen = themes[id];
     setNext(id);
     setCovered(true);
@@ -48,6 +50,7 @@ export function ThemePicker() {
         {IDS.map((id) => {
           const theme = themes[id];
           const on = id === shown;
+
           return (
             <Tap
               key={id}
@@ -83,6 +86,7 @@ export function ThemePicker() {
 
 function Cover({ id }: { id: ThemeId }) {
   const theme = themes[id];
+
   return (
     <Animated.View
       entering={FadeIn.duration(COVER_MS)}

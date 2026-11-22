@@ -18,12 +18,15 @@ export function ChromeProvider({ bar, children }: { bar: number; children: React
   const hidden = useSharedValue(0);
   const [docked, setDocked] = useState(0);
   const value = useMemo(() => ({ hidden, docked, setDocked, bottom: bar + docked }), [hidden, docked, bar]);
+
   return <Context value={value}>{children}</Context>;
 }
 
 export function useChrome(): Chrome {
   const chrome = use(Context);
+
   if (!chrome) throw new Error('useChrome outside ChromeProvider');
+
   return chrome;
 }
 
@@ -46,22 +49,29 @@ export function useChromeScroll(pull?: PullHooks) {
     },
     onScroll: (event, context) => {
       const y = event.contentOffset.y;
+
       if (pull) {
         pull.offset.set(y);
         pull.fromBounce(y);
       }
+
       const last = context.last ?? y;
       context.last = y;
+
       if (y <= 0) {
         hidden.set(0);
+
         return;
       }
+
       const maxY = event.contentSize.height - event.layoutMeasurement.height;
+
       if (y >= maxY) return;
       hidden.set(Math.min(1, Math.max(0, hidden.get() + (y - last) / TRAVEL)));
     },
     onEndDrag: (event) => {
       pull?.endBounce();
+
       if (event.contentOffset.y <= 0) return;
       hidden.set(withSpring(hidden.get() > 0.5 ? 1 : 0, motion.settle));
     },

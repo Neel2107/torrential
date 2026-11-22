@@ -30,9 +30,11 @@ import { posterRect } from './titleGeometry';
 export const HERO = Platform.OS === 'android';
 
 type Rect = { x: number; y: number; width: number; height: number };
+
 type Measurable = React.ComponentRef<typeof View>;
 
 type Phase = 'opening' | 'open' | 'closing';
+
 type Flight = {
   token: number;
   id: string;
@@ -61,6 +63,7 @@ const listeners = new Set<() => void>();
 
 function set(next: Flight | null) {
   flight = next;
+
   for (const listener of listeners) listener();
 }
 
@@ -73,6 +76,7 @@ const useFlight = () =>
   useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
+
       return () => listeners.delete(listener);
     },
     () => flight,
@@ -87,6 +91,7 @@ function measure(view: Measurable | null): Promise<Rect | null> {
 
 function onScreen(rect: Rect | null): rect is Rect {
   const { height } = Dimensions.get('window');
+
   return !!rect && rect.y + rect.height > 0 && rect.y < height;
 }
 
@@ -95,9 +100,11 @@ export function useHeroSource(id: string) {
 
   const open = async (navigate: () => void) => {
     if (!HERO) return navigate();
+
     if (flight && flight.phase !== 'open') return;
     const source = () => measure(ref.current);
     const from = await source();
+
     if (from) {
       progress.set(0);
       tokens += 1;
@@ -106,6 +113,7 @@ export function useHeroSource(id: string) {
     } else {
       set(null);
     }
+
     navigate();
   };
 
@@ -129,13 +137,17 @@ export function useHeroPage(id: string) {
   usePreventRemove(HERO && focused && !gone, ({ repeat }) => {
     if (leaving.current) return;
     leaving.current = true;
+
     const go = () => {
       setGone(true);
       repeat();
     };
+
     const current = flight;
+
     const fade = () => {
       if (current?.id === id) update(current.token, null);
+
       if (flown.get()) own.set(interpolate(progress.get(), PAGE, [0, 1], Extrapolation.CLAMP));
       flown.set(0);
       own.set(
@@ -144,6 +156,7 @@ export function useHeroPage(id: string) {
         }),
       );
     };
+
     if (current?.id !== id || current.phase !== 'open') return fade();
     Promise.all([measure(slot.current), current.source()]).then(([to, from]) => {
       if (flight?.token !== current.token || !onScreen(to) || !onScreen(from)) return fade();
@@ -167,14 +180,17 @@ export function useLanded(id: string): boolean {
   useEffect(() => {
     if (now) setLanded(true);
   }, [now]);
+
   return landed || now;
 }
 
 export function HeroTarget({ id, children }: { id: string; children: ReactNode }) {
   const slot = use(Slot);
   const current = useFlight();
+
   const hidden =
     HERO && current?.id === id && (current.phase === 'opening' || (current.phase === 'closing' && current.shown));
+
   return (
     <View
       ref={slot}
@@ -182,8 +198,10 @@ export function HeroTarget({ id, children }: { id: string; children: ReactNode }
       style={hidden ? styles.hidden : undefined}
       onLayout={() => {
         const now = flight;
+
         if (now?.id !== id || now.phase !== 'opening' || now.ready) return;
         update(now.token, { ready: true });
+
         if (kick?.token === now.token) kick.go();
       }}
     >
@@ -194,7 +212,9 @@ export function HeroTarget({ id, children }: { id: string; children: ReactNode }
 
 export function HeroLayer() {
   const current = useFlight();
+
   if (!HERO || !current || current.phase === 'open') return null;
+
   return <Flying key={`${current.token}:${current.phase}`} flight={current} />;
 }
 
@@ -207,6 +227,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
   const start = () => {
     if (started.current) return;
     started.current = true;
+
     if (!back) since('open', 'tap to flight');
     visible.set(1);
     update(token, { shown: true });
@@ -219,6 +240,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
 
   useEffect(() => {
     kick = { token, go: () => drawn.current && start() };
+
     return () => {
       if (kick?.token === token) kick = null;
     };
@@ -226,6 +248,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
 
   useEffect(() => {
     const timer = setTimeout(start, ready ? DRAW_WITHIN : MOUNT_WITHIN);
+
     return () => clearTimeout(timer);
   }, [ready]);
 
@@ -234,6 +257,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
     const scale = interpolate(p, [0, 1], [from.width / to.width, 1]);
     const centerX = interpolate(p, [0, 1], [from.x + from.width / 2, to.x + to.width / 2]);
     const centerY = interpolate(p, [0, 1], [from.y + from.height / 2, to.y + to.height / 2]);
+
     return {
       opacity: visible.get(),
       transform: [
@@ -257,6 +281,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
           placeholder={false}
           onDisplay={() => {
             drawn.current = true;
+
             if (flight?.token === token && flight.ready) start();
           }}
         />

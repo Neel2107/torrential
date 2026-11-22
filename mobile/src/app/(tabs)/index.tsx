@@ -42,10 +42,12 @@ export default function Home() {
   const top = useTopInset(false);
   const offset = useSharedValue(0);
   const refetch = home.refetch;
+
   const pull = usePullToRefresh(
     offset,
     useCallback(() => refetch(), [refetch]),
   );
+
   const onScroll = useChromeScroll({ offset, fromBounce: pull.fromBounce, endBounce: pull.endBounce });
   const { bottom } = useChrome();
 
@@ -88,7 +90,7 @@ export default function Home() {
       </GestureDetector>
       <TopBar
         left={<EngineAvatar />}
-        title={<PullMark size={30} />}
+        mark={<PullMark size={30} />}
         right={
           <Actions
             actions={[
@@ -122,6 +124,7 @@ function ContinueCarousel({ items }: { items: Continue[] }) {
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = Math.round(event.nativeEvent.contentOffset.x / (cardWidth + space.md));
+
     if (next !== page) setPage(next);
   };
 
@@ -232,6 +235,7 @@ function Empty() {
 function Loading() {
   const { width } = useWindowDimensions();
   const cardWidth = width - space.page * 2 - 28;
+
   return (
     <View
       style={{ paddingHorizontal: space.page, gap: space.lg }}

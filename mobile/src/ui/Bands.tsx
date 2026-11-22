@@ -22,11 +22,13 @@ export const band = (phase: number, index: number): number => {
   'worklet';
   const t = (((phase - index / 3) % 1) + 1) % 1;
   const peak = t < 0.15 ? t / 0.15 : t < 0.33 ? 1 : t < 0.48 ? 1 - (t - 0.33) / 0.15 : 0;
+
   return 0.12 + 0.88 * peak;
 };
 
 export const fill = (progress: number, index: number): number => {
   'worklet';
+
   return 0.15 + 0.85 * Math.min(1, Math.max(0, progress * 3 - index));
 };
 
@@ -50,6 +52,7 @@ export function BandsMark({
   label?: string;
 }) {
   const tone = useTone();
+
   return (
     <Animated.View style={[{ width: size, height: size }, style]} accessibilityLabel={label}>
       {BANDS.map(([y, height], index) => (
@@ -86,5 +89,6 @@ export function LoadingMark({ size, label = 'Loading' }: { size: number; label?:
   const top = useAnimatedStyle(() => ({ opacity: reduced ? 0.6 : band(phase.get(), 0) }));
   const middle = useAnimatedStyle(() => ({ opacity: reduced ? 0.6 : band(phase.get(), 1) }));
   const last = useAnimatedStyle(() => ({ opacity: reduced ? 0.6 : band(phase.get(), 2) }));
+
   return <BandsMark size={size} bands={[top, middle, last]} label={label} />;
 }

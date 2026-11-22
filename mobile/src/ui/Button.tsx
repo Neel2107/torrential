@@ -30,6 +30,7 @@ export function Button({
   const tone = useTone();
   const styles = useStaged(themed, staged);
   const ink = kind === 'primary' ? tone.actionInk : kind === 'danger' ? tone.paper : tone.ink;
+
   return (
     <Tap
       haptic

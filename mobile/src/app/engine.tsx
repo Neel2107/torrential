@@ -36,6 +36,7 @@ export default function Engine() {
       <View style={styles.card}>
         {engines.map((engine) => {
           const active = engine.id === current?.id;
+
           return (
             <Tap
               key={engine.id}
@@ -72,10 +73,12 @@ export default function Engine() {
             disabled={starting}
             onPress={async () => {
               setStarting(true);
+
               try {
                 await runOnPhone();
                 leave();
               } catch {}
+
               setStarting(false);
             }}
             style={[styles.engine, styles.rowRule]}

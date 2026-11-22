@@ -31,6 +31,7 @@ export function Tap({
 }) {
   const pressed = useSharedValue(0);
   const wash = useStaged(WASH, STAGE_WASH);
+
   const animated = useAnimatedStyle(() => ({
     transform: [{ scale: 1 - (1 - shrink) * pressed.get() }],
     backgroundColor: highlight ? interpolateColor(pressed.get(), [0, 1], wash) : undefined,

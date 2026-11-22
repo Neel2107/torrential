@@ -130,12 +130,17 @@ export const themes = {
 
 export type ThemeId = keyof typeof themes;
 
+export function isThemeId(name: string): name is ThemeId {
+  return name in themes;
+}
+
 const stored = new File(Paths.document, 'theme');
 
 function readTheme(): ThemeId {
   try {
     const saved = stored.exists ? stored.textSync().trim() : '';
-    return saved in themes ? (saved as ThemeId) : 'sage';
+
+    return isThemeId(saved) ? saved : 'sage';
   } catch {
     return 'sage';
   }
@@ -160,6 +165,7 @@ export const stage: Palette = scheme === 'dark' ? color : sage;
 /** `hex` at `opacity`, for washes and fades of a token. */
 export function alpha(hex: string, opacity: number): string {
   const n = parseInt(hex.slice(1), 16);
+
   return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${opacity})`;
 }
 

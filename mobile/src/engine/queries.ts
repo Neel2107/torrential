@@ -19,6 +19,7 @@ export const keys = {
 
 export function useHome() {
   const link = useLink();
+
   return useQuery({
     queryKey: [...keys.home, link.base],
     queryFn: ({ signal }) => get<Home>(link, '/api/home', signal),
@@ -27,6 +28,7 @@ export function useHome() {
 
 export function useTitle(id: string, enabled = true) {
   const link = useLink();
+
   return useQuery({
     queryKey: [...keys.title(id), link.base],
     enabled: enabled && id.length > 0,
@@ -37,6 +39,7 @@ export function useTitle(id: string, enabled = true) {
 export function usePrefetchTitle() {
   const link = useLink();
   const client = useQueryClient();
+
   return useCallback(
     (id: string) => {
       client.prefetchQuery({
@@ -55,6 +58,7 @@ export function usePrefetchTitle() {
 /** What is popular now, films or series. Kept for an hour; a failure, such as an engine without the route, leaves it empty. */
 export function usePopular(kind: 'film' | 'series', enabled = true) {
   const link = useLink();
+
   return useQuery({
     queryKey: [...keys.popular(kind), link.base],
     enabled,
@@ -67,6 +71,7 @@ export function usePopular(kind: 'film' | 'series', enabled = true) {
 export function useTitleSearch(q: string) {
   const link = useLink();
   const query = q.trim();
+
   return useQuery({
     queryKey: [...keys.titles(query), link.base],
     queryFn: ({ signal }) => get<TitleSearch>(link, `/api/titles?q=${encodeURIComponent(query)}`, signal),
@@ -78,11 +83,13 @@ export function useTitleSearch(q: string) {
 
 export function useMe() {
   const link = useLink();
+
   return useQuery({ queryKey: [...keys.me, link.base], queryFn: ({ signal }) => get<Me>(link, '/api/me', signal) });
 }
 
 export function useVersion() {
   const link = useLink();
+
   return useQuery({
     queryKey: [...keys.version, link.base],
     queryFn: ({ signal }) => get<Version>(link, '/api/version', signal),
@@ -92,13 +99,16 @@ export function useVersion() {
 export function useSaveTitle(id: string) {
   const link = useLink();
   const client = useQueryClient();
+
   return useMutation({
     mutationFn: (saved: boolean) => post<{ saved: boolean }>(link, '/api/library', { title: id, saved }),
     onMutate: async (saved) => {
       const key = [...keys.title(id), link.base];
       await client.cancelQueries({ queryKey: key });
       const before = client.getQueryData<TitlePage>(key);
+
       if (before) client.setQueryData<TitlePage>(key, { ...before, saved });
+
       return { before };
     },
     onError: (_error, _saved, context) => {
@@ -113,6 +123,7 @@ export function useSaveTitle(id: string) {
 
 export function useTvs(polling: boolean) {
   const link = useLink();
+
   return useQuery({
     queryKey: [...keys.tvs, link.base],
     queryFn: ({ signal }) => get<TvList>(link, '/api/tvs', signal),
@@ -128,6 +139,7 @@ const IDLE_CAST_MS = 60_000;
 
 export function useCasts() {
   const link = useLink();
+
   return useQuery({
     queryKey: [...keys.tvs, link.base],
     queryFn: ({ signal }) => get<TvList>(link, '/api/tvs', signal),
@@ -138,6 +150,7 @@ export function useCasts() {
 export function useCastControl() {
   const link = useLink();
   const client = useQueryClient();
+
   return useMutation({
     mutationFn: (body: { tv: string } & CastAction) => post<{ cast: Cast }>(link, '/api/cast/control', body),
     onSuccess: ({ cast }) =>

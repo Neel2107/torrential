@@ -21,6 +21,7 @@ export function TitleTap({
   const { ref, open } = useHeroSource(id);
   const prefetch = usePrefetchTitle();
   const href = { pathname: '/title/[id]', params: { id } } as const;
+
   const press = (
     <Tap
       {...tap}
@@ -41,7 +42,9 @@ export function TitleTap({
       <Source value={ref}>{children}</Source>
     </Tap>
   );
+
   if (HERO) return press;
+
   return (
     <Link href={href} onPress={onOpen} asChild>
       {press}
@@ -51,7 +54,9 @@ export function TitleTap({
 
 export function TitlePoster({ children }: { children: ReactNode }) {
   const ref = use(Source);
+
   if (!ref) return children;
+
   return (
     <Link.AppleZoom>
       <View ref={ref} collapsable={false}>

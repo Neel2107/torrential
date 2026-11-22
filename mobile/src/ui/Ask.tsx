@@ -18,11 +18,13 @@ const listeners = new Set<() => void>();
 
 function show(next: Asking | null) {
   asking = next;
+
   for (const listener of listeners) listener();
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
+
   return () => listeners.delete(listener);
 }
 
@@ -43,8 +45,10 @@ export function ask(question: Question): Promise<boolean> {
         ],
         { cancelable: true, onDismiss: () => resolve(false) },
       );
+
       return;
     }
+
     asking?.answer(false);
     show({ ...question, answer: resolve });
   });
@@ -52,6 +56,7 @@ export function ask(question: Question): Promise<boolean> {
 
 export function AskHost() {
   const current = useSyncExternalStore(subscribe, () => asking);
+
   return current ? <Dialog key={current.title + current.message} asking={current} /> : null;
 }
 
@@ -65,6 +70,7 @@ function Dialog({ asking: question }: { asking: Asking }) {
     if (asking === question) show(null);
     question.answer(yes);
   };
+
   const close = (yes: boolean) => {
     if (answered.current) return;
     answered.current = true;
@@ -77,6 +83,7 @@ function Dialog({ asking: question }: { asking: Asking }) {
   }, [shown]);
 
   const backdrop = useAnimatedStyle(() => ({ opacity: shown.get() }));
+
   const card = useAnimatedStyle(() => ({
     opacity: shown.get(),
     transform: [{ translateY: (1 - shown.get()) * 12 }, { scale: 0.96 + shown.get() * 0.04 }],

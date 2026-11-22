@@ -44,9 +44,11 @@ function Play() {
     at?: string;
     stream?: string;
   }>();
+
   if (__DEV__) forceStream(stream === '1');
   const [attempt, setAttempt] = useState(0);
   useEffect(() => mark('play'), []);
+
   return ref ? (
     <ByTorrent
       torrent={ref}
@@ -80,9 +82,11 @@ function ByTorrent({
   retry: () => void;
 }) {
   const start = useTorrentPlay(torrent, attempt, file);
+
   if (start.phase === 'ready') {
     return <Player video={null} play={start.play} release={start.release} resumeAt={at} title={null} episode={null} />;
   }
+
   return <Starting video={null} start={start} onRetry={retry} />;
 }
 
@@ -101,8 +105,10 @@ function ByTitle({
 }) {
   const start = useTitlePlay(video, attempt, source);
   const [takeover, setTakeover] = useState<{ from: Start; to: Takeover } | null>(null);
+
   if (start.phase === 'ready') {
     const shown = takeover?.from === start ? takeover.to : null;
+
     return (
       <Player
         key={shown?.play.id ?? start.play.id}
@@ -117,6 +123,7 @@ function ByTitle({
       />
     );
   }
+
   return <Starting video={video} pinned={Boolean(source)} start={start} onRetry={retry} />;
 }
 
@@ -146,6 +153,7 @@ function Starting({
   const [choosing, setChoosing] = useState(false);
   const id = video ? titleOf(video) : null;
   const name = start.title?.name ?? '';
+
   const detail = start.episode
     ? `${episodeCode(start.episode)} · ${episodeName(start.episode)}`
     : start.title?.year

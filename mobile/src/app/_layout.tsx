@@ -18,12 +18,15 @@ import { PortalHost } from '@/ui/Portal';
 import { color, scheme, stage } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
+
 Appearance.setColorScheme(scheme);
+
 SystemUI.setBackgroundColorAsync(color.paper);
 
 AppState.addEventListener('change', (state) => focusManager.setFocused(state === 'active'));
 
 const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+
 const theme = {
   ...base,
   colors: {
@@ -42,6 +45,7 @@ export const unstable_settings = { anchor: '(tabs)' };
 function Routes() {
   const { session, forget } = useSession();
   const engineKey = session.state === 'paired' ? `${session.link.base}|${session.link.token ?? ''}` : 'unpaired';
+
   const client = useMemo(
     () =>
       new QueryClient({
@@ -65,6 +69,7 @@ function Routes() {
       client.getQueryCache().subscribe((event) => {
         if (event.type !== 'updated' || event.action.type !== 'error' || !engineId) return;
         const error = event.action.error;
+
         if (error instanceof EngineError && error.unpaired) forget(engineId);
       }),
     [client, forget, engineId],
@@ -173,6 +178,7 @@ function MaybeJobs({ paired, children }: { paired: boolean; children: ReactNode 
 
 export default function RootLayout() {
   const [loaded] = useFonts(FONTS);
+
   if (!loaded) return null;
 
   return (

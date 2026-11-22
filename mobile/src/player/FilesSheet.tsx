@@ -18,12 +18,15 @@ export function videosOf(play: PlayInfo): TorrentFile[] {
 function sharedStart(names: string[]): string {
   const words = names.map((name) => name.split(' '));
   let shared = 0;
+
   while (words.every((own) => own.length > shared + 1 && own[shared] === words[0]![shared])) shared += 1;
+
   return words[0]!.slice(0, shared).join(' ');
 }
 
 function spaced(path: string): string {
   const name = readable(fileName(path));
+
   return `${name.title} ${name.tags}`.trim();
 }
 
@@ -41,8 +44,9 @@ export function FilesSheet({
   const shared = sharedStart(videos.map((file) => spaced(file.path)));
 
   return (
-    <Sheet onClose={onClose}>
-      {(close) => (
+    <Sheet
+      onClose={onClose}
+      render={(close) => (
         <>
           <View style={styles.head}>
             <Text style={type.title} numberOfLines={1}>
@@ -51,8 +55,9 @@ export function FilesSheet({
             <Text style={type.caption}>{videos.length} videos in this torrent</Text>
           </View>
           <ScrollView contentContainerStyle={{ paddingBottom: space.md }}>
-            {videos.map((file, index) => {
+            {videos.map((file) => {
               const playing = file.index === current;
+
               return (
                 <Tap
                   key={file.index}
@@ -81,7 +86,7 @@ export function FilesSheet({
           </ScrollView>
         </>
       )}
-    </Sheet>
+    />
   );
 }
 

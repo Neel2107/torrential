@@ -14,7 +14,9 @@ const IN = new Keyframe({
 
 export function Check({ shown, size = 20 }: { shown: boolean; size?: number }) {
   const tone = useTone();
+
   if (!shown) return null;
+
   return (
     <Animated.View entering={IN} exiting={vanish}>
       <Icon name={icons.check} size={size} tint={tone.action} weight={2.6} />

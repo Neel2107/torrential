@@ -20,9 +20,11 @@ export default function Relocate() {
 
   const submit = async () => {
     const found = parsePairing(text);
+
     if (!found) return setProblem('Type the address of the computer, such as 192.168.1.20 or mac.local.');
     setBusy(true);
     setProblem(null);
+
     try {
       await relocate(found.base);
       leave();
@@ -35,6 +37,7 @@ export default function Relocate() {
             : 'Nothing answered at that address.',
       );
     }
+
     setBusy(false);
   };
 

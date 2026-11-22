@@ -19,17 +19,22 @@ export function useDataSaver(): [boolean, (next: boolean) => void] {
   const current = useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
+
       return () => listeners.delete(listener);
     },
     () => on,
   );
+
   const set = (next: boolean) => {
     on = next;
     const text = next ? 'on' : 'off';
+
     try {
       stored.writeSync(text);
     } catch {}
+
     for (const listener of listeners) listener();
   };
+
   return [current, set];
 }

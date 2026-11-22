@@ -58,24 +58,31 @@ export function SeekBar({
   useEffect(() => {
     const previous = before.current;
     before.current = downloaded;
+
     if (!previous || reduced) return;
     const landed = arrivals(previous, downloaded);
+
     if (landed.length > 0) setFresh((last) => ({ wave: last.wave + 1, runs: landed }));
   }, [downloaded, reduced]);
   const fraction = duration > 0 ? Math.min(1, position / duration) : 0;
   const shown = preview ?? position;
 
   const marks = duration > 0 ? chapters.filter((chapter) => chapter.start > 1 && chapter.start < duration - 1) : [];
+
   const chapterAt = (seconds: number) => {
     let found: Chapter | null = null;
+
     for (const chapter of chapters) if (chapter.start <= seconds) found = chapter;
+
     return found;
   };
+
   const lastChapter = useRef<Chapter | null>(null);
 
   const pick = (px: number, final: boolean) => {
     if (duration <= 0) return onScrubbing(false);
     const seconds = Math.max(0, Math.min(duration, (px / Math.max(1, width)) * duration));
+
     if (final) {
       setPreview(null);
       onScrubbing(false);
@@ -83,6 +90,7 @@ export function SeekBar({
     } else {
       setPreview(seconds);
       const chapter = chapterAt(seconds);
+
       if (chapter !== lastChapter.current) {
         if (lastChapter.current !== null && chapter !== null) Haptics.selectionAsync();
         lastChapter.current = chapter;
@@ -125,6 +133,7 @@ export function SeekBar({
   useEffect(() => {
     if (preview === null) return;
     const timer = setTimeout(() => setThumbTime(wanted), 120);
+
     return () => clearTimeout(timer);
   }, [wanted, preview]);
 
@@ -175,17 +184,23 @@ export function SeekBar({
             ]}
             onAccessibilityAction={(event) => {
               const action = event.nativeEvent.actionName;
+
               if (action === 'next') {
                 const after = chapters.find((chapter) => chapter.start > position + 1);
+
                 if (after) onSeek(after.start);
+
                 return;
               }
+
               if (action === 'previous') {
                 const here = chapterAt(position);
                 const before = here && position - here.start < 3 ? chapterAt(here.start - 1) : here;
                 onSeek(before?.start ?? 0);
+
                 return;
               }
+
               onSeek(position + (action === 'increment' ? 10 : -10));
             }}
           >
@@ -234,6 +249,7 @@ function Glow({ run }: { run: Run }) {
     shine.set(withTiming(0, GLOW));
   }, [shine]);
   const style = useAnimatedStyle(() => ({ opacity: shine.get() }));
+
   return (
     <Animated.View
       pointerEvents="none"

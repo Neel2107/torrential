@@ -25,9 +25,12 @@ function decoded(text: string): string {
 function describe(ref: string): string {
   if (ref.startsWith('magnet:')) {
     const name = /[?&]dn=([^&]+)/.exec(ref)?.[1];
+
     return name ? decoded(name.replace(/\+/g, ' ')) : 'Magnet link';
   }
+
   if (/^https?:/i.test(ref)) return decoded(ref.split('/').pop()?.split('?')[0] ?? ref);
+
   return `Infohash ${ref.slice(0, 10)}…`;
 }
 
@@ -47,6 +50,7 @@ export default function Add() {
     Clipboard.getStringAsync()
       .then((value) => {
         const torrent = findTorrent(value);
+
         if (torrent) setClip(torrent);
       })
       .catch(() => {});
@@ -55,16 +59,19 @@ export default function Add() {
   const readFile = (uri: string) => {
     setReading(true);
     setProblem(null);
+
     return magnetFromTorrentFile(uri)
-      .then(setText, (error: unknown) =>
-        setProblem(error instanceof Error ? error.message : 'Could not read that file.'),
+      .then(setText, (cause: unknown) =>
+        setProblem(cause instanceof Error ? cause.message : 'Could not read that file.'),
       )
       .then(() => setReading(false));
   };
 
   useEffect(() => {
     const payload = share.sharedPayloads[0];
+
     if (!payload) return;
+
     if (payload.shareType === 'text' || payload.shareType === 'url') {
       setText(payload.value);
       clearSharedPayloads();

@@ -10,11 +10,13 @@ export function progressOf(item: Continue): number | null {
 
 export function subtitleOf(item: Continue): string {
   if (item.episode) return `${episodeCode(item.episode)} · ${episodeName(item.episode)}`;
+
   return item.title.year ? String(item.title.year) : '';
 }
 
 export function remainingOf(item: Continue): string {
   if (item.resume_at !== null && item.duration) return minutesLeft(item.resume_at, item.duration);
+
   return item.episode ? 'Next episode' : 'Not started';
 }
 

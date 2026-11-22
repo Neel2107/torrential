@@ -36,7 +36,7 @@ export function useStallRecovery({
   held: { current: boolean };
   now: () => number;
   onTakeover: (takeover: Takeover) => void;
-}): { recovery: Recovery; retry: () => void } {
+}) {
   const link = useLink();
   const viewer = useViewer();
   const [recovery, dispatch] = useReducer(recover, WATCHING);
@@ -47,6 +47,7 @@ export function useStallRecovery({
 
   useEffect(() => {
     if (!video) return;
+
     const timer = setInterval(() => {
       const { job, status } = seen.current;
       const time = player.currentTime;
@@ -60,6 +61,7 @@ export function useStallRecovery({
         failed: job.state === 'error',
       });
     }, SAMPLE_MS);
+
     return () => clearInterval(timer);
   }, [video, player, held]);
 
@@ -75,6 +77,7 @@ export function useStallRecovery({
       },
       () => {},
     );
+
     return () => stop.abort();
   }, [switching, video, link, play.id]);
 
@@ -94,6 +97,7 @@ export function RecoveryNotice({
   useEffect(() => {
     if (!showSwitched) return;
     const timer = setTimeout(() => setShowSwitched(false), SWITCHED_MS);
+
     return () => clearTimeout(timer);
   }, [showSwitched]);
 
@@ -111,6 +115,7 @@ export function RecoveryNotice({
     ) : showSwitched ? (
       <Text style={styles.text}>Switched to another source.</Text>
     ) : null;
+
   if (!notice) return null;
 
   return (

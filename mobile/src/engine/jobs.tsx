@@ -25,17 +25,21 @@ function createStore(): Store {
   let state: State = { jobs: new Map(), live: false };
   let view: Jobs = { jobs: [], live: false };
   const listeners = new Set<() => void>();
+
   return {
     get: () => view,
     subscribe: (listener) => {
       listeners.add(listener);
+
       return () => listeners.delete(listener);
     },
     update: (change) => {
       const next = change(state);
+
       if (next === state) return;
       state = next;
       view = { jobs: [...next.jobs.values()].sort((a, b) => b.added_at - a.added_at), live: next.live };
+
       for (const listener of listeners) listener();
     },
   };
@@ -60,12 +64,16 @@ export function JobsProvider({ children }: { children: ReactNode }) {
       attempt = 0;
       setState((previous) => {
         if (event.event === 'snapshot') return { jobs: new Map(event.jobs.map((job) => [job.id, job])), live: true };
+
         if (event.event === 'job') return { jobs: new Map(previous.jobs).set(event.job.id, event.job), live: true };
+
         if (event.event === 'removed') {
           const jobs = new Map(previous.jobs);
           jobs.delete(event.id);
+
           return { jobs, live: true };
         }
+
         return previous.live ? previous : { ...previous, live: true };
       });
     };
@@ -73,12 +81,15 @@ export function JobsProvider({ children }: { children: ReactNode }) {
     const open = async () => {
       generation += 1;
       const mine = generation;
+
       while (!stopped && mine === generation && AppState.currentState === 'active') {
         controller = new AbortController();
         heard = Date.now();
+
         try {
           await events<Event>(link, '/api/events', controller.signal, apply);
         } catch {}
+
         if (stopped || mine !== generation) return;
         setState((previous) => ({ ...previous, live: false }));
         attempt += 1;
@@ -91,16 +102,19 @@ export function JobsProvider({ children }: { children: ReactNode }) {
     }, 5_000);
 
     open();
+
     const subscription = AppState.addEventListener('change', (next) => {
       if (next === 'active') {
         attempt = 0;
         controller?.abort();
+
         if (!stopped) open();
       } else {
         generation += 1;
         controller?.abort();
       }
     });
+
     return () => {
       stopped = true;
       clearInterval(watchdog);
@@ -114,12 +128,15 @@ export function JobsProvider({ children }: { children: ReactNode }) {
 
 function useStore(): Store {
   const store = use(Context);
+
   if (!store) throw new Error('jobs read outside JobsProvider');
+
   return store;
 }
 
 export function useJobs(): Jobs {
   const store = useStore();
+
   return useSyncExternalStore(store.subscribe, store.get);
 }
 
@@ -127,12 +144,16 @@ export function useJobs(): Jobs {
 export function useJobsSelect<T>(select: (jobs: Jobs) => T, same: (a: T, b: T) => boolean = Object.is): T {
   const store = useStore();
   const last = useRef<{ value: T } | null>(null);
+
   const read = () => {
     const next = select(store.get());
+
     if (last.current && same(last.current.value, next)) return last.current.value;
     last.current = { value: next };
+
     return next;
   };
+
   return useSyncExternalStore(store.subscribe, read);
 }
 
@@ -155,6 +176,7 @@ const EPISODE = /s(\d{1,2})[ ._-]*e(\d{1,3})|\b(\d{1,2})x(\d{2,3})\b/i;
 /** The episode numbers a season download picked, or null when it picked them all or its names do not say. */
 export function pickedEpisodes(job: Job): number[] | null {
   if (job.selection.kind !== 'patterns') return null;
+
   const numbers = [
     ...new Set(
       job.selection.value
@@ -163,12 +185,14 @@ export function pickedEpisodes(job: Job): number[] | null {
         .map((found) => Number(found[2] ?? found[4])),
     ),
   ].sort((a, b) => a - b);
+
   return numbers.length > 0 ? numbers : null;
 }
 
 function episodesOf(job: Job): string | null {
   if (job.title && /e\d/i.test(job.title.span)) return null;
   const names = job.selection.kind === 'patterns' ? job.selection.value : job.path ? [job.path] : [];
+
   const numbers = [
     ...new Set(
       names
@@ -177,14 +201,18 @@ function episodesOf(job: Job): string | null {
         .map((found) => Number(found[2] ?? found[4])),
     ),
   ].sort((a, b) => a - b);
+
   if (numbers.length === 0) return null;
+
   if (numbers.length === 1) return `E${numbers[0]}`;
+
   return `${numbers.length} episodes`;
 }
 
-export function useJobName(job: Job): { title: string; tags: string; poster: string | null } {
+export function useJobName(job: Job) {
   const page = useTitle(job.title?.title ?? '', Boolean(job.title));
   const fromName = readable(job.name ?? job.id);
+
   if (job.title && page.data) {
     const span =
       job.title.span === 'film'
@@ -192,8 +220,10 @@ export function useJobName(job: Job): { title: string; tags: string; poster: str
           ? String(page.data.year)
           : ''
         : [job.title.span.toUpperCase(), episodesOf(job)].filter(Boolean).join(' ');
+
     return { title: page.data.name, tags: span, poster: job.title.title };
   }
+
   return { ...fromName, poster: null };
 }
 

@@ -16,14 +16,17 @@ const WHOLE: Downloaded = Array.from({ length: PIECE_RUNS }, () => 1);
 
 function fromTorrentMap(job: Job, file: StreamedFile, totalSize: number): Downloaded {
   const runs = arrived(job, file, totalSize);
+
   return Array.from({ length: PIECE_RUNS }, (_, i) => {
     const middle = (i + 0.5) / PIECE_RUNS;
+
     return runs.find((run) => run.from <= middle && middle < run.to)?.share ?? 0;
   });
 }
 
 export function usePlayingJob(job: Job): Job {
   const { jobs } = useJobs();
+
   return jobs.find((candidate) => candidate.id === job.id) ?? job;
 }
 
@@ -37,6 +40,7 @@ export function useDownloaded(job: Job, file: StreamedFile, totalSize: number): 
     if (done) return;
     const stop = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
+
     const poll = () =>
       get<FilePieces>(link, `/api/pieces?id=${id}&file=${file.index}`, stop.signal)
         .then((map) => setOwn([...map.pieces].map((eighths) => (Number(eighths) || 0) / 8)))
@@ -44,7 +48,9 @@ export function useDownloaded(job: Job, file: StreamedFile, totalSize: number): 
         .finally(() => {
           if (!stop.signal.aborted) timer = setTimeout(poll, POLL_MS);
         });
+
     poll();
+
     return () => {
       stop.abort();
       clearTimeout(timer);
@@ -55,6 +61,7 @@ export function useDownloaded(job: Job, file: StreamedFile, totalSize: number): 
     () => (own || done ? null : fromTorrentMap(job, file, totalSize)),
     [own, done, job, file, totalSize],
   );
+
   return done ? WHOLE : (own ?? coarse ?? WHOLE);
 }
 
@@ -64,14 +71,17 @@ export function runsOf(downloaded: Downloaded): Run[] {
   downloaded.forEach((share, i) => {
     if (share <= 0) return;
     const last = runs.at(-1);
+
     if (last && last.share === share && Math.abs(last.to - i * step) < 1e-9) last.to = (i + 1) * step;
     else runs.push({ from: i * step, to: (i + 1) * step, share });
   });
+
   return runs;
 }
 
 /** Stretches whose share grew since `before`, as fractions of the file. */
 export function arrivals(before: Downloaded, now: Downloaded): Run[] {
   if (before.length !== now.length) return [];
+
   return runsOf(now.map((share, i) => (share > before[i] ? 1 : 0)));
 }

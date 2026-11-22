@@ -15,7 +15,7 @@ Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
 ```bash
 npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
 npx expo start              # start the dev server
-npx expo lint               # lint
+npx oxlint src              # lint (Node 22)
 npx tsc --noEmit            # typecheck
 npx expo-doctor             # diagnose dependency and config issues
 npx expo install --fix      # fix incompatible package versions
@@ -45,9 +45,10 @@ We build locally, not on EAS. The app runs torrential's engine inside itself, so
 
 ## This app
 
-- **Check:** `npm run -s check` runs tsc, ESLint (`eslint.config.js`, at most 37 warnings, all known debt), Prettier and `scripts/compiler-check.js`. The compiler check fails when React Compiler skips more components and hooks than it does today (9). Don’t raise that number; fix the cause.
+- **Check:** `npm run -s check` runs tsc, oxlint with the anti-slop rules (`.oxlintrc.json`, plugin vendored in `tools/oxlint/anti-slop`, at most 92 warnings, all known debt, no errors), Prettier and `scripts/compiler-check.js`. oxlint's anti-slop plugin is TypeScript, so use Node 22 (`.nvmrc`; on this Mac `/opt/homebrew/opt/node@22/bin`). The compiler check fails when React Compiler skips more components and hooks than it does today (9). Don’t raise that number; fix the cause.
 - **Shared values:** read and write them with `.get()` and `.set()`, never `.value`. `.value` makes React Compiler skip the whole component.
 - **Worklet to React:** call back from a worklet with `scheduleOnRN` from `react-native-worklets` (`runOnJS` is deprecated). Never call back every frame; use `useAnimatedReaction` at a threshold.
+- **Stored and received data:** JSON the app stores is read through its zod schema in `src/engine/stored.ts` (`readStored`), so a file from an older version falls back instead of crashing. Engine replies go through `fromEngine` in `src/engine/client.ts`, the one place that casts them. Any other type assertion needs a `// SAFETY:` line saying why it holds.
 - **Names:** only hooks start with `use`. An action named `useX` makes ESLint and React Compiler treat it as a hook (`runOnPhone`, not `usePhone`). React Compiler can't compile `try/finally` yet, so put the cleanup after the `try/catch`.
 - **Refs and hook results:** don't read refs while rendering, and don't change a hook's result in place. Set expo-video's properties through `src/player/control.ts`.
 - **Motion tokens:** use the ones in `src/theme.ts` (`motion.out`, `motion.inOut`, `motion.press`, `motion.quick`, `motion.tick`) and the springs `motion.settle`, `motion.snap` and `motion.pop`. Springs take a duration and damping ratio, respect reduced motion, and carry the finger's release velocity.

@@ -40,7 +40,7 @@ export default function SavedVideos() {
             </Text>
           </View>
         }
-        renderItem={({ item, index }) => (
+        renderItem={({ item }) => (
           <Animated.View>
             <Tap
               highlight

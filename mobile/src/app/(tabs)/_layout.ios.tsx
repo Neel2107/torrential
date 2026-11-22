@@ -15,6 +15,7 @@ const SYSTEM_TAB_BAR = 50;
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+
   const downloading = useJobsSelect(({ jobs }) =>
     jobs.some((job) => job.state === 'downloading' || job.state === 'metadata'),
   );

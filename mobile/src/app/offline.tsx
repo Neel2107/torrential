@@ -34,6 +34,7 @@ export default function OfflineScreen() {
 function Offline() {
   const { job } = useLocalSearchParams<{ job: string }>();
   const copy = useCopy(job ?? '');
+
   if (copy?.state !== 'saved') {
     return (
       <View style={[styles.screen, styles.gone]}>
@@ -42,11 +43,13 @@ function Offline() {
       </View>
     );
   }
+
   return <SavedPlayer copy={copy} />;
 }
 
 function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
   const insets = useSafeAreaInsets();
+
   const player = useVideoPlayer({ uri: copy.uri, metadata: { title: copy.label.title } }, (p) => {
     p.keepScreenOnWhilePlaying = true;
     p.timeUpdateEventInterval = 0.25;
@@ -55,6 +58,7 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
 
   const [preferences] = usePlayerPreferences();
   const [cues, setCues] = useState<Cue[]>([]);
+
   const { currentTime } = useEvent(player, 'timeUpdate', {
     currentTime: player.currentTime,
     currentLiveTimestamp: null,
@@ -64,6 +68,7 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
 
   useEffect(() => {
     if (!copy.subtitles) return;
+
     try {
       const parser = new VttParser();
       const text = new File(copy.subtitles).textSync();
@@ -78,20 +83,25 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
     SecureStore.getItemAsync(key)
       .then((saved) => {
         const at = Number(saved);
+
         if (!stopped && at > 5) jumpTo(player, at);
       })
       .catch(() => {})
       .finally(() => {
         restored = true;
       });
+
     const keep = () => {
       const at = player.currentTime;
+
       if (!restored || at < 1) return;
       const near = player.duration > 0 && player.duration - at < ENDING_SECONDS;
       SecureStore.setItemAsync(key, near ? '0' : String(Math.floor(at))).catch(() => {});
     };
+
     const timer = setInterval(keep, KEEP_EVERY_MS);
     const subscription = AppState.addEventListener('change', (next) => next !== 'active' && keep());
+
     return () => {
       stopped = true;
       clearInterval(timer);

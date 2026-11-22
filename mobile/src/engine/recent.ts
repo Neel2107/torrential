@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useState } from 'react';
+import { readStored, recentSearches } from './stored';
 
 const KEY = 'recent-searches';
 const KEEP = 8;
@@ -9,7 +10,7 @@ export function useRecentSearches() {
 
   useEffect(() => {
     SecureStore.getItemAsync(KEY)
-      .then((saved) => saved && setRecent(JSON.parse(saved) as string[]))
+      .then((saved) => setRecent(readStored(recentSearches, saved, [])))
       .catch(() => {});
   }, []);
 
@@ -20,10 +21,12 @@ export function useRecentSearches() {
 
   const remember = useCallback((query: string) => {
     const q = query.trim();
+
     if (!q) return;
     setRecent((previous) => {
       const next = [q, ...previous.filter((item) => item.toLowerCase() !== q.toLowerCase())].slice(0, KEEP);
       SecureStore.setItemAsync(KEY, JSON.stringify(next)).catch(() => {});
+
       return next;
     });
   }, []);
