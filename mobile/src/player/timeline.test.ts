@@ -104,6 +104,22 @@ describe('the source the player is handed', () => {
     });
   });
 
+  test('a file name the engine already encoded is sent as the engine wrote it', () => {
+    const named = aPlay({
+      video: {
+        index: 0,
+        path: 'Sintel 2010 – été.mkv',
+        size: 100,
+        url: '/a1/0/Sintel%202010%20%E2%80%93%20%C3%A9t%C3%A9.mkv',
+        offset: 0,
+      },
+    });
+
+    expect(sourceFor(LINK, named, { kind: 'direct' }, metadata)?.uri).toBe(
+      `${LINK.base}/a1/0/Sintel%202010%20%E2%80%93%20%C3%A9t%C3%A9.mkv`,
+    );
+  });
+
   test('on Android a stream is the engine’s one fragmented MP4, from where it starts', () => {
     const source = sourceFor(LINK, play, { ...COPY, from: 61.5, audio: 3 }, metadata);
 

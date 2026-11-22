@@ -53,7 +53,7 @@ export function sourceFor(link: Link, play: PlayInfo, mode: Mode, metadata: Vide
 
   if (mode.kind === 'direct') {
     return {
-      uri: `${link.base}${encodeURI(play.video.url)}`,
+      uri: `${link.base}${play.video.url}`,
       headers: authHeaders(link),
       metadata,
       contentType: 'progressive',
