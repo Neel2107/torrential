@@ -4,7 +4,11 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
 
     if (/^(content|file):/i.test(path)) return `/add?file=${encodeURIComponent(path)}`;
 
-    if (new URL(path).hostname === 'expo-sharing') return '/add';
+    const { hostname } = new URL(path);
+
+    if (hostname === 'expo-sharing') return '/add';
+
+    if (hostname === 'update') return '/settings?check=now';
 
     return path;
   } catch {

@@ -1,7 +1,7 @@
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,8 +10,10 @@ import { z } from 'zod';
 import { useDataSaver } from '@/engine/dataSaver';
 import { useVersion } from '@/engine/queries';
 import { useSession } from '@/engine/session';
+import { applyLatestUpdate, runningBundle, runtimeVersion, takesUpdates, type UpdatePhase } from '@/updates';
 import { engineStatus } from '@/ui/engineStatus';
 import { Icon, icons } from '@/ui/Icon';
+import { ActionRow } from '@/ui/Row';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
 import { ThemePicker } from '@/ui/ThemePicker';
@@ -22,6 +24,7 @@ const commit = z.string().catch('Unknown').parse(Constants.expoConfig?.extra?.co
 
 export default function Settings() {
   const insets = useSafeAreaInsets();
+  const { check } = useLocalSearchParams<{ check?: string }>();
   const { session } = useSession();
   const version = useVersion();
   const [saver, setSaver] = useDataSaver();
@@ -82,7 +85,8 @@ export default function Settings() {
         <Group title="About" index={3}>
           <Line label="Version" value={Application.nativeApplicationVersion ?? 'Unknown'} />
           <Line label="Build" value={Application.nativeBuildVersion ?? 'Unknown'} />
-          <Line label="Commit" value={commit} last />
+          <Line label="Commit" value={commit} last={!takesUpdates} />
+          {takesUpdates ? <OverTheAir checkNow={check === 'now'} /> : null}
         </Group>
       </ScrollView>
     </View>
@@ -107,6 +111,43 @@ function Group({
       </Text>
       {bare ? children : <View style={styles.card}>{children}</View>}
     </Animated.View>
+  );
+}
+
+const UPDATE_LABELS: Record<UpdatePhase, string> = {
+  idle: 'Check for update',
+  checking: 'Checking for update…',
+  current: 'Up to date',
+  failed: "Couldn't get the update. Try again",
+  restarting: 'Restarting…',
+};
+
+/** "torrential preview" only: what this launch runs, and a row that fetches the newest update and restarts. */
+function OverTheAir({ checkNow }: { checkNow: boolean }) {
+  const [phase, setPhase] = useState<UpdatePhase>(checkNow ? 'checking' : 'idle');
+
+  useEffect(() => {
+    if (checkNow) applyLatestUpdate().then(setPhase);
+  }, [checkNow]);
+
+  const check = async () => {
+    setPhase('checking');
+    setPhase(await applyLatestUpdate());
+  };
+
+  return (
+    <>
+      <Line label="Bundle" value={runningBundle()} />
+      <Line label="Runtime" value={runtimeVersion} />
+      <View style={styles.action}>
+        <ActionRow
+          label={UPDATE_LABELS[phase]}
+          icon={icons.refresh}
+          disabled={phase === 'checking' || phase === 'restarting'}
+          onPress={check}
+        />
+      </View>
+    </>
   );
 }
 
@@ -150,6 +191,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingVertical: 14,
   },
+  action: { paddingHorizontal: space.lg },
   rule: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.rule },
   label: { fontFamily: font.medium, fontSize: 15, color: color.soft },
   lineValue: { fontFamily: font.medium, fontSize: 15, color: color.ink, fontVariant: ['tabular-nums'] },

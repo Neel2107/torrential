@@ -3,7 +3,8 @@
 # to ~/Desktop/torrential-preview.apk and ~/Desktop/torrential-preview-<version>-<build>-<commit>.apk,
 # and puts the development Android project back. It refuses a tree with uncommitted or untracked
 # changes, so every APK is exactly one commit, and its build number (Settings → About) is that commit's
-# count on the branch.
+# count on the branch. It prints the build's runtime version, which over-the-air updates must match
+# (scripts/ota-publish.sh).
 #
 # Runs on the owner's Mac only: it needs Homebrew's openjdk@17, android-commandlinetools and node@22.
 #
@@ -38,3 +39,4 @@ cp android/app/build/outputs/apk/release/app-release.apk ~/Desktop/torrential-pr
 cp ~/Desktop/torrential-preview.apk "$numbered"
 pnpm exec expo prebuild --platform android --clean >/dev/null
 echo "$numbered ($(du -h "$numbered" | cut -f1)), also at ~/Desktop/torrential-preview.apk"
+echo "runtime version $(unzip -p "$numbered" assets/fingerprint): updates from scripts/ota-publish.sh reach it while it prints the same"

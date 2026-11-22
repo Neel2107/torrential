@@ -21,8 +21,17 @@ function buildNumber() {
 }
 
 /**
+ * Where "torrential preview" fetches over-the-air updates: `scripts/ota/server.ts` on the owner's Linux
+ * machine, reached over Tailscale. `OTA_URL` points a build somewhere else.
+ */
+const OTA_URL = process.env.OTA_URL || 'http://100.87.229.89:8790/manifest';
+
+/**
  * `APP_VARIANT=preview` builds "torrential preview", a separate app beside the development one, for
- * testing from a fresh install and for sharing.
+ * testing from a fresh install and for sharing. Only it takes over-the-air updates, and only when asked
+ * (Settings → About → Check for update, or `torrential-preview://update`): it never checks at launch,
+ * so launch makes no request it didn't make before. Its runtime version is the native fingerprint
+ * (`fingerprint.config.js`), so an update only reaches a build with the same native code.
  */
 module.exports = ({ config }) => {
   const build = buildNumber();
@@ -43,5 +52,9 @@ module.exports = ({ config }) => {
       ...(preview && { bundleIdentifier: 'dev.torrential.app.preview' }),
     },
     extra: { ...config.extra, commit },
+    updates: preview
+      ? { url: OTA_URL, enabled: true, checkAutomatically: 'NEVER', fallbackToCacheTimeout: 0 }
+      : { enabled: false, checkAutomatically: 'NEVER' },
+    ...(preview && { runtimeVersion: { policy: 'fingerprint' } }),
   };
 };
