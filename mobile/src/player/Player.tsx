@@ -374,7 +374,7 @@ export function Player({
   const rightSkip = useSharedValue(0);
   const flash = (side: 'left' | 'right') => {
     const value = side === 'left' ? leftSkip : rightSkip;
-    value.value = withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 520, easing: motion.out }));
+    value.set(withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 520, easing: motion.out })));
   };
   const skip = (seconds: number) => {
     poke();
@@ -402,14 +402,14 @@ export function Player({
     .activeOffsetY(18)
     .failOffsetX([-24, 24])
     .onUpdate((event) => {
-      drop.value = Math.max(0, event.translationY);
+      drop.set(Math.max(0, event.translationY));
     })
     .onEnd((event) => {
       if (event.translationY > 100 || event.velocityY > 800) {
-        drop.value = withTiming(600, { duration: 180, easing: motion.out });
+        drop.set(withTiming(600, { duration: 180, easing: motion.out }));
         scheduleOnRN(close);
       } else {
-        drop.value = withSpring(0, { ...motion.snap, velocity: event.velocityY });
+        drop.set(withSpring(0, { ...motion.snap, velocity: event.velocityY }));
       }
     });
   const taps = Gesture.Race(pullDown, sides.swipe, Gesture.Exclusive(doubleTap, tap));
@@ -417,13 +417,13 @@ export function Player({
     .runOnJS(true)
     .onEnd(() => setUnlockShown(true));
   const dropStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: drop.value * 0.8 }, { scale: 1 - Math.min(drop.value, 400) / 2400 }],
-    borderRadius: Math.min(drop.value / 6, 24),
-    opacity: 1 - Math.min(drop.value, 600) / 1200,
+    transform: [{ translateY: drop.get() * 0.8 }, { scale: 1 - Math.min(drop.get(), 400) / 2400 }],
+    borderRadius: Math.min(drop.get() / 6, 24),
+    opacity: 1 - Math.min(drop.get(), 600) / 1200,
   }));
 
-  const leftStyle = useAnimatedStyle(() => ({ opacity: leftSkip.value }));
-  const rightStyle = useAnimatedStyle(() => ({ opacity: rightSkip.value }));
+  const leftStyle = useAnimatedStyle(() => ({ opacity: leftSkip.get() }));
+  const rightStyle = useAnimatedStyle(() => ({ opacity: rightSkip.get() }));
 
   const buffering =
     status === 'loading' ||
@@ -775,9 +775,9 @@ export function Player({
 function PlayButton({ playing, buffering, onPress }: { playing: boolean; buffering: boolean; onPress: () => void }) {
   const pop = useSharedValue(1);
   useEffect(() => {
-    pop.value = withSequence(withTiming(0.85, { duration: 80 }), withSpring(1, motion.pop));
+    pop.set(withSequence(withTiming(0.85, { duration: 80 }), withSpring(1, motion.pop)));
   }, [playing, pop]);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() }] }));
 
   return (
     <Tap shrink={0.9} onPress={onPress} accessibilityLabel={playing ? 'Pause' : 'Play'} style={styles.playButton}>

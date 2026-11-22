@@ -37,8 +37,8 @@ export function TabBar({
   const height = TAB_BAR_HEIGHT + insets.bottom;
 
   const slide = useAnimatedStyle(() => ({
-    transform: [{ translateY: hidden.value * height }],
-    opacity: interpolate(hidden.value, [0, 1], [1, 0.4]),
+    transform: [{ translateY: hidden.get() * height }],
+    opacity: interpolate(hidden.get(), [0, 1], [1, 0.4]),
   }));
 
   return (
@@ -60,7 +60,7 @@ export function TabBar({
                 Haptics.selectionAsync();
                 navigateToTab(route.key);
               }
-              hidden.value = withSpring(0, motion.settle);
+              hidden.set(withSpring(0, motion.settle));
             }}
             onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
           />
@@ -90,11 +90,11 @@ function TabButton({
 
   useEffect(() => {
     if (focused && !reduced) {
-      scale.value = withSequence(withTiming(0.82, { duration: 90, easing: motion.out }), withSpring(1, motion.pop));
+      scale.set(withSequence(withTiming(0.82, { duration: 90, easing: motion.out }), withSpring(1, motion.pop)));
     }
   }, [focused, reduced, scale]);
 
-  const pop = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const pop = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
   return (
     <Pressable

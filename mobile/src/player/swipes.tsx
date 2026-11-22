@@ -61,13 +61,13 @@ export function useSideSwipes({ width, height }: { width: number; height: number
     start.current = now;
     written.current = Math.round(now * 100);
     readout.set(written.current);
-    level.value = now;
-    shown.value = withTiming(1, { duration: motion.press });
+    level.set(now);
+    shown.set(withTiming(1, { duration: motion.press }));
   };
 
   const move = (side: Kind, translationY: number) => {
     const next = Math.min(1, Math.max(0, start.current - (translationY / height) * TRAVEL));
-    level.value = next;
+    level.set(next);
     const percent = Math.round(next * 100);
     if (percent === written.current) return;
     written.current = percent;
@@ -77,7 +77,7 @@ export function useSideSwipes({ width, height }: { width: number; height: number
   };
 
   const end = () => {
-    shown.value = withDelay(500, withTiming(0, { duration: motion.standard }));
+    shown.set(withDelay(500, withTiming(0, { duration: motion.standard })));
   };
 
   const side = (which: Kind) =>
@@ -105,8 +105,8 @@ export function SwipeLevel({
   level: ReturnType<typeof useSideSwipes>['level'];
   shown: ReturnType<typeof useSideSwipes>['shown'];
 }) {
-  const fill = useAnimatedStyle(() => ({ height: `${Math.round(level.value * 100)}%` }));
-  const pill = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ scale: 0.92 + shown.value * 0.08 }] }));
+  const fill = useAnimatedStyle(() => ({ height: `${Math.round(level.get() * 100)}%` }));
+  const pill = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ scale: 0.92 + shown.get() * 0.08 }] }));
 
   const percent = useSyncExternalStore(readout.subscribe, readout.get);
   const icon = kind === 'brightness' ? Sun : percent === 0 ? VolumeX : Volume2;

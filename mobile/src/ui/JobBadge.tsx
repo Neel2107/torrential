@@ -31,17 +31,17 @@ export function JobBadge({ job, landed }: { job: Job; landed: boolean }) {
   const pop = useSharedValue(landed ? 0.4 : 1);
 
   useEffect(() => {
-    progress.value = withTiming(share, { duration: 600, easing: motion.out });
+    progress.set(withTiming(share, { duration: 600, easing: motion.out }));
   }, [progress, share]);
 
   useEffect(() => {
-    if (landed) pop.value = withDelay(80, withSpring(1, motion.pop));
+    if (landed) pop.set(withDelay(80, withSpring(1, motion.pop)));
   }, [landed, pop]);
 
-  const top = useAnimatedStyle(() => ({ opacity: fill(progress.value, 0) }));
-  const middle = useAnimatedStyle(() => ({ opacity: fill(progress.value, 1) }));
-  const last = useAnimatedStyle(() => ({ opacity: fill(progress.value, 2) }));
-  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const top = useAnimatedStyle(() => ({ opacity: fill(progress.get(), 0) }));
+  const middle = useAnimatedStyle(() => ({ opacity: fill(progress.get(), 1) }));
+  const last = useAnimatedStyle(() => ({ opacity: fill(progress.get(), 2) }));
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() }] }));
   const seeding = job.state === 'done' && job.progress.up_rate > 0;
 
   if (filling)
@@ -65,11 +65,11 @@ function Ping() {
   const t = useSharedValue(0);
   useEffect(() => {
     if (reduced) return;
-    t.value = withRepeat(withTiming(1, { duration: PING_MS, easing: Easing.out(Easing.quad) }), -1, false);
+    t.set(withRepeat(withTiming(1, { duration: PING_MS, easing: Easing.out(Easing.quad) }), -1, false));
   }, [reduced, t]);
   const ring = useAnimatedStyle(() => ({
-    opacity: reduced ? 0.25 : 0.45 * (1 - t.value),
-    transform: [{ scale: reduced ? 1.2 : 1 + t.value * 1.2 }],
+    opacity: reduced ? 0.25 : 0.45 * (1 - t.get()),
+    transform: [{ scale: reduced ? 1.2 : 1 + t.get() * 1.2 }],
   }));
   return (
     <View pointerEvents="none" style={styles.ping}>

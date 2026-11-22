@@ -37,9 +37,9 @@ export function TopBar({
   const { hidden } = useChrome();
   const pull = usePullHeight();
 
-  const stretch = useAnimatedStyle(() => ({ height: BAR_HEIGHT + pull.value }));
-  const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.value * BAR_HEIGHT }] }));
-  const fade = useAnimatedStyle(() => ({ opacity: interpolate(hidden.value, [0, 0.6], [1, 0]) }));
+  const stretch = useAnimatedStyle(() => ({ height: BAR_HEIGHT + pull.get() }));
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.get() * BAR_HEIGHT }] }));
+  const fade = useAnimatedStyle(() => ({ opacity: interpolate(hidden.get(), [0, 0.6], [1, 0]) }));
 
   return (
     <>

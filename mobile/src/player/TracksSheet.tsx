@@ -240,9 +240,9 @@ function Disclosure({
 }) {
   const turn = useSharedValue(open ? 1 : 0);
   useEffect(() => {
-    turn.value = withTiming(open ? 1 : 0, { duration: motion.quick, easing: motion.out });
+    turn.set(withTiming(open ? 1 : 0, { duration: motion.quick, easing: motion.out }));
   }, [open, turn]);
-  const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value * 180}deg` }] }));
+  const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get() * 180}deg` }] }));
 
   return (
     <Tap

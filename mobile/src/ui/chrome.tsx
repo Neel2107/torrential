@@ -37,7 +37,7 @@ export function useChromeScroll(pull?: PullHooks) {
   const { hidden } = useChrome();
 
   useEffect(() => {
-    hidden.value = withSpring(0, motion.settle);
+    hidden.set(withSpring(0, motion.settle));
   }, [hidden]);
 
   return useAnimatedScrollHandler<{ last: number }>({
@@ -47,26 +47,26 @@ export function useChromeScroll(pull?: PullHooks) {
     onScroll: (event, context) => {
       const y = event.contentOffset.y;
       if (pull) {
-        pull.offset.value = y;
+        pull.offset.set(y);
         pull.fromBounce(y);
       }
       const last = context.last ?? y;
       context.last = y;
       if (y <= 0) {
-        hidden.value = 0;
+        hidden.set(0);
         return;
       }
       const maxY = event.contentSize.height - event.layoutMeasurement.height;
       if (y >= maxY) return;
-      hidden.value = Math.min(1, Math.max(0, hidden.value + (y - last) / TRAVEL));
+      hidden.set(Math.min(1, Math.max(0, hidden.get() + (y - last) / TRAVEL)));
     },
     onEndDrag: (event) => {
       pull?.endBounce();
       if (event.contentOffset.y <= 0) return;
-      hidden.value = withSpring(hidden.value > 0.5 ? 1 : 0, motion.settle);
+      hidden.set(withSpring(hidden.get() > 0.5 ? 1 : 0, motion.settle));
     },
     onMomentumEnd: () => {
-      hidden.value = withSpring(hidden.value > 0.5 ? 1 : 0, motion.settle);
+      hidden.set(withSpring(hidden.get() > 0.5 ? 1 : 0, motion.settle));
     },
   });
 }

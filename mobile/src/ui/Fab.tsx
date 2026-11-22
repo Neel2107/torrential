@@ -17,8 +17,8 @@ export const FAB_ROOM = ADD_IN_TOP_BAR ? space.xl : 96;
 export function Fab({ icon, label, onPress }: { icon: LucideIcon; label: string; onPress: () => void }) {
   const { hidden, bottom } = useChrome();
   const fade = useAnimatedStyle(() => ({
-    opacity: interpolate(hidden.value, [0, 1], [1, 0.45]),
-    transform: [{ translateY: hidden.value * (TAB_BAR_HEIGHT * 0.6) }],
+    opacity: interpolate(hidden.get(), [0, 1], [1, 0.45]),
+    transform: [{ translateY: hidden.get() * (TAB_BAR_HEIGHT * 0.6) }],
   }));
 
   if (ADD_IN_TOP_BAR) return null;

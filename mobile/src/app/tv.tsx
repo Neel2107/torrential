@@ -214,12 +214,9 @@ function Radar({ active }: { active: boolean }) {
 function Ring({ delay }: { delay: number }) {
   const t = useSharedValue(0);
   useEffect(() => {
-    t.value = withDelay(
-      delay,
-      withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false),
-    );
+    t.set(withDelay(delay, withRepeat(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), -1, false)));
   }, [delay, t]);
-  const style = useAnimatedStyle(() => ({ opacity: 0.6 * (1 - t.value), transform: [{ scale: 0.6 + t.value * 1.4 }] }));
+  const style = useAnimatedStyle(() => ({ opacity: 0.6 * (1 - t.get()), transform: [{ scale: 0.6 + t.get() * 1.4 }] }));
   return <Animated.View style={[styles.ring, style]} />;
 }
 
@@ -233,14 +230,14 @@ function Remote({ cast }: { cast: Cast }) {
 
   const [unreached, setUnreached] = useState(false);
   const pop = useSharedValue(1);
-  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() }] }));
   const [justStarted, setJustStarted] = useState(false);
   const confirmed = useRef(cast.state === 'playing' || cast.state === 'paused');
   useEffect(() => {
     if (cast.state !== 'playing' || confirmed.current) return;
     confirmed.current = true;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    pop.value = withSequence(withTiming(1.18, { duration: 140 }), withSpring(1, motion.pop));
+    pop.set(withSequence(withTiming(1.18, { duration: 140 }), withSpring(1, motion.pop)));
     setJustStarted(true);
     const timer = setTimeout(() => setJustStarted(false), STARTED_SHOWN_MS);
     return () => clearTimeout(timer);

@@ -64,11 +64,11 @@ function Dialog({ asking: question }: { asking: Asking }) {
     question.answer(yes);
   };
   const close = (yes: boolean) => {
-    shown.value = withTiming(0, { duration: 150, easing: motion.out }, (done) => done && scheduleOnRN(finish, yes));
+    shown.set(withTiming(0, { duration: 150, easing: motion.out }, (done) => done && scheduleOnRN(finish, yes)));
   };
 
   useEffect(() => {
-    shown.value = withTiming(1, { duration: 240, easing: motion.out });
+    shown.set(withTiming(1, { duration: 240, easing: motion.out }));
     const back = BackHandler.addEventListener('hardwareBackPress', () => {
       close(false);
       return true;
@@ -76,10 +76,10 @@ function Dialog({ asking: question }: { asking: Asking }) {
     return () => back.remove();
   });
 
-  const backdrop = useAnimatedStyle(() => ({ opacity: shown.value }));
+  const backdrop = useAnimatedStyle(() => ({ opacity: shown.get() }));
   const card = useAnimatedStyle(() => ({
-    opacity: shown.value,
-    transform: [{ translateY: (1 - shown.value) * 12 }, { scale: 0.96 + shown.value * 0.04 }],
+    opacity: shown.get(),
+    transform: [{ translateY: (1 - shown.get()) * 12 }, { scale: 0.96 + shown.get() * 0.04 }],
   }));
 
   return (

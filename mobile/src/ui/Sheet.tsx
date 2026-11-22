@@ -41,10 +41,8 @@ export function Sheet({
   const height = useSharedValue(screen);
 
   const close = () => {
-    offset.value = withTiming(
-      height.value,
-      { duration: 200, easing: motion.out },
-      (done) => done && scheduleOnRN(onClose),
+    offset.set(
+      withTiming(height.get(), { duration: 200, easing: motion.out }, (done) => done && scheduleOnRN(onClose)),
     );
   };
 
@@ -59,25 +57,23 @@ export function Sheet({
   const drag = Gesture.Pan()
     .activeOffsetY([-6, 6])
     .onUpdate((event) => {
-      offset.value = event.translationY > 0 ? event.translationY : event.translationY * 0.15;
+      offset.set(event.translationY > 0 ? event.translationY : event.translationY * 0.15);
     })
     .onEnd((event) => {
-      if (event.translationY > height.value / 3 || event.velocityY > 900) {
-        offset.value = withTiming(
-          height.value,
-          { duration: 180, easing: motion.out },
-          (done) => done && scheduleOnRN(onClose),
+      if (event.translationY > height.get() / 3 || event.velocityY > 900) {
+        offset.set(
+          withTiming(height.get(), { duration: 180, easing: motion.out }, (done) => done && scheduleOnRN(onClose)),
         );
       } else {
-        offset.value = withSpring(0, { ...motion.settle, velocity: event.velocityY });
+        offset.set(withSpring(0, { ...motion.settle, velocity: event.velocityY }));
       }
     });
 
   const sheet = useAnimatedStyle(() => ({
-    transform: [{ translateY: offset.value }],
+    transform: [{ translateY: offset.get() }],
   }));
   const backdrop = useAnimatedStyle(() => ({
-    opacity: interpolate(offset.value, [0, height.value], [1, 0]),
+    opacity: interpolate(offset.get(), [0, height.get()], [1, 0]),
   }));
 
   return (
@@ -88,8 +84,8 @@ export function Sheet({
         </Animated.View>
         <Animated.View
           onLayout={(event) => {
-            height.value = event.nativeEvent.layout.height;
-            if (offset.value >= screen) offset.value = withSpring(0, motion.settle);
+            height.set(event.nativeEvent.layout.height);
+            if (offset.get() >= screen) offset.set(withSpring(0, motion.settle));
           }}
           style={[
             styles.sheet,

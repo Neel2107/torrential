@@ -185,9 +185,9 @@ function SearchHeader({
     }, []),
   );
   const focus = useSharedValue(0);
-  const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.value * BAR_HEIGHT }] }));
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.get() * BAR_HEIGHT }] }));
   const field = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(focus.value, [0, 1], [`${color.action}00`, color.action]),
+    borderColor: interpolateColor(focus.get(), [0, 1], [`${color.action}00`, color.action]),
   }));
 
   return (
@@ -215,8 +215,8 @@ function SearchHeader({
               autoCorrect={false}
               autoCapitalize="none"
               selectionColor={color.action}
-              onFocus={() => (focus.value = withTiming(1, { duration: motion.quick }))}
-              onBlur={() => (focus.value = withTiming(0, { duration: motion.quick }))}
+              onFocus={() => focus.set(withTiming(1, { duration: motion.quick }))}
+              onBlur={() => focus.set(withTiming(0, { duration: motion.quick }))}
               accessibilityLabel="Search"
             />
             {text ? (

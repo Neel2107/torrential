@@ -32,8 +32,8 @@ export function Tap({
   const pressed = useSharedValue(0);
   const wash = useStaged(WASH, STAGE_WASH);
   const animated = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 - (1 - shrink) * pressed.value }],
-    backgroundColor: highlight ? interpolateColor(pressed.value, [0, 1], wash) : undefined,
+    transform: [{ scale: 1 - (1 - shrink) * pressed.get() }],
+    backgroundColor: highlight ? interpolateColor(pressed.get(), [0, 1], wash) : undefined,
   }));
 
   return (
@@ -41,11 +41,11 @@ export function Tap({
       hitSlop={highlight ? undefined : hitSlop}
       accessibilityRole="button"
       onPressIn={(event) => {
-        pressed.value = withTiming(1, { duration: motion.press, easing: motion.out });
+        pressed.set(withTiming(1, { duration: motion.press, easing: motion.out }));
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        pressed.value = withTiming(0, { duration: motion.quick, easing: motion.out });
+        pressed.set(withTiming(0, { duration: motion.quick, easing: motion.out }));
         onPressOut?.(event);
       }}
       onPress={(event) => {

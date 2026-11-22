@@ -73,7 +73,7 @@ export function CastBar({
     if (empty) onHeight(0);
   }, [empty, onHeight]);
 
-  const slide = useAnimatedStyle(() => ({ transform: [{ translateY: (hidden?.value ?? 0) * travel }] }));
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateY: (hidden?.get() ?? 0) * travel }] }));
 
   if (empty) return null;
   return (
@@ -191,7 +191,7 @@ function Line({ fraction }: { fraction: number }) {
     () => withTiming(Math.min(1, Math.max(0, fraction)), { duration: 1000, easing: Easing.linear }),
     [fraction],
   );
-  const fill = useAnimatedStyle(() => ({ width: `${value.value * 100}%` }));
+  const fill = useAnimatedStyle(() => ({ width: `${value.get() * 100}%` }));
   return (
     <View style={styles.line} pointerEvents="none">
       <Animated.View style={[styles.lineFill, fill]} />

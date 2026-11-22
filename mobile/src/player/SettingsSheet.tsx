@@ -149,14 +149,14 @@ export function Chip({
   const on = useSharedValue(selected ? 1 : 0);
   const pop = useSharedValue(1);
   useEffect(() => {
-    on.value = withTiming(selected ? 1 : 0, { duration: motion.quick, easing: motion.out });
-    if (selected) pop.value = withSequence(withTiming(1.08, { duration: 90 }), withSpring(1, motion.pop));
+    on.set(withTiming(selected ? 1 : 0, { duration: motion.quick, easing: motion.out }));
+    if (selected) pop.set(withSequence(withTiming(1.08, { duration: 90 }), withSpring(1, motion.pop)));
   }, [selected, on, pop]);
   const fill = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(on.value, [0, 1], [color.lifted, color.ink]),
-    transform: [{ scale: pop.value }],
+    backgroundColor: interpolateColor(on.get(), [0, 1], [color.lifted, color.ink]),
+    transform: [{ scale: pop.get() }],
   }));
-  const text = useAnimatedStyle(() => ({ color: interpolateColor(on.value, [0, 1], [color.soft, color.paper]) }));
+  const text = useAnimatedStyle(() => ({ color: interpolateColor(on.get(), [0, 1], [color.soft, color.paper]) }));
 
   return (
     <Tap

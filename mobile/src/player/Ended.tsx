@@ -60,14 +60,14 @@ export function Ended({
   }, [next, cancelled]);
 
   useEffect(() => {
-    if (next && !reduced) progress.value = withTiming(1, { duration: UP_NEXT_SECONDS * 1000, easing: Easing.linear });
+    if (next && !reduced) progress.set(withTiming(1, { duration: UP_NEXT_SECONDS * 1000, easing: Easing.linear }));
   }, [next, progress, reduced]);
 
   useEffect(() => {
     if (next) AccessibilityInfo.announceForAccessibility(`Up next in ${UP_NEXT_SECONDS} seconds: ${next.name}`);
   }, [next]);
 
-  const bar = useAnimatedStyle(() => ({ transform: [{ scaleX: progress.value }] }));
+  const bar = useAnimatedStyle(() => ({ transform: [{ scaleX: progress.get() }] }));
 
   return (
     <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.screen}>

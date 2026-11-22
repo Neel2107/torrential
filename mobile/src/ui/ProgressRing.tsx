@@ -14,10 +14,10 @@ export function ProgressRing({ size, fraction, stroke = 2.5 }: { size: number; f
   const filled = useSharedValue(0);
 
   useEffect(() => {
-    filled.value = withTiming(Math.min(1, Math.max(0.02, fraction)), { duration: 600, easing: motion.out });
+    filled.set(withTiming(Math.min(1, Math.max(0.02, fraction)), { duration: 600, easing: motion.out }));
   }, [filled, fraction]);
 
-  const arc = useAnimatedProps(() => ({ strokeDashoffset: around * (1 - filled.value) }));
+  const arc = useAnimatedProps(() => ({ strokeDashoffset: around * (1 - filled.get()) }));
 
   return (
     <Svg width={size} height={size} style={[StyleSheet.absoluteFill, styles.turned]} pointerEvents="none">

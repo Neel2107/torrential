@@ -225,12 +225,12 @@ function Scanner({ onScan, busy }: { onScan: (data: string) => void; busy: boole
 function Reticle({ locked }: { locked: boolean }) {
   const lock = useSharedValue(0);
   useEffect(() => {
-    lock.value = locked ? withSpring(1, motion.pop) : withTiming(0, { duration: motion.quick });
+    lock.set(locked ? withSpring(1, motion.pop) : withTiming(0, { duration: motion.quick }));
   }, [locked, lock]);
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 - 0.12 * lock.value }],
-    borderColor: interpolateColor(lock.value, [0, 1], ['rgba(240, 233, 220, 0.85)', color.action]),
-    borderWidth: 2 + lock.value,
+    transform: [{ scale: 1 - 0.12 * lock.get() }],
+    borderColor: interpolateColor(lock.get(), [0, 1], ['rgba(240, 233, 220, 0.85)', color.action]),
+    borderWidth: 2 + lock.get(),
   }));
   return <Animated.View style={[styles.reticle, style]} pointerEvents="none" />;
 }

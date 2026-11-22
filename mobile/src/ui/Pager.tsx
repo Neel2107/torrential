@@ -69,10 +69,10 @@ export function Pager({
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
       const at = event.contentOffset.x / width;
-      position.value = at;
+      position.set(at);
       for (const page of [Math.floor(at), Math.ceil(at)]) {
-        if (page < 0 || asked.value & (1 << page)) continue;
-        asked.value |= 1 << page;
+        if (page < 0 || asked.get() & (1 << page)) continue;
+        asked.set(asked.get() | (1 << page));
         scheduleOnRN(near, page);
       }
     },
@@ -128,8 +128,8 @@ export function TabStrip({
 
   const underline = useAnimatedStyle(() => ({
     opacity: ready ? 1 : 0,
-    left: interpolate(position.value, inputs, lefts),
-    width: interpolate(position.value, inputs, sizes),
+    left: interpolate(position.get(), inputs, lefts),
+    width: interpolate(position.get(), inputs, sizes),
   }));
 
   const spot = spots[index];
@@ -145,7 +145,7 @@ export function TabStrip({
       onPress={() => {
         if (i === index) return;
         Haptics.selectionAsync();
-        position.value = glide ? withTiming(i, GLIDE) : i;
+        position.set(glide ? withTiming(i, GLIDE) : i);
         onChange(i);
       }}
       accessibilityRole="tab"
@@ -191,7 +191,7 @@ export function TabStrip({
 
 function TabLabel({ label, at, position }: { label: string; at: number; position: SharedValue<number> }) {
   const style = useAnimatedStyle(() => {
-    const near = Math.max(0, 1 - Math.abs(position.value - at));
+    const near = Math.max(0, 1 - Math.abs(position.get() - at));
     return { color: interpolateColor(near, [0, 1], [color.pencil, color.ink]) };
   });
   return (

@@ -99,7 +99,7 @@ export function useHeroSource(id: string) {
     const source = () => measure(ref.current);
     const from = await source();
     if (from) {
-      progress.value = 0;
+      progress.set(0);
       tokens += 1;
       const to = posterRect(Dimensions.get('window').width);
       set({ token: tokens, id, from, to, phase: 'opening', shown: false, ready: false, source });
@@ -122,7 +122,7 @@ export function useHeroPage(id: string) {
   const [gone, setGone] = useState(false);
 
   useEffect(() => {
-    if (HERO && !flown.value) own.value = withTiming(1, FADE);
+    if (HERO && !flown.get()) own.set(withTiming(1, FADE));
   }, [flown, own]);
 
   const focused = useIsFocused();
@@ -136,11 +136,13 @@ export function useHeroPage(id: string) {
     const current = flight;
     const fade = () => {
       if (current?.id === id) update(current.token, null);
-      if (flown.value) own.value = interpolate(progress.value, PAGE, [0, 1], Extrapolation.CLAMP);
-      flown.value = 0;
-      own.value = withTiming(0, FADE, (done) => {
-        if (done) scheduleOnRN(go);
-      });
+      if (flown.get()) own.set(interpolate(progress.get(), PAGE, [0, 1], Extrapolation.CLAMP));
+      flown.set(0);
+      own.set(
+        withTiming(0, FADE, (done) => {
+          if (done) scheduleOnRN(go);
+        }),
+      );
     };
     if (current?.id !== id || current.phase !== 'open') return fade();
     Promise.all([measure(slot.current), current.source()]).then(([to, from]) => {
@@ -151,7 +153,7 @@ export function useHeroPage(id: string) {
   });
 
   const style = useAnimatedStyle(() => ({
-    opacity: flown.value ? interpolate(progress.value, PAGE, [0, 1], Extrapolation.CLAMP) : own.value,
+    opacity: flown.get() ? interpolate(progress.get(), PAGE, [0, 1], Extrapolation.CLAMP) : own.get(),
   }));
 
   return { style, Provider: Slot.Provider, slot };
@@ -206,11 +208,13 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
     if (started.current) return;
     started.current = true;
     if (!back) since('open', 'tap to flight');
-    visible.value = 1;
+    visible.set(1);
     update(token, { shown: true });
-    progress.value = withTiming(back ? 0 : 1, back ? CLOSE : OPEN, (done) => {
-      if (done) scheduleOnRN(land, token, back);
-    });
+    progress.set(
+      withTiming(back ? 0 : 1, back ? CLOSE : OPEN, (done) => {
+        if (done) scheduleOnRN(land, token, back);
+      }),
+    );
   };
 
   useEffect(() => {
@@ -226,12 +230,12 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
   }, [ready]);
 
   const style = useAnimatedStyle(() => {
-    const p = progress.value;
+    const p = progress.get();
     const scale = interpolate(p, [0, 1], [from.width / to.width, 1]);
     const centerX = interpolate(p, [0, 1], [from.x + from.width / 2, to.x + to.width / 2]);
     const centerY = interpolate(p, [0, 1], [from.y + from.height / 2, to.y + to.height / 2]);
     return {
-      opacity: visible.value,
+      opacity: visible.get(),
       transform: [
         { translateX: centerX - (to.x + to.width / 2) },
         { translateY: centerY - (to.y + to.height / 2) },

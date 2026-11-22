@@ -17,10 +17,10 @@ export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
 
   useEffect(() => {
     if (reduced) return;
-    pulse.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true);
+    pulse.set(withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true));
   }, [pulse, reduced]);
 
-  const animated = useAnimatedStyle(() => ({ opacity: 0.55 + pulse.value * 0.45 }));
+  const animated = useAnimatedStyle(() => ({ opacity: 0.55 + pulse.get() * 0.45 }));
 
   return <Animated.View style={[{ backgroundColor: color.raised }, animated, style]} />;
 }

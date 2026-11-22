@@ -24,15 +24,15 @@ export const Burst = forwardRef<BurstHandle, { size?: number; tint?: string }>(f
   useImperativeHandle(ref, () => ({
     fire: () => {
       if (reduced) return;
-      t.value = 0;
-      t.value = withTiming(1, { duration: 560, easing: Easing.out(Easing.cubic) });
+      t.set(0);
+      t.set(withTiming(1, { duration: 560, easing: Easing.out(Easing.cubic) }));
     },
   }));
 
   const ring = useAnimatedStyle(() => ({
-    opacity: t.value === 0 || t.value === 1 ? 0 : 1 - t.value,
-    transform: [{ scale: 0.4 + t.value * 1.1 }],
-    borderWidth: Math.max(0.5, 6 * (1 - t.value)),
+    opacity: t.get() === 0 || t.get() === 1 ? 0 : 1 - t.get(),
+    transform: [{ scale: 0.4 + t.get() * 1.1 }],
+    borderWidth: Math.max(0.5, 6 * (1 - t.get())),
   }));
 
   return (
@@ -60,13 +60,13 @@ function Dot({
   tint: string;
 }) {
   const style = useAnimatedStyle(() => {
-    const travel = Math.min(1, t.value * 1.4);
+    const travel = Math.min(1, t.get() * 1.4);
     return {
-      opacity: t.value === 0 || t.value === 1 ? 0 : t.value < 0.35 ? 0 : 1 - (t.value - 0.35) / 0.65,
+      opacity: t.get() === 0 || t.get() === 1 ? 0 : t.get() < 0.35 ? 0 : 1 - (t.get() - 0.35) / 0.65,
       transform: [
         { translateX: Math.cos(angle) * reach * travel },
         { translateY: Math.sin(angle) * reach * travel },
-        { scale: 1 - t.value * 0.6 },
+        { scale: 1 - t.get() * 0.6 },
       ],
     };
   });

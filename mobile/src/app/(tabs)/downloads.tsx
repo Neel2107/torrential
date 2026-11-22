@@ -317,7 +317,7 @@ function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
     () => withTiming(Math.min(1, Math.max(0, fraction)), { duration: 600, easing: motion.out }),
     [fraction],
   );
-  const fill = useAnimatedStyle(() => ({ transform: [{ scaleX: value.value }] }));
+  const fill = useAnimatedStyle(() => ({ transform: [{ scaleX: value.get() }] }));
   return (
     <View style={styles.track} accessibilityRole="progressbar" accessibilityValue={{ text: percent(fraction) }}>
       <Animated.View style={[styles.fill, { backgroundColor: paused ? color.pencil : color.action }, fill]} />

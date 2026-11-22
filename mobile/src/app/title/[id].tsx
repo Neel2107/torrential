@@ -62,29 +62,29 @@ export default function Title() {
   const hero = useHeroPage(id);
 
   const onScroll = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
+    scrollY.set(event.contentOffset.y);
   });
 
   const banner = useAnimatedStyle(() => {
-    const y = scrollY.value;
+    const y = scrollY.get();
     return {
       transform: [{ translateY: y < 0 ? y / 2 : -y * 0.5 }, { scale: y < 0 ? 1 + -y / bannerHeight : 1 }],
     };
   });
   const headerName = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [bannerHeight + 40, bannerHeight + 90], [0, 1], Extrapolation.CLAMP),
+    opacity: interpolate(scrollY.get(), [bannerHeight + 40, bannerHeight + 90], [0, 1], Extrapolation.CLAMP),
     transform: [
-      { translateY: interpolate(scrollY.value, [bannerHeight + 40, bannerHeight + 90], [8, 0], Extrapolation.CLAMP) },
+      { translateY: interpolate(scrollY.get(), [bannerHeight + 40, bannerHeight + 90], [8, 0], Extrapolation.CLAMP) },
     ],
   }));
   const headerShade = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [bannerHeight - 120, bannerHeight - 40], [0, 1], Extrapolation.CLAMP),
+    opacity: interpolate(scrollY.get(), [bannerHeight - 120, bannerHeight - 40], [0, 1], Extrapolation.CLAMP),
   }));
 
   const navigation = useNavigation();
   const [overArt, setOverArt] = useState(true);
   useAnimatedReaction(
-    () => scrollY.value < bannerHeight - 80,
+    () => scrollY.get() < bannerHeight - 80,
     (now, before) => {
       if (scheme === 'light' && now !== before) scheduleOnRN(setOverArt, now);
     },
@@ -388,14 +388,14 @@ function SaveButton({ id, saved }: { id: string; saved: boolean }) {
   const save = useSaveTitle(id);
   const burst = useRef<BurstHandle>(null);
   const pop = useSharedValue(1);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() }] }));
 
   return (
     <Tap
       shrink={0.94}
       onPress={() => {
         Haptics.impactAsync(saved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
-        pop.value = withSequence(withTiming(0.7, { duration: 90 }), withSpring(1, motion.pop));
+        pop.set(withSequence(withTiming(0.7, { duration: 90 }), withSpring(1, motion.pop)));
         if (!saved) burst.current?.fire();
         save.mutate(!saved);
       }}
@@ -481,7 +481,7 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
   useEffect(() => {
     if (currentSeason === undefined) return;
     const next = seasons.findIndex((s) => s.number === currentSeason);
-    if (next >= 0) position.value = next;
+    if (next >= 0) position.set(next);
     setSeason(currentSeason);
   }, [currentSeason]);
 
@@ -490,25 +490,25 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
     .failOffsetY([-12, 12])
     .onUpdate((event) => {
       const room = (event.translationX < 0 ? at < last : at > 0) ? 1 : 0.25;
-      drag.value = event.translationX * room;
-      position.value = Math.min(last, Math.max(0, at - (drag.value / width) * room));
+      drag.set(event.translationX * room);
+      position.set(Math.min(last, Math.max(0, at - (drag.get() / width) * room)));
     })
     .onEnd((event) => {
       const far = Math.abs(event.translationX) > width * 0.25 || Math.abs(event.velocityX) > 600;
       const next = at + (event.translationX < 0 ? 1 : -1);
       if (far && next >= 0 && next <= last) {
-        drag.value = Math.sign(event.translationX) * -width * 0.15;
-        position.value = withTiming(next, GLIDE);
+        drag.set(Math.sign(event.translationX) * -width * 0.15);
+        position.set(withTiming(next, GLIDE));
         scheduleOnRN(show, next);
       } else {
-        position.value = withTiming(at, GLIDE);
+        position.set(withTiming(at, GLIDE));
       }
-      drag.value = withSpring(0, { ...motion.snap, velocity: event.velocityX });
+      drag.set(withSpring(0, { ...motion.snap, velocity: event.velocityX }));
     });
 
   const carried = useAnimatedStyle(() => ({
-    transform: [{ translateX: drag.value * 0.5 }],
-    opacity: 1 - Math.min(0.5, Math.abs(drag.value) / width),
+    transform: [{ translateX: drag.get() * 0.5 }],
+    opacity: 1 - Math.min(0.5, Math.abs(drag.get()) / width),
   }));
 
   const episodes = seasons[at]?.episodes ?? [];

@@ -99,22 +99,22 @@ export function SeekBar({
     .minDistance(0)
     .hitSlop({ top: 20, bottom: 20 })
     .onBegin((event) => {
-      touching.value = withTiming(1, { duration: motion.press });
-      x.value = event.x;
+      touching.set(withTiming(1, { duration: motion.press }));
+      x.set(event.x);
       scheduleOnRN(begin);
       scheduleOnRN(pick, event.x, false);
     })
     .onUpdate((event) => {
-      x.value = Math.max(0, Math.min(width, event.x));
-      scheduleOnRN(pick, x.value, false);
+      x.set(Math.max(0, Math.min(width, event.x)));
+      scheduleOnRN(pick, x.get(), false);
     })
     .onFinalize((event) => {
-      touching.value = withSpring(0, motion.settle);
+      touching.set(withSpring(0, motion.settle));
       scheduleOnRN(pick, Math.max(0, Math.min(width, event.x)), true);
     });
 
-  const track = useAnimatedStyle(() => ({ height: 3 + touching.value * 4, borderRadius: 4 }));
-  const knob = useAnimatedStyle(() => ({ transform: [{ scale: 0.75 + touching.value * 0.55 }] }));
+  const track = useAnimatedStyle(() => ({ height: 3 + touching.get() * 4, borderRadius: 4 }));
+  const knob = useAnimatedStyle(() => ({ transform: [{ scale: 0.75 + touching.get() * 0.55 }] }));
 
   const previewFraction = duration > 0 ? shown / duration : 0;
   const thumbLeft = Math.max(0, Math.min(width - THUMB_WIDTH, previewFraction * width - THUMB_WIDTH / 2));
@@ -231,9 +231,9 @@ export function SeekBar({
 function Glow({ run }: { run: Run }) {
   const shine = useSharedValue(0.9);
   useEffect(() => {
-    shine.value = withTiming(0, GLOW);
+    shine.set(withTiming(0, GLOW));
   }, [shine]);
-  const style = useAnimatedStyle(() => ({ opacity: shine.value }));
+  const style = useAnimatedStyle(() => ({ opacity: shine.get() }));
   return (
     <Animated.View
       pointerEvents="none"
