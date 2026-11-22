@@ -68,6 +68,7 @@ for node in re.finditer(r"<node [^>]*>", xml):
 }
 
 launch() {
+  $A shell input keyevent KEYCODE_WAKEUP
   $A shell am force-stop "$P"
   $A logcat -c
   $A shell am start-activity -W -n "$P/.MainActivity" | sed -n 's/^WaitTime: //p'
