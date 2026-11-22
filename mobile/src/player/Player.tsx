@@ -43,7 +43,7 @@ import { Tap } from '@/ui/Tap';
 import { stage as color, font, motion, space } from '@/theme';
 
 import { useDownloaded, usePlayingJob } from './downloaded';
-import { Ended } from './Ended';
+import { Ended, type UpNext } from './Ended';
 import { FilesSheet, videosOf } from './FilesSheet';
 import { usePlayerPreferences } from './preferences';
 import { RecoveryNotice, useStallRecovery, type Takeover } from './recovery';
@@ -61,14 +61,21 @@ const SKIP = 10;
 
 type OpenSheet = 'tracks' | 'settings' | 'sources' | 'files';
 
-function nextEpisode(page: TitlePage | null, video: string | null): { video: string; name: string } | null {
+function nextEpisode(page: TitlePage | null, video: string | null): UpNext | null {
   const here = page && video ? findEpisode(page, video) : null;
   if (!page || !here) return null;
   const order = playingOrder(page, here.season === 0);
   const at = order.findIndex((e) => e.season === here.season && e.episode === here.episode);
   const following = at === -1 ? undefined : order[at + 1];
   return following
-    ? { video: videoOf(page.id, following), name: `${episodeCode(following)} · ${episodeName(following)}` }
+    ? {
+        video: videoOf(page.id, following),
+        name: `${episodeCode(following)} · ${episodeName(following)}`,
+        title: page.id,
+        season: following.season,
+        episode: following.episode,
+        still: Boolean(following.thumbnail),
+      }
     : null;
 }
 
@@ -490,7 +497,7 @@ export function Player({
 
           {ended ? (
             <Ended
-              next={next?.name ?? null}
+              next={next}
               onNext={() => next && router.replace({ pathname: '/play', params: { video: next.video } })}
               onReplay={() => {
                 setEnded(false);

@@ -10,9 +10,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { icons } from '@/ui/Icon';
-import { stage as color, font, motion, space, stageType as type } from '@/theme';
+import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
+
+import { useSources } from './sources';
+
+export type UpNext = { video: string; name: string; title: string; season: number; episode: number; still: boolean };
 
 const UP_NEXT_SECONDS = 10;
 
@@ -22,7 +27,7 @@ export function Ended({
   onReplay,
   onBack,
 }: {
-  next: string | null;
+  next: UpNext | null;
   onNext: () => void;
   onReplay: () => void;
   onBack: () => void;
@@ -32,6 +37,7 @@ export function Ended({
   const [cancelled, setCancelled] = useState(false);
   const progress = useSharedValue(0);
   const go = useRef(onNext);
+  useSources(next && !cancelled ? next.video : null);
   useEffect(() => {
     go.current = onNext;
   }, [onNext]);
@@ -63,18 +69,27 @@ export function Ended({
           <Text style={[type.label, styles.center]} accessibilityLiveRegion="polite">
             {left === null ? 'Up next' : `Up next in ${left}`}
           </Text>
+          <Animated.View entering={FadeIn.duration(motion.standard).delay(120)} style={styles.still}>
+            <Art
+              id={next.title}
+              kind={next.still ? 'thumbnail' : 'background'}
+              season={next.still ? next.season : undefined}
+              episode={next.still ? next.episode : undefined}
+              style={StyleSheet.absoluteFill}
+            />
+            {left !== null ? (
+              <View style={styles.track}>
+                <Animated.View style={[styles.fill, bar]} />
+              </View>
+            ) : null}
+          </Animated.View>
           <Text style={[styles.next, styles.center]} numberOfLines={2}>
-            {next}
+            {next.name}
           </Text>
         </View>
       ) : (
         <Text style={[type.title, styles.center]}>The end</Text>
       )}
-      {left !== null ? (
-        <View style={styles.track}>
-          <Animated.View style={[styles.fill, bar]} />
-        </View>
-      ) : null}
       <View style={styles.actions}>
         {next ? <Button label="Play now" icon={icons.play} onPress={onNext} /> : null}
         {left !== null ? (
@@ -105,10 +120,11 @@ const styles = StyleSheet.create({
     gap: space.xl,
     padding: space.xl,
   },
-  heading: { gap: space.xs, maxWidth: 520 },
+  heading: { gap: space.sm, maxWidth: 520, alignItems: 'center' },
+  still: { width: 288, height: 162, borderRadius: radius.md, overflow: 'hidden', backgroundColor: color.raised },
   center: { textAlign: 'center' },
-  next: { fontFamily: font.bold, fontSize: 24, lineHeight: 30, letterSpacing: -0.4, color: color.ink },
-  track: { width: 200, height: 3, borderRadius: 2, backgroundColor: 'rgba(240,233,220,0.16)', overflow: 'hidden' },
-  fill: { height: 3, width: 200, backgroundColor: color.ink, transformOrigin: 'left' },
+  next: { fontFamily: font.bold, fontSize: 20, lineHeight: 26, letterSpacing: -0.4, color: color.ink },
+  track: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, backgroundColor: 'rgba(0,0,0,0.45)' },
+  fill: { height: 4, width: '100%', backgroundColor: color.action, transformOrigin: 'left' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm },
 });
