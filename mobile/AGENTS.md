@@ -65,6 +65,7 @@ Commit straight to `mobile`, one change per commit. CI (`.github/workflows/mobil
 - **Components:** RNTL 14's `render` is async; `await` it. Assert what a person sees or hears (text, role, accessibility value), not props or state.
 - **Names:** a test's name is a sentence saying the behaviour, such as "a last line with no newline after it still arrives".
 - **Fixes:** a fix in pure code (parsing, stored data, wire handling, anything without UI) comes with a test that failed before the fix and passes after it.
+- **Lint rules:** a change to a rule in `tools/oxlint/anti-slop` comes with RuleTester cases next to it. The plugin is vendored from dmmulroy/anti-slop; its `UPSTREAM.md` says from which commit and which rules are ours. To update it, follow `UPDATE.md` beside it and record the new commit in `UPSTREAM.md`.
 - **Worklets:** `anti-slop/no-js-call-in-worklet` reports a plain function called inside a worklet. Its description lists what it misses, so a clean run is not proof.
 
 ## This app
