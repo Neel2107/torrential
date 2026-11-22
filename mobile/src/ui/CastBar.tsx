@@ -187,9 +187,8 @@ function Thumb({ cast }: { cast: Cast }) {
 }
 
 function Line({ fraction }: { fraction: number }) {
-  const value = useDerivedValue(
-    () => withTiming(Math.min(1, Math.max(0, fraction)), { duration: 1000, easing: Easing.linear }),
-    [fraction],
+  const value = useDerivedValue(() =>
+    withTiming(Math.min(1, Math.max(0, fraction)), { duration: motion.tick, easing: Easing.linear }),
   );
   const fill = useAnimatedStyle(() => ({ width: `${value.get() * 100}%` }));
   return (

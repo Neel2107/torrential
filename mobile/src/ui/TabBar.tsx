@@ -85,17 +85,6 @@ function TabButton({
   onPress: () => void;
   onLongPress: () => void;
 }) {
-  const reduced = useReducedMotion();
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    if (focused && !reduced) {
-      scale.set(withSequence(withTiming(0.82, { duration: 90, easing: motion.out }), withSpring(1, motion.pop)));
-    }
-  }, [focused, reduced, scale]);
-
-  const pop = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
-
   return (
     <Pressable
       onPress={onPress}
@@ -105,7 +94,7 @@ function TabButton({
       accessibilityLabel={label}
       accessibilityState={{ selected: focused }}
     >
-      <Animated.View style={pop}>
+      <View>
         <Icon
           name={icon}
           size={26}
@@ -114,7 +103,7 @@ function TabButton({
           tint={focused ? color.ink : color.soft}
         />
         {badge ? <View style={styles.badge} /> : null}
-      </Animated.View>
+      </View>
     </Pressable>
   );
 }

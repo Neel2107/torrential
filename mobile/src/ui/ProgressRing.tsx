@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
-import Animated, { useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
 import { color, motion } from '@/theme';
@@ -11,11 +11,12 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 export function ProgressRing({ size, fraction, stroke = 2.5 }: { size: number; fraction: number; stroke?: number }) {
   const r = (size - stroke) / 2;
   const around = 2 * Math.PI * r;
-  const filled = useSharedValue(0);
+  const shown = Math.min(1, Math.max(0.02, fraction));
+  const filled = useSharedValue(shown);
 
   useEffect(() => {
-    filled.set(withTiming(Math.min(1, Math.max(0.02, fraction)), { duration: 600, easing: motion.out }));
-  }, [filled, fraction]);
+    filled.set(withTiming(shown, { duration: motion.tick, easing: Easing.linear }));
+  }, [filled, shown]);
 
   const arc = useAnimatedProps(() => ({ strokeDashoffset: around * (1 - filled.get()) }));
 

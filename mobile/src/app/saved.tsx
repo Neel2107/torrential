@@ -42,7 +42,7 @@ export default function SavedVideos() {
           </View>
         }
         renderItem={({ item, index }) => (
-          <Animated.View entering={rise(index)}>
+          <Animated.View>
             <Tap
               highlight
               shrink={1}

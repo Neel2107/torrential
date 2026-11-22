@@ -216,6 +216,7 @@ export const motion = {
   quick: 180,
   standard: 240,
   stagger: 40,
+  tick: 1000,
   out: Easing.bezier(0.23, 1, 0.32, 1),
   inOut: Easing.bezier(0.77, 0, 0.175, 1),
   settle: { duration: 300, dampingRatio: 0.8, reduceMotion: ReduceMotion.System },

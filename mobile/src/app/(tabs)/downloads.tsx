@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, useIsFocused } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  Easing,
   FadeOut,
   LinearTransition,
   useAnimatedStyle,
@@ -178,20 +179,21 @@ function JobList({
 function useLanded(jobs: Job[]): ReadonlySet<string> {
   const seen = useRef<Map<string, Job['state']> | null>(null);
   const [landed, setLanded] = useState<ReadonlySet<string>>(new Set());
+  const focused = useIsFocused();
   useEffect(() => {
     const before = seen.current;
     seen.current = new Map(jobs.map((job) => [job.id, job.state]));
     if (!before) return;
     const fresh = jobs.filter((job) => job.state === 'done' && before.has(job.id) && before.get(job.id) !== 'done');
     if (fresh.length === 0) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (focused) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setLanded((now) => new Set([...now, ...fresh.map((job) => job.id)]));
     const timer = setTimeout(
       () => setLanded((now) => new Set([...now].filter((id) => !fresh.some((job) => job.id === id)))),
       4000,
     );
     return () => clearTimeout(timer);
-  }, [jobs]);
+  }, [jobs, focused]);
   return landed;
 }
 
@@ -295,7 +297,7 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
   );
 
   return (
-    <Animated.View entering={enter(index)} exiting={FadeOut.duration(motion.quick)}>
+    <Animated.View>
       {job.title ? (
         <TitleTap id={job.title.title} {...press}>
           {content}
@@ -313,9 +315,8 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
 }
 
 function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
-  const value = useDerivedValue(
-    () => withTiming(Math.min(1, Math.max(0, fraction)), { duration: 600, easing: motion.out }),
-    [fraction],
+  const value = useDerivedValue(() =>
+    withTiming(Math.min(1, Math.max(0, fraction)), { duration: motion.tick, easing: Easing.linear }),
   );
   const fill = useAnimatedStyle(() => ({ transform: [{ scaleX: value.get() }] }));
   return (
@@ -577,7 +578,7 @@ function CopyRow({ copy, index, onMenu }: { copy: Copy; index: number; onMenu: (
         : sentence(copy.error);
 
   return (
-    <Animated.View entering={enter(index)} exiting={FadeOut.duration(motion.quick)}>
+    <Animated.View>
       <Tap
         shrink={1}
         highlight

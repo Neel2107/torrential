@@ -312,7 +312,7 @@ function Titles({
 
 function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; onOpen: () => void }) {
   return (
-    <Animated.View entering={rise(index)}>
+    <Animated.View>
       <TitleTap
         id={title.id}
         shrink={1}
@@ -581,7 +581,7 @@ function ReleaseRow({
   ].filter(Boolean) as string[];
 
   return (
-    <Animated.View entering={rise(index)}>
+    <Animated.View>
       <Tap
         shrink={1}
         highlight
