@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { createContext, use, useCallback, useMemo, useRef, type ReactNode } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
@@ -17,7 +17,9 @@ import Animated, {
 
 import { motion } from '@/theme';
 
-import { Mark } from './Mark';
+import Svg, { ClipPath, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+
+import { TRIANGLE } from './Mark';
 
 /**
  * Pull to refresh as X has it: the header stretches with the finger and the mark grows in it; let
@@ -32,8 +34,8 @@ import { Mark } from './Mark';
 const MOST = 130;
 /** Past this a release refreshes. */
 const LINE = 70;
-/** One fade out and back in, as X's logo does while it refreshes. */
-const CYCLE = 800;
+/** One pass of light down the three bands. */
+const CYCLE = 750;
 /** A refresh lights at least this long, one full pass and its fade, so a quick answer still reads as one. */
 const AT_LEAST = 1000;
 
@@ -155,22 +157,58 @@ export function usePullHeight() {
   return pull;
 }
 
+/** How lit band `index` is at `phase` of a pass: each band peaks in turn, top to bottom. */
+function band(phase: number, index: number): number {
+  'worklet';
+  const t = (((phase - index * 0.18) % 1) + 1) % 1;
+  const peak = t < 0.35 ? t / 0.35 : Math.max(0, 1 - (t - 0.35) / 0.4);
+  return 0.3 + 0.7 * peak;
+}
+
 /**
- * The mark in the bar, as X's logo: it grows with the pull, dim until the pull would refresh, and
- * fades out and back in while the feed refreshes.
+ * The mark in the bar. It grows with the pull, dim until the pull would refresh, as X's does; while
+ * the feed refreshes its three bands light top to bottom, like pieces of a torrent landing.
  */
 export function PullMark({ size = 30 }: { size?: number }) {
   const { pull, spin, busy } = usePull();
   const style = useAnimatedStyle(() => ({
-    // Dim as the pull starts and full at the line; while refreshing it fades to a quarter and back.
-    opacity:
-      (pull.value > 0 ? 0.4 + 0.6 * Math.min(1, pull.value / LINE) : 1) *
-      (1 - 0.75 * busy.value * (0.5 - 0.5 * Math.cos(2 * Math.PI * spin.value))),
+    opacity: pull.value > 0 ? 0.4 + 0.6 * Math.min(1, pull.value / LINE) : 1,
     transform: [{ scale: 1 + (pull.value / MOST) * 0.6 }],
   }));
+  // At rest the last band is the faint one still arriving; while refreshing, light runs down all
+  // three. Each band is its own layer: animated SVG props do not reach the drawing on Android.
+  const lit = (index: number, rest: number) => {
+    'worklet';
+    return rest + (band(spin.value, index) - rest) * busy.value;
+  };
+  const top = useAnimatedStyle(() => ({ opacity: lit(0, 1) }));
+  const middle = useAnimatedStyle(() => ({ opacity: lit(1, 1) }));
+  const last = useAnimatedStyle(() => ({ opacity: lit(2, 0.42) }));
+  const layers: [number, number, typeof top][] = [
+    [300, 118, top],
+    [446, 132, middle],
+    [606, 160, last],
+  ];
   return (
-    <Animated.View style={style}>
-      <Mark size={size} />
+    <Animated.View style={[{ width: size, height: size }, style]} accessibilityLabel="torrential">
+      {layers.map(([y, height, opacity]) => (
+        <Animated.View key={y} style={[StyleSheet.absoluteFill, opacity]}>
+          <Svg width={size} height={size} viewBox="308 300 440 440">
+            <Defs>
+              <LinearGradient id={`pull-${y}`} x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor="#c3dbb8" />
+                <Stop offset="1" stopColor="#8fb683" />
+              </LinearGradient>
+              <ClipPath id={`pull-clip-${y}`}>
+                <Path d={TRIANGLE} transform="translate(-40 42)" />
+              </ClipPath>
+            </Defs>
+            <G clipPath={`url(#pull-clip-${y})`}>
+              <Rect x="300" y={y} width="520" height={height} fill={`url(#pull-${y})`} />
+            </G>
+          </Svg>
+        </Animated.View>
+      ))}
     </Animated.View>
   );
 }
