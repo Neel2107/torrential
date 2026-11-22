@@ -5,4 +5,12 @@ const config = getDefaultConfig(__dirname);
 // The web app's wire types and pure helpers are shared, not copied, so both clients follow the engine.
 config.watchFolders = [path.resolve(__dirname, '../web/src')];
 
+// A module runs when it's first used, not when the bundle starts, so launch runs only what the first screen needs.
+const transformOptions = config.transformer.getTransformOptions;
+config.transformer.getTransformOptions = async (...args) => {
+  const options = await transformOptions(...args);
+
+  return { ...options, transform: { ...options.transform, inlineRequires: true } };
+};
+
 module.exports = config;
