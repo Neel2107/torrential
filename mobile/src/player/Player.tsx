@@ -33,10 +33,11 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { titleOf, videoOf } from '@web/lib/video';
 
-import { get, post } from '@/engine/client';
+import { get } from '@/engine/client';
 import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { LoadingMark } from '@/ui/Bands';
+import { report, resend } from '@/engine/watched';
 import { since } from '@/perf';
 import { Button } from '@/ui/Button';
 import { Glass } from '@/ui/Glass';
@@ -194,6 +195,10 @@ export function Player({
   });
 
   useEffect(() => {
+    resend(link);
+  }, [link]);
+
+  useEffect(() => {
     const controller = new AbortController();
     get<MediaInfo>(link, `/api/media?id=${play.id}&file=${play.video.index}`, controller.signal).then(
       setMedia,
@@ -216,10 +221,7 @@ export function Player({
       starts: resumed.current,
     };
     resumed.current = false;
-    return post(link, '/api/watched', body).then(
-      () => {},
-      () => {},
-    );
+    return report(link, body);
   }, [duration, link, now, release.id, video]);
 
   useEffect(() => {
