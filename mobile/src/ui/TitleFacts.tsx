@@ -1,6 +1,6 @@
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { color, space, type } from '@/theme';
+import { color, DENSE_TEXT_SCALE, space, type } from '@/theme';
 
 import { Icon, icons } from './Icon';
 
@@ -46,14 +46,22 @@ export function TitleFacts({
       {shown ? (
         <View style={styles.rating}>
           <Icon name={icons.star} size={11} tint={color.action} filled />
-          <Text style={type.caption} numberOfLines={1}>
+          <Text style={type.caption} numberOfLines={1} maxFontSizeMultiplier={DENSE_TEXT_SCALE}>
             {shown}
           </Text>
         </View>
       ) : null}
-      {shown && rest && !stacked ? <Text style={type.caption}>·</Text> : null}
+      {shown && rest && !stacked ? (
+        <Text style={type.caption} maxFontSizeMultiplier={DENSE_TEXT_SCALE}>
+          ·
+        </Text>
+      ) : null}
       {rest ? (
-        <Text style={[type.caption, styles.rest]} numberOfLines={stacked ? 2 : 1}>
+        <Text
+          style={[type.caption, styles.rest]}
+          numberOfLines={stacked ? 2 : 1}
+          maxFontSizeMultiplier={DENSE_TEXT_SCALE}
+        >
           {rest}
         </Text>
       ) : null}

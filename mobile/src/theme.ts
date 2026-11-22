@@ -215,6 +215,9 @@ export const type = typeFor(color);
 
 export const stageType = stage === color ? type : typeFor(stage);
 
+/** How far text may grow with the phone's font size where columns are narrow (poster grids, card captions), so a word never splits mid-way. */
+export const DENSE_TEXT_SCALE = 1.4;
+
 export const hitSlop = { top: 10, bottom: 10, left: 10, right: 10 } as const;
 
 export const motion = {

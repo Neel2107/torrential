@@ -3,7 +3,7 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { cardFacts } from '@web/titles/words';
 import type { TitleCard } from '@web/wire';
 
-import { color, radius, space, type } from '@/theme';
+import { color, DENSE_TEXT_SCALE, radius, space, type } from '@/theme';
 
 import { Art } from './Art';
 import { TitleFacts } from './TitleFacts';
@@ -43,7 +43,7 @@ export function Poster({ title, width }: { title: TitleCard; width: number }) {
           style={StyleSheet.flatten([styles.poster, { height: width * 1.5 }])}
         />
       </TitlePoster>
-      <Text style={[type.label, styles.name]} numberOfLines={2}>
+      <Text style={[type.label, styles.name]} numberOfLines={2} maxFontSizeMultiplier={DENSE_TEXT_SCALE}>
         {title.name}
       </Text>
       <TitleFacts rating={title.rating} facts={[cardFacts(title)].filter(Boolean)} />
