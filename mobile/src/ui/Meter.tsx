@@ -47,6 +47,7 @@ export function Meter({
   return (
     <View
       pointerEvents="none"
+      accessible
       accessibilityRole="progressbar"
       accessibilityValue={valueText ? { text: valueText } : { min: 0, max: 100, now }}
       style={[

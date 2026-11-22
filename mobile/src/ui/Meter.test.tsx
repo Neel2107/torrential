@@ -18,3 +18,15 @@ test('a meter given words says them instead of a percentage', async () => {
 
   expect(screen.root).toHaveAccessibilityValue({ text: '3 of 6 episodes' });
 });
+
+test('a screen reader finds a meter as one progress bar with its value', async () => {
+  await render(<Meter fraction={0.42} />);
+
+  expect(screen.getByRole('progressbar', { value: { now: 42 } })).toBeOnTheScreen();
+});
+
+test('a meter given words is found by them', async () => {
+  await render(<Meter fraction={0.5} valueText="3 of 6 episodes" />);
+
+  expect(screen.getByRole('progressbar', { value: { text: '3 of 6 episodes' } })).toBeOnTheScreen();
+});
