@@ -16,6 +16,7 @@ import Animated, {
 import { color, font, motion } from '@/theme';
 
 const TAB_PAD = 16;
+const NEIGHBOURS_AFTER_MS = 400;
 const GLIDE = { duration: 260, easing: motion.out };
 
 /** Which page shows, in pages, fractional mid-swipe. */
@@ -37,6 +38,13 @@ export function Pager({
   const { width } = useWindowDimensions();
   const scroll = useAnimatedRef<Animated.ScrollView>();
   const settled = useRef(index);
+  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set([index]));
+
+  useEffect(() => {
+    setMounted((seen) => (seen.has(index) ? seen : new Set([...seen, index])));
+    const timer = setTimeout(() => setMounted((seen) => new Set([...seen, index - 1, index + 1])), NEIGHBOURS_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [index]);
 
   useEffect(() => {
     if (settled.current === index) return;
@@ -71,8 +79,8 @@ export function Pager({
       contentOffset={{ x: index * width, y: 0 }}
       style={styles.pager}
     >
-      {Children.map(children, (page) => (
-        <View style={{ width }}>{page}</View>
+      {Children.map(children, (page, at) => (
+        <View style={{ width }}>{mounted.has(at) ? page : null}</View>
       ))}
     </Animated.ScrollView>
   );
