@@ -40,6 +40,15 @@ What we know about the app's speed and what to do next, in order. The `measure-a
 
 ## Done
 
+- **Launch, bytes and lag, 2026-11-23** (Poco F6, release build, `scripts/perf-f6.sh`; medians, runs measured back to back):
+  - Launch to Home with data: 769 → 525 ms (−32%). The phone's engine starts with the app process (−71 ms); Home and Popular draw their last answer kept on disk (`src/engine/kept.ts`, −117 ms); Metro inline requires run modules on first use (JavaScript runs 55 ms sooner).
+  - Requests after launch: 4 requests and 41 KB → 2 and 54 characters. Title pages are kept on disk through one `titleQuery`, and New episodes treats a show's page as fresh for six hours.
+  - Glancing at a title: 140 KB → 19 KB over five looks. Its sources are searched only after 1.5 s on the page (`useLingered`); a stay still warms Play.
+  - Opening a show: the frame it lands on fell from about 100 ms (82 ms mounting every episode row) to p99 32 ms; rows mount a few per frame (`useGrowing`) and only the first four rise in.
+  - Not worth a change: press-in prefetch during scrolls (one 1.6 KB request in 12 swipes); a synchronous session read (the keystore can't read while the phone is locked, which must never look unpaired).
+  - Search: 389–783 ms per query after the 280 ms pause, almost all of it the engine asking Cinemeta and IMDb.
+  - Method: the phone drifts within an hour (battery, heat, downloads), so compare builds measured back to back, never against an old number. A launch behind the lock screen waits for SecureStore; the script wakes the phone first.
+
 - **Interactions, 2026-11-22** (Poco F6 at 120 Hz, release build, 5 runs each, medians):
   - Home scroll: p50 7 ms, p99 15 ms, 0.4% janky. Title page scroll: p99 9 ms. Fine.
   - Opening a title: worst frame 31 → 21 ms after icons stopped going through react-native-svg. On Android, react-native-svg draws every SVG into a bitmap on the main thread (`SvgView.drawOutput`), about 0.5 ms per icon, and 19 ms of one frame went to icons. `Icon` now hands Lucide's paths to `modules/glyph-android`, which records them on the hardware canvas. What's left is the screen mount (about 13 ms) and GPU fill while the page fades in over Home.
