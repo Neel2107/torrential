@@ -41,12 +41,12 @@ We build locally, not on EAS. The app runs torrential's engine inside itself, so
 
 ## Commits
 
-Commit straight to `mobile`, one change per commit. CI (`.github/workflows/mobile.yml`) runs `scripts/guard.sh`, `pnpm -s check`, the tests and an Android and iOS bundle on every push.
+Commit straight to `mobile`, one change per commit. CI (`.github/workflows/mobile.yml`) runs `scripts/guard.sh`, `pnpm -s check`, the tests (network budgets included) and an Android and iOS bundle with its size budget on every push.
 
 - **Subject:** at most 72 characters, saying what changed for the person using the app ("mobile: the player remembers subtitle size"). Details go in the body, never in the subject.
 - **Body:** why the change was made and what it does that the subject can't say. End it with a `Checked:` line naming the build, device or commands and any number you measured: `Checked: preview build 1042 on the Poco F6, title opens in 212 ms (was 340)`.
 - **One change per commit.** A fix found in review is its own commit about that fix, never "review fixes" covering several.
-- **Never commit build output** (`build/`, `node_modules/`, `.apk`, `.so`, `.hbc`, `.xcframework/`, the generated `mobile/android/` or `mobile/ios/`). The guard fails on it, and on a hand edit of `web/src/wire.ts` or a raised `--max-warnings` or `--max` in `package.json`. A ceiling that truly has to rise says why on a `Raises-ceiling:` line in the body.
+- **Never commit build output** (`build/`, `node_modules/`, `.apk`, `.so`, `.hbc`, `.xcframework/`, the generated `mobile/android/` or `mobile/ios/`). The guard fails on it, and on a hand edit of `web/src/wire.ts`, a raised `--max-warnings` or `--max` in `package.json`, or a raised or dropped budget (see Budgets). A ceiling that truly has to rise says why on a `Raises-ceiling:` line in the body.
 - **Hooks:** run `git config core.hooksPath mobile/scripts/hooks` once per clone. `commit-msg` rejects a subject over 72 characters; `pre-commit` runs the guard on what is staged and `pnpm -C mobile -s check` when a staged file is in `mobile/`. `git commit --no-verify` skips them; CI still runs.
 - **Before pushing:** `mobile/scripts/guard.sh` checks your commits not yet on `origin/mobile`.
 
@@ -67,6 +67,16 @@ Commit straight to `mobile`, one change per commit. CI (`.github/workflows/mobil
 - **Fixes:** a fix in pure code (parsing, stored data, wire handling, anything without UI) comes with a test that failed before the fix and passes after it.
 - **Lint rules:** a change to a rule in `tools/oxlint/anti-slop` comes with RuleTester cases next to it. The plugin is vendored from dmmulroy/anti-slop; its `UPSTREAM.md` says from which commit and which rules are ours. To update it, follow `UPDATE.md` beside it and record the new commit in `UPSTREAM.md`.
 - **Worklets:** `anti-slop/no-js-call-in-worklet` reports a plain function called inside a worklet. Its description lists what it misses, so a clean run is not proof.
+
+## Budgets
+
+Speed the owner has measured on the F6 is kept from slipping by budgets CI checks on every push.
+
+- **Network:** `src/perf/budgets.test.tsx` renders the app's own route files under Expo Router, answers every request as the engine would (the `transport` seam, typed fixtures, a short delay before each answer) and counts requests and characters per route in fixed scenarios: first launch with and without saved shows, the second launch 5 h and 50 min later, a 0.8 s glance at a title, staying 2 s, and opening a show. `src/perf/budgets.ts` holds the most each scenario may ask of each route; a route a scenario doesn't list may not be asked at all. `pnpm test` runs it, in about 5 s, or 40 s with a cold Jest cache. It fails naming the scenario, route and numbers. With `TORRENTIAL_BUDGET_REPORT_PATH` set it writes a markdown table there, which CI adds to the step summary even when the job fails.
+- **Bundle:** after `expo export`, `node scripts/bundle-budget.js dist` fails when the Android or iOS Hermes bundle is over its size in `src/perf/bundle.json` (set at the size when written, plus 2%), and adds both to the step summary.
+- **Raising one:** lowering a budget is always fine. Raising a number, adding a route to a scenario or dropping a scenario fails the guard unless the commit body says why on a `Raises-ceiling:` line. Never raise one to make a slower change pass; fix the cause.
+- **A new win:** add a scenario that fails without it (break the code on purpose to see it fail, then put it back), and set its budget at what it measures.
+- **The phone:** CI has no phone, so launch time, frames and transitions are not budgeted. Measure them by hand with `scripts/perf-f6.sh` on the release build before a build ships, before and after a change, and record the numbers in `docs/performance.md`.
 
 ## This app
 

@@ -3,8 +3,8 @@ export type Budget = { scenario: string; route: string; requests: number; chars:
 
 /**
  * What each scenario in `budgets.test.tsx` may ask of the engine, set at what it asked when the budget was written. A
- * route a scenario does not list may not be asked at all. Lowering a number is always fine; raising one, or dropping a
- * line or a scenario, fails `scripts/guard.sh` unless the commit says why on a `Raises-ceiling:` line.
+ * route a scenario does not list may not be asked at all. Lowering a number is always fine; raising one, adding a route
+ * to a scenario or dropping a scenario fails `scripts/guard.sh` unless the commit says why on a `Raises-ceiling:` line.
  */
 export const NETWORK: Budget[] = [
   { scenario: 'first launch, saved shows', route: '/api/home', requests: 1, chars: 297 },
