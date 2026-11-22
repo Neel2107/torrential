@@ -109,6 +109,7 @@ export default function Home() {
 }
 
 const NONE: ReadonlySet<string> = new Set();
+const TIGHT_FONT_SCALE = 1.15;
 
 function SectionTitle({ children }: { children: string }) {
   return (
@@ -158,6 +159,8 @@ function ContinueCarousel({ items }: { items: Continue[] }) {
 }
 
 function ContinueCard({ item, width, index }: { item: Continue; width: number; index: number }) {
+  const { fontScale } = useWindowDimensions();
+  const tight = fontScale > TIGHT_FONT_SCALE;
   const progress = progressOf(item);
   const height = Math.round((width * 9) / 16);
   const still = item.episode?.thumbnail;
@@ -200,12 +203,17 @@ function ContinueCard({ item, width, index }: { item: Continue; width: number; i
           ) : null}
         </View>
       </Tap>
-      <TitleTap id={item.title.id} shrink={1} accessibilityLabel={`Open ${item.title.name}`} style={styles.cardText}>
-        <View style={{ flex: 1 }}>
-          <Text style={type.headline} numberOfLines={1}>
+      <TitleTap
+        id={item.title.id}
+        shrink={1}
+        accessibilityLabel={`Open ${item.title.name}`}
+        style={[styles.cardText, tight && styles.cardTextTight]}
+      >
+        <View style={tight ? undefined : { flex: 1 }}>
+          <Text style={type.headline} numberOfLines={2}>
             {item.title.name}
           </Text>
-          <Text style={type.label} numberOfLines={1}>
+          <Text style={type.label} numberOfLines={tight ? 2 : 1}>
             {subtitleOf(item)}
           </Text>
         </View>
@@ -276,6 +284,7 @@ const styles = StyleSheet.create({
   playPillText: { ...type.callout, color: stage.actionInk, fontSize: 14 },
   edgeMeter: { position: 'absolute', left: space.lg, right: space.lg, bottom: space.md },
   cardText: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingTop: space.md, paddingHorizontal: 2 },
+  cardTextTight: { flexDirection: 'column', alignItems: 'flex-start', gap: 2 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: space.xs },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.rule },
   dotActive: { width: 18, backgroundColor: color.soft },

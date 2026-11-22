@@ -1,7 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { ago } from '@web/lib/format';
@@ -22,6 +22,7 @@ const RECENT_DAYS = 14;
 const SHOWN = 10;
 const CARD = 220;
 const AFTER_HOME_MS = 800;
+const STACK_FROM_FONT_SCALE = 1.15;
 
 type Fresh = { page: TitlePage; episode: EpisodeInfo };
 
@@ -65,6 +66,8 @@ function useFresh(saved: TitleCard[]): Fresh[] {
 
 export function NewEpisodes({ saved, index }: { saved: TitleCard[]; index: number }) {
   const fresh = useFresh(saved);
+  const { fontScale } = useWindowDimensions();
+  const stacked = fontScale > STACK_FROM_FONT_SCALE;
 
   if (fresh.length === 0) return null;
 
@@ -98,9 +101,15 @@ export function NewEpisodes({ saved, index }: { saved: TitleCard[]; index: numbe
             <Text style={type.callout} numberOfLines={1}>
               {page.name}
             </Text>
-            <Text style={type.caption} numberOfLines={1}>
-              {episodeName(episode)} · {ago(episode.aired ?? 0)}
-            </Text>
+            <View style={stacked ? undefined : styles.line}>
+              <Text style={[type.caption, styles.name]} numberOfLines={1}>
+                {episodeName(episode)}
+              </Text>
+              <Text style={type.caption} numberOfLines={1}>
+                {stacked ? '' : ' · '}
+                {ago(episode.aired ?? 0)}
+              </Text>
+            </View>
           </Tap>
         ))}
       </ScrollView>
@@ -130,4 +139,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 9, 7, 0.72)',
   },
   badgeText: { ...type.label, color: stage.ink },
+  line: { flexDirection: 'row' },
+  name: { flexShrink: 1 },
 });

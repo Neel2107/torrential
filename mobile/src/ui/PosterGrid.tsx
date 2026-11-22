@@ -6,7 +6,7 @@ import type { TitleCard } from '@web/wire';
 import { color, radius, space, type } from '@/theme';
 
 import { Art } from './Art';
-import { Icon, icons } from './Icon';
+import { TitleFacts } from './TitleFacts';
 import { TitlePoster, TitleTap } from './TitleTap';
 
 export function PosterGrid({ titles }: { titles: TitleCard[] }) {
@@ -30,7 +30,9 @@ export function Poster({ title, width }: { title: TitleCard; width: number }) {
     <TitleTap
       id={title.id}
       shrink={0.95}
-      accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
+      accessibilityLabel={[title.name, title.rating ? `rated ${title.rating.toFixed(1)}` : null, cardFacts(title)]
+        .filter(Boolean)
+        .join(', ')}
       style={{ width }}
     >
       <TitlePoster>
@@ -44,18 +46,7 @@ export function Poster({ title, width }: { title: TitleCard; width: number }) {
       <Text style={[type.label, styles.name]} numberOfLines={2}>
         {title.name}
       </Text>
-      <View style={styles.facts}>
-        {title.rating ? (
-          <>
-            <Icon name={icons.star} size={11} tint={color.action} filled />
-            <Text style={type.caption}>{title.rating.toFixed(1)}</Text>
-            <Text style={type.caption}>·</Text>
-          </>
-        ) : null}
-        <Text style={type.caption} numberOfLines={1}>
-          {cardFacts(title)}
-        </Text>
-      </View>
+      <TitleFacts rating={title.rating} facts={[cardFacts(title)].filter(Boolean)} />
     </TitleTap>
   );
 }
@@ -64,5 +55,4 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   poster: { borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, borderColor: color.hairline },
   name: { color: color.ink, marginTop: space.sm },
-  facts: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
 });
