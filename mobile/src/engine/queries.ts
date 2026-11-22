@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import type { Cast, CastAction, Home, Me, TitlePage, TitleSearch, TvList, Version } from '@web/wire';
 
 import { authHeaders, get, post, url, type Link } from './client';
-import { keepReply, keptOptions } from './kept';
+import { keepReply, keptOptions, keptReply } from './kept';
 import { useLink } from './session';
 
 export const keys = {
@@ -90,17 +90,44 @@ export function usePopular(kind: 'film' | 'series', enabled = true) {
   });
 }
 
+function searchRoute(query: string): string {
+  return `/api/titles?q=${encodeURIComponent(query)}`;
+}
+
 export function useTitleSearch(q: string) {
   const link = useLink();
   const query = q.trim();
+  const route = searchRoute(query);
 
   return useQuery({
     queryKey: [...keys.titles(query), link.base],
-    queryFn: ({ signal }) => get<TitleSearch>(link, `/api/titles?q=${encodeURIComponent(query)}`, signal),
+    queryFn: async ({ signal }) => {
+      const found = await get<TitleSearch>(link, route, signal);
+      keepReply(link, route, found);
+
+      return found;
+    },
     enabled: query.length > 0,
     placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
+    ...keptOptions<TitleSearch>(link, route),
   });
+}
+
+/** Whether a search for `q` already has an answer, in memory or kept on disk, so it can show without waiting for typing to settle. */
+export function useKnownSearch(): (q: string) => boolean {
+  const link = useLink();
+  const client = useQueryClient();
+
+  return (q) => {
+    const query = q.trim();
+
+    return (
+      query.length > 0 &&
+      (client.getQueryData([...keys.titles(query), link.base]) !== undefined ||
+        keptReply(link, searchRoute(query)) !== undefined)
+    );
+  };
 }
 
 export function useMe() {

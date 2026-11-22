@@ -28,7 +28,7 @@ import {
 
 import { post, stream } from '@/engine/client';
 import { openJob, STATE, useJob, useJobName, useJobsSelect } from '@/engine/jobs';
-import { keys, useHome, useTitleSearch } from '@/engine/queries';
+import { keys, useHome, useKnownSearch, useTitleSearch } from '@/engine/queries';
 import { mark, since } from '@/perf';
 import { useRecentSearches } from '@/engine/recent';
 import { useLink } from '@/engine/session';
@@ -103,7 +103,10 @@ export default function Search() {
   const [tab, setTab] = useState(0);
   const position = usePagerPosition(0);
   const [everything, setEverything] = useState(false);
-  const query = useDebounced(text.trim(), 280);
+  const typed = text.trim();
+  const settled = useDebounced(typed, 280);
+  const known = useKnownSearch();
+  const query = typed !== settled && known(typed) ? typed : settled;
   const top = insets.top + BAR_HEIGHT + TABS_HEIGHT;
   const recents = useRecentSearches();
   const remember = () => recents.remember(text);
