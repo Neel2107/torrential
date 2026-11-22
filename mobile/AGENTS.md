@@ -29,13 +29,31 @@ Run lint and typecheck before declaring any task done.
 - Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - Docs: https://docs.expo.dev/router/introduction.md
 
-## Building with EAS
+## Building
 
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
+We build locally, not on EAS. The app runs torrential's engine inside itself, so build the engine library before any native build: `scripts/build-engine.sh android|ios`.
+
+- **Android dev:** `CI=1 npx expo prebuild --platform android`, then in `android/` run `./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a`. Install with `adb install -r`, then `npx expo start --dev-client` and `adb reverse tcp:8081 tcp:8081`.
+- **Android release ("torrential preview"):** `scripts/build-preview.sh` writes `~/Desktop/torrential-preview.apk`. Judge motion and speed here, never in a dev build.
+- **iOS simulator:** `npx expo run:ios --device <udid>`. For Release, use xcodebuild with `-sdk iphonesimulator ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, because the engine framework is arm64 only. If the Debug link breaks after a `pod install`, run `CI=1 npx expo prebuild --platform ios --clean`.
 
 ## Rules
 
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## This app
+
+- **Check:** `npm run -s check` runs tsc, Prettier and `scripts/compiler-check.js`. The compiler check fails when React Compiler skips more components and hooks than it does today (17). Don't raise that number; fix the cause.
+- **Shared values:** read and write them with `.get()` and `.set()`, never `.value`. `.value` makes React Compiler skip the whole component.
+- **Worklet to React:** call back from a worklet with `scheduleOnRN` from `react-native-worklets` (`runOnJS` is deprecated). Never call back every frame; use `useAnimatedReaction` at a threshold.
+- **Refs and hook results:** don't read refs while rendering, and don't change a hook's result in place. Set expo-video's properties through `src/player/control.ts`.
+- **Motion tokens:** use the ones in `src/theme.ts` (`motion.out`, `motion.inOut`, `motion.press`, `motion.quick`, `motion.tick`) and the springs `motion.settle`, `motion.snap` and `motion.pop`. Springs take a duration and damping ratio, respect reduced motion, and carry the finger's release velocity.
+- **What animates:** follow Emil Kowalski's `animate-expo` skill. Nothing used 100+ times a day animates: tab switches, list rows, typing. Never put `entering` on rows of a FlatList or LegendList. Animate `transform` and `opacity`, not layout, except an absolute element with no children.
+- **Staggered entrances:** `rise(i)` from `src/ui/rise.ts`. A Reanimated Keyframe keeps the first delay it's built with, so never call `.delay()` on a shared Keyframe.
+- **Sheets:** `src/ui/Sheet.tsx`. Give it a function child to get `close(after)`, which slides the sheet away and then runs what was picked, once. Use `onBack` for sheets with pages and `morph` to ease to a new height.
+- **Confirmations:** `ask()` from `src/ui/Ask.tsx`. It shows the native alert on iOS and the app's own dialog on Android.
+- **Going back:** use `leave()` from `src/ui/leave.ts`, never `router.back()`. A screen opened from a link has nothing behind it, so `leave()` goes home instead.
+- **Platforms:** Android follows X's app (icon tab bar, top bar, FAB, sheets). iOS uses Liquid Glass: NativeTabs, `src/ui/Glass.tsx` and native menus.
+- **Speed:** `[perf]` logs come from `src/perf.ts` (`mark`, `since`, `lap`). Read them with `adb logcat` on a release build.
