@@ -1,0 +1,55 @@
+name: mobile
+
+on:
+  push:
+    branches: [mobile]
+    paths:
+      - mobile/**
+      - web/src/**
+      - .github/workflows/mobile.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Never cancelled, so every push's commits are checked even when a newer push follows at once.
+  guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Guard the pushed commits
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          git fetch --quiet --no-tags origin "$BEFORE" 2>/dev/null || true
+          mobile/scripts/guard.sh "$BEFORE" "$GITHUB_SHA"
+
+  app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: mobile-app-${{ github.ref }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: mobile/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: mobile/.nvmrc
+          cache: pnpm
+          cache-dependency-path: mobile/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run -s check
+      - run: pnpm run -s --if-present test
+      - run: pnpm run -s --if-present test:tools
+      - name: Bundle for Android and iOS
+        run: pnpm exec expo export --platform android --platform ios
