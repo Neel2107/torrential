@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -7,6 +8,7 @@ import Animated, {
   Extrapolation,
   interpolate,
   LinearTransition,
+  runOnJS,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -22,7 +24,9 @@ import { videoOf } from '@web/lib/video';
 import { episodeCode, episodeName, findEpisode, seasonName } from '@web/titles/words';
 import type { EpisodeInfo, TitlePage as Page, Watched } from '@web/wire';
 
+import { authHeaders, url } from '@/engine/client';
 import { useSaveTitle, useTitle } from '@/engine/queries';
+import { useLink } from '@/engine/session';
 import { useSources } from '@/player/sources';
 import { SourcesSheet } from '@/player/SourcesSheet';
 import { Art } from '@/ui/Art';
@@ -335,12 +339,29 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
     seasons.findIndex((s) => s.number === season),
   );
   const position = usePagerPosition(at);
+  const link = useLink();
   const drag = useSharedValue(0);
 
   const show = (next: number) => {
-    position.value = withTiming(next, GLIDE);
+    Haptics.selectionAsync();
     setSeason(seasons[next].number);
   };
+  const last = seasons.length - 1;
+
+  useEffect(() => {
+    const near = [seasons[at - 1], seasons[at + 1]].flatMap((s) => s?.episodes ?? []);
+    const stills = near
+      .filter((episode) => episode.thumbnail)
+      .map((episode) =>
+        url(link, '/api/title/art', {
+          id: page.id,
+          kind: 'thumbnail',
+          season: episode.season,
+          episode: episode.episode,
+        }),
+      );
+    if (stills.length) Image.prefetch(stills, { cachePolicy: 'memory-disk', headers: authHeaders(link) });
+  }, [at, link, page.id, seasons]);
 
   useEffect(() => {
     if (currentSeason === undefined) return;
@@ -350,21 +371,20 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
   }, [currentSeason]);
 
   const swipe = Gesture.Pan()
-    .runOnJS(true)
     .activeOffsetX([-16, 16])
     .failOffsetY([-12, 12])
     .onUpdate((event) => {
-      const room = (event.translationX < 0 ? at < seasons.length - 1 : at > 0) ? 1 : 0.25;
+      const room = (event.translationX < 0 ? at < last : at > 0) ? 1 : 0.25;
       drag.value = event.translationX * room;
-      position.value = Math.min(seasons.length - 1, Math.max(0, at - (drag.value / width) * room));
+      position.value = Math.min(last, Math.max(0, at - (drag.value / width) * room));
     })
     .onEnd((event) => {
       const far = Math.abs(event.translationX) > width * 0.25 || Math.abs(event.velocityX) > 600;
       const next = at + (event.translationX < 0 ? 1 : -1);
-      if (far && next >= 0 && next < seasons.length) {
-        Haptics.selectionAsync();
+      if (far && next >= 0 && next <= last) {
         drag.value = Math.sign(event.translationX) * -width * 0.15;
-        show(next);
+        position.value = withTiming(next, GLIDE);
+        runOnJS(show)(next);
       } else {
         position.value = withTiming(at, GLIDE);
       }
@@ -397,7 +417,7 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
         <Animated.View style={carried}>
           {episodes.map((episode, index) => (
             <EpisodeRow
-              key={`${season}:${episode.episode}`}
+              key={episode.episode}
               page={page}
               episode={episode}
               watched={watched.get(videoOf(page.id, episode))}
