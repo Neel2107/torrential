@@ -4,10 +4,13 @@ import { StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewS
 
 import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
-import { color, font } from '@/theme';
+import { color, font, stage, type Palette } from '@/theme';
+
+import { STAGE_DIFFERS, useStaged } from './stage';
 
 export function Logo({ id, name, style }: { id: string; name: string; style?: StyleProp<ViewStyle> }) {
   const link = useLink();
+  const styles = useStaged(themed, staged);
   // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
   const { width, height } = useWindowDimensions();
   const orientation = width > height ? 'landscape' : 'portrait';
@@ -38,16 +41,20 @@ export function Logo({ id, name, style }: { id: string; name: string; style?: St
   );
 }
 
-const styles = StyleSheet.create({
-  name: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    fontFamily: font.bold,
-    fontSize: 22,
-    lineHeight: 26,
-    letterSpacing: -0.5,
-    color: color.ink,
-  },
-});
+const sheet = (c: Palette) =>
+  StyleSheet.create({
+    name: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      fontFamily: font.bold,
+      fontSize: 22,
+      lineHeight: 26,
+      letterSpacing: -0.5,
+      color: c.ink,
+    },
+  });
+
+const themed = sheet(color);
+const staged = STAGE_DIFFERS ? sheet(stage) : themed;

@@ -18,10 +18,19 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { LoadingMark } from '@/ui/Bands';
 import { Logo } from '@/ui/Logo';
+import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
-import { color, font, motion, radius, space, type } from '@/theme';
+import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
 
-export default function Play() {
+export default function PlayScreen() {
+  return (
+    <Stage value>
+      <Play />
+    </Stage>
+  );
+}
+
+function Play() {
   const { video, ref, file, source, at, stream } = useLocalSearchParams<{
     video?: string;
     ref?: string;

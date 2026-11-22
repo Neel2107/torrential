@@ -10,7 +10,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
-import { color, font, radius, space, type } from '@/theme';
+import { stage as color, font, radius, space, stageType as type } from '@/theme';
 
 import { useSources, type Sources } from './sources';
 

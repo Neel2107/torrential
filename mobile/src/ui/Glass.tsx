@@ -1,8 +1,10 @@
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
-import type { ReactNode } from 'react';
+import { use, type ReactNode } from 'react';
 import { Platform, View, type ColorValue, type StyleProp, type ViewStyle } from 'react-native';
 
-import { color } from '@/theme';
+import { color, scheme, stage } from '@/theme';
+
+import { Stage } from './stage';
 
 /** Some iOS 26 betas lack the API and crash on it. */
 export const LIQUID_GLASS = Platform.OS === 'ios' && isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
@@ -13,7 +15,7 @@ export function Glass({
   style,
   interactive = false,
   tint,
-  fallback = color.lifted,
+  fallback,
 }: {
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -21,9 +23,13 @@ export function Glass({
   tint?: ColorValue;
   fallback?: ColorValue;
 }) {
-  if (!LIQUID_GLASS) return <View style={[{ backgroundColor: tint ?? fallback }, style]}>{children}</View>;
+  const onStage = use(Stage);
+  if (!LIQUID_GLASS) {
+    const surface = tint ?? fallback ?? (onStage ? stage : color).lifted;
+    return <View style={[{ backgroundColor: surface }, style]}>{children}</View>;
+  }
   return (
-    <GlassView style={style} isInteractive={interactive} tintColor={tint} colorScheme="dark">
+    <GlassView style={style} isInteractive={interactive} tintColor={tint} colorScheme={onStage ? 'dark' : scheme}>
       {children}
     </GlassView>
   );

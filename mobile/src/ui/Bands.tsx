@@ -12,6 +12,7 @@ import Animated, {
 import Svg, { ClipPath, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { TRIANGLE } from './Mark';
+import { useTone } from './stage';
 
 /** Animated SVG props do not reach the drawing on Android, so the layers, not the shapes, carry the opacity. */
 
@@ -48,6 +49,7 @@ export function BandsMark({
   style?: StyleProp<ViewStyle> | Opacity;
   label?: string;
 }) {
+  const tone = useTone();
   return (
     <Animated.View style={[{ width: size, height: size }, style]} accessibilityLabel={label}>
       {BANDS.map(([y, height], index) => (
@@ -55,8 +57,8 @@ export function BandsMark({
           <Svg width={size} height={size} viewBox="308 300 440 440">
             <Defs>
               <LinearGradient id={`band-${size}-${y}`} x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor="#c3dbb8" />
-                <Stop offset="1" stopColor="#8fb683" />
+                <Stop offset="0" stopColor={tone.markLight} />
+                <Stop offset="1" stopColor={tone.markDeep} />
               </LinearGradient>
               <ClipPath id={`band-clip-${size}-${y}`}>
                 <Path d={TRIANGLE} transform="translate(-40 42)" />

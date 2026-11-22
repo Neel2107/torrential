@@ -12,9 +12,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { color, motion, radius, space } from '@/theme';
+import { color, motion, radius, space, stage, type Palette } from '@/theme';
 
 import { Portal } from './Portal';
+import { STAGE_DIFFERS, useStaged } from './stage';
 
 const CONTENT_IN = new Keyframe({
   0: { opacity: 0, transform: [{ translateY: 10 }] },
@@ -32,6 +33,7 @@ export function Sheet({
   onClose: () => void;
   maxWidth?: number;
 }) {
+  const styles = useStaged(themed, staged);
   const insets = useSafeAreaInsets();
   const { height: screen, width: screenWidth } = useWindowDimensions();
   const width = Math.min(screenWidth, maxWidth);
@@ -113,17 +115,21 @@ export function Sheet({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { backgroundColor: 'rgba(0,0,0,0.55)' },
-  sheet: {
-    position: 'absolute',
-    bottom: 0,
-    maxHeight: '88%',
-    backgroundColor: color.raised,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-  },
-  handle: { height: 28, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
-  body: { flexShrink: 1 },
-  grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: color.rule },
-});
+const sheet = (c: Palette) =>
+  StyleSheet.create({
+    backdrop: { backgroundColor: 'rgba(0,0,0,0.55)' },
+    sheet: {
+      position: 'absolute',
+      bottom: 0,
+      maxHeight: '88%',
+      backgroundColor: c.raised,
+      borderTopLeftRadius: radius.xl,
+      borderTopRightRadius: radius.xl,
+    },
+    handle: { height: 28, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
+    body: { flexShrink: 1 },
+    grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: c.rule },
+  });
+
+const themed = sheet(color);
+const staged = STAGE_DIFFERS ? sheet(stage) : themed;

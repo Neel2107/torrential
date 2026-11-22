@@ -16,7 +16,7 @@ import type { Release } from '@web/wire';
 import { Icon, icons } from '@/ui/Icon';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
-import { color, font, motion, radius, space, type } from '@/theme';
+import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 function speedText(speed: number): string {

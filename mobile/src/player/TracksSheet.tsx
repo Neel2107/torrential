@@ -14,7 +14,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { Sheet } from '@/ui/Sheet';
 import { Check } from '@/ui/Check';
 import { Tap } from '@/ui/Tap';
-import { color, font, motion, space, type } from '@/theme';
+import { stage as color, font, motion, space, stageType as type } from '@/theme';
 
 type FileChoice = Extract<SubtitleChoice, { kind: 'file' }>;
 

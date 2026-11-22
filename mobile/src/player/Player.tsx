@@ -40,7 +40,7 @@ import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
 import { PortalHost } from '@/ui/Portal';
 import { Tap } from '@/ui/Tap';
-import { color, font, motion, space } from '@/theme';
+import { stage as color, font, motion, space } from '@/theme';
 
 import { useDownloaded, usePlayingJob } from './downloaded';
 import { Ended } from './Ended';

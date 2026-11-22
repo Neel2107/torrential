@@ -8,7 +8,7 @@ import type { Job, PlayInfo, Release } from '@web/wire';
 
 import { useLink } from '@/engine/session';
 import { Button } from '@/ui/Button';
-import { color, font, motion, radius, space } from '@/theme';
+import { stage as color, font, motion, radius, space } from '@/theme';
 
 import { replaceStalled, useViewer } from './start';
 
