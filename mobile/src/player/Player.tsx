@@ -46,7 +46,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { PortalHost } from '@/ui/Portal';
 import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
-import { stage as color, font, motion, space } from '@/theme';
+import { alpha, stage as color, font, motion, space } from '@/theme';
 
 import { useDownloaded, usePlayingJob } from './downloaded';
 import { Ended, type UpNext } from './Ended';
@@ -841,7 +841,7 @@ function PlayButton({ playing, buffering, onPress }: { playing: boolean; bufferi
 
   return (
     <Tap shrink={0.9} onPress={onPress} accessibilityLabel={playing ? 'Pause' : 'Play'} style={styles.playButton}>
-      <Glass interactive fallback="rgba(20, 18, 15, 0.5)" style={styles.disc}>
+      <Glass interactive fallback={alpha(color.paper, 0.5)} style={styles.disc}>
         {buffering ? (
           <LoadingMark size={34} label="Buffering" />
         ) : (
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(20, 18, 15, 0.72)',
+    backgroundColor: alpha(color.paper, 0.72),
   },
   unlockText: { fontFamily: font.semibold, fontSize: 15, color: color.ink },
   skip: {
@@ -922,13 +922,13 @@ const styles = StyleSheet.create({
     left: 0,
     borderTopRightRadius: 400,
     borderBottomRightRadius: 400,
-    backgroundColor: 'rgba(240,233,220,0.08)',
+    backgroundColor: alpha(color.ink, 0.08),
   },
   skipRight: {
     right: 0,
     borderTopLeftRadius: 400,
     borderBottomLeftRadius: 400,
-    backgroundColor: 'rgba(240,233,220,0.08)',
+    backgroundColor: alpha(color.ink, 0.08),
   },
   skipText: { fontFamily: font.semibold, fontSize: 14, color: color.ink },
 });

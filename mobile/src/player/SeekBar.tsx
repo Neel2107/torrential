@@ -18,7 +18,7 @@ import { THUMBNAIL_EVERY, type Chapter } from '@web/wire';
 
 import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
-import { stage as color, font, motion, radius } from '@/theme';
+import { alpha, stage as color, font, motion, radius } from '@/theme';
 
 import { arrivals, runsOf, type Downloaded, type Run } from './downloaded';
 
@@ -213,7 +213,7 @@ export function SeekBar({
                     {
                       left: `${run.from * 100}%`,
                       width: `${(run.to - run.from) * 100}%`,
-                      backgroundColor: `rgba(240, 233, 220, ${(0.06 + run.share * 0.14).toFixed(3)})`,
+                      backgroundColor: alpha(color.ink, 0.06 + run.share * 0.14),
                     },
                   ]}
                 />
@@ -263,10 +263,10 @@ const styles = StyleSheet.create({
   chapterGap: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, backgroundColor: '#000' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   hit: { flex: 1, height: 36, justifyContent: 'center' },
-  track: { width: '100%', backgroundColor: 'rgba(240, 233, 220, 0.14)', overflow: 'hidden' },
+  track: { width: '100%', backgroundColor: alpha(color.ink, 0.14), overflow: 'hidden' },
   downloaded: { position: 'absolute', top: 0, bottom: 0 },
   glow: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.action },
-  buffered: { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: 'rgba(240, 233, 220, 0.32)' },
+  buffered: { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: alpha(color.ink, 0.32) },
   played: { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: color.action },
   knob: {
     position: 'absolute',

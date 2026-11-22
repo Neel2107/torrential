@@ -9,7 +9,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } fro
 import { VolumeManager } from 'react-native-volume-manager';
 
 import { Icon } from '@/ui/Icon';
-import { stage as color, font, motion, radius, space } from '@/theme';
+import { alpha, stage as color, font, motion, radius, space } from '@/theme';
 
 const SIDE = 0.4;
 const TRAVEL = 1;
@@ -145,13 +145,13 @@ const styles = StyleSheet.create({
     paddingVertical: space.md,
     width: 52,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(20, 18, 15, 0.72)',
+    backgroundColor: alpha(color.paper, 0.72),
   },
   track: {
     width: 6,
     height: 120,
     borderRadius: 3,
-    backgroundColor: 'rgba(240, 233, 220, 0.25)',
+    backgroundColor: alpha(color.ink, 0.25),
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
