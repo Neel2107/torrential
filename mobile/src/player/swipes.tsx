@@ -7,7 +7,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } fro
 import { VolumeManager } from 'react-native-volume-manager';
 
 import { Icon } from '@/ui/Icon';
-import { color, font, motion, radius, space } from '@/theme';
+import { stage as color, font, motion, radius, space } from '@/theme';
 
 const SIDE = 0.4;
 const TRAVEL = 1;

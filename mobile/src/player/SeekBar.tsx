@@ -10,7 +10,7 @@ import { THUMBNAIL_EVERY } from '@web/wire';
 
 import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
-import { color, font, motion, radius } from '@/theme';
+import { stage as color, font, motion, radius } from '@/theme';
 
 import { runsOf, type Downloaded } from './downloaded';
 

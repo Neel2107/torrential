@@ -11,7 +11,7 @@ import { findTorrent, magnetFromTorrentFile } from '@/engine/torrentFile';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
-import { color, font, radius, space, type } from '@/theme';
+import { alpha, color, font, radius, space, type } from '@/theme';
 
 function decoded(text: string): string {
   try {
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     gap: space.md,
     padding: space.md,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(166,199,154,0.1)',
+    backgroundColor: alpha(color.action, 0.1),
   },
   clipAction: { fontFamily: font.bold, fontSize: 15, color: color.action },
   input: {

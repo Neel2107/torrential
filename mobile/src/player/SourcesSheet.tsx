@@ -9,8 +9,9 @@ import type { Release } from '@web/wire';
 import { qualityOf } from '@/engine/quality';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
+import { STAGE_DIFFERS, useStaged, useTone } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
-import { color, font, space, type } from '@/theme';
+import { color as themedColor, font, space, stage, stageType, type as themedType, type Palette } from '@/theme';
 
 import { useSources, type Sources } from './sources';
 
@@ -27,6 +28,9 @@ export function SourcesSheet({
   onPick?: (release: Release) => void;
   onClose: () => void;
 }) {
+  const styles = useStaged(themed, staged);
+  const color = useTone();
+  const type = useStaged(themedType, stageType);
   const sources = useSources(video);
   const state: Sources = sources.data ?? {
     releases: [],
@@ -80,6 +84,8 @@ function SourceRow({
   playing: boolean;
   onPress: () => void;
 }) {
+  const styles = useStaged(themed, staged);
+  const color = useTone();
   const name = readable(release.name);
   const tags = qualityOf(release.name);
   const detail = name.tags || name.title;
@@ -135,44 +141,48 @@ function SourceRow({
   );
 }
 
-const styles = StyleSheet.create({
-  head: { paddingHorizontal: space.xl, paddingBottom: space.md, gap: 2 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingHorizontal: space.xl,
-    paddingVertical: 14,
-  },
-  rowPlaying: { backgroundColor: 'rgba(166, 199, 154, 0.08)' },
-  body: { flex: 1, gap: 6 },
-  tags: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  tag: {
-    fontFamily: font.semibold,
-    fontSize: 11,
-    letterSpacing: 0.2,
-    color: color.soft,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-    overflow: 'hidden',
-    backgroundColor: color.lifted,
-  },
-  tagStrong: { color: color.actionInk, backgroundColor: color.action },
-  best: { color: color.action, backgroundColor: 'transparent', borderWidth: 1, borderColor: color.action },
-  unknown: { ...type.caption, color: color.pencil },
-  detail: { ...type.caption, color: color.pencil },
-  side: { alignItems: 'flex-end', gap: 6 },
-  size: { ...type.numeric, color: color.ink },
-  seeds: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  seedText: { ...type.caption, fontVariant: ['tabular-nums'] },
-  status: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.xl,
-    paddingVertical: space.lg,
-  },
-  statusText: { paddingHorizontal: space.xl, paddingVertical: space.lg },
-});
+const sheet = (c: Palette, t: typeof themedType) =>
+  StyleSheet.create({
+    head: { paddingHorizontal: space.xl, paddingBottom: space.md, gap: 2 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      paddingHorizontal: space.xl,
+      paddingVertical: 14,
+    },
+    rowPlaying: { backgroundColor: 'rgba(166, 199, 154, 0.08)' },
+    body: { flex: 1, gap: 6 },
+    tags: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+    tag: {
+      fontFamily: font.semibold,
+      fontSize: 11,
+      letterSpacing: 0.2,
+      color: c.soft,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 5,
+      overflow: 'hidden',
+      backgroundColor: c.lifted,
+    },
+    tagStrong: { color: c.actionInk, backgroundColor: c.action },
+    best: { color: c.action, backgroundColor: 'transparent', borderWidth: 1, borderColor: c.action },
+    unknown: { ...t.caption, color: c.pencil },
+    detail: { ...t.caption, color: c.pencil },
+    side: { alignItems: 'flex-end', gap: 6 },
+    size: { ...t.numeric, color: c.ink },
+    seeds: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    dot: { width: 6, height: 6, borderRadius: 3 },
+    seedText: { ...t.caption, fontVariant: ['tabular-nums'] },
+    status: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      paddingHorizontal: space.xl,
+      paddingVertical: space.lg,
+    },
+    statusText: { paddingHorizontal: space.xl, paddingVertical: space.lg },
+  });
+
+const themed = sheet(themedColor, themedType);
+const staged = STAGE_DIFFERS ? sheet(stage, stageType) : themed;

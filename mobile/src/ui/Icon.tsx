@@ -38,7 +38,7 @@ import {
 } from 'lucide-react-native';
 import type { ColorValue, StyleProp, ViewStyle } from 'react-native';
 
-import { color } from '@/theme';
+import { useTone } from './stage';
 
 export const icons = {
   home: House,
@@ -83,7 +83,7 @@ export const icons = {
 export function Icon({
   name: Glyph,
   size = 22,
-  tint = color.ink,
+  tint,
   filled = false,
   weight,
   style,
@@ -95,11 +95,13 @@ export function Icon({
   weight?: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const tone = useTone();
+  const ink = (tint ?? tone.ink) as string;
   return (
     <Glyph
       size={size}
-      color={tint as string}
-      fill={filled ? (tint as string) : 'none'}
+      color={ink}
+      fill={filled ? ink : 'none'}
       strokeWidth={weight ?? (filled ? 2.2 : 1.9)}
       absoluteStrokeWidth={false}
       style={style}

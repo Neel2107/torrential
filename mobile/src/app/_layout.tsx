@@ -6,11 +6,12 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { AppState } from 'react-native';
+import { Appearance, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { EngineError } from '@/engine/client';
@@ -18,16 +19,19 @@ import { JobsProvider } from '@/engine/jobs';
 import { SessionProvider, useSession } from '@/engine/session';
 import { HERO, HeroLayer } from '@/ui/hero';
 import { PortalHost } from '@/ui/Portal';
-import { color } from '@/theme';
+import { color, scheme, stage } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
+Appearance.setColorScheme(scheme);
+SystemUI.setBackgroundColorAsync(color.paper);
 
 AppState.addEventListener('change', (state) => focusManager.setFocused(state === 'active'));
 
+const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
 const theme = {
-  ...DarkTheme,
+  ...base,
   colors: {
-    ...DarkTheme.colors,
+    ...base.colors,
     primary: color.action,
     background: color.paper,
     card: color.paper,
@@ -103,6 +107,7 @@ function Routes() {
                 presentation: 'fullScreenModal',
                 animation: 'fade',
                 orientation: 'landscape',
+                contentStyle: { backgroundColor: stage.paper },
                 statusBarHidden: true,
                 navigationBarHidden: true,
               }}
@@ -113,6 +118,7 @@ function Routes() {
                 presentation: 'fullScreenModal',
                 animation: 'fade',
                 orientation: 'landscape',
+                contentStyle: { backgroundColor: stage.paper },
                 statusBarHidden: true,
                 navigationBarHidden: true,
               }}
@@ -173,7 +179,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: color.paper }}>
       <ThemeProvider value={theme}>
-        <StatusBar style="light" />
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         <SessionProvider>
           <PortalHost>
             <Routes />

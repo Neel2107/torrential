@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { SubtitleBacking, SubtitleStyle } from '@web/lib/storage';
 
-import { space, type } from '@/theme';
+import { space, stageType as type } from '@/theme';
 
 import { Chip, Section } from './SettingsSheet';
 

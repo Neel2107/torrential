@@ -1,8 +1,9 @@
 import { ActivityIndicator, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { color, font, radius, space } from '@/theme';
+import { color, font, radius, space, stage, type Palette } from '@/theme';
 
 import { Icon, icons } from './Icon';
+import { STAGE_DIFFERS, useStaged, useTone } from './stage';
 import { Tap } from './Tap';
 
 type Kind = 'primary' | 'secondary' | 'quiet';
@@ -26,7 +27,9 @@ export function Button({
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }) {
-  const ink = kind === 'primary' ? color.actionInk : color.ink;
+  const tone = useTone();
+  const styles = useStaged(themed, staged);
+  const ink = kind === 'primary' ? tone.actionInk : tone.ink;
   return (
     <Tap
       haptic
@@ -50,18 +53,22 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    minHeight: 48,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.xl,
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  primary: { backgroundColor: color.action },
-  secondary: { backgroundColor: color.lifted, borderWidth: StyleSheet.hairlineWidth, borderColor: color.rule },
-  quiet: { backgroundColor: 'transparent', paddingHorizontal: space.md },
-  dimmed: { opacity: 0.5 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
-  label: { fontFamily: font.semibold, fontSize: 16, letterSpacing: -0.1 },
-});
+const sheet = (c: Palette) =>
+  StyleSheet.create({
+    base: {
+      minHeight: 48,
+      borderRadius: radius.pill,
+      paddingHorizontal: space.xl,
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    primary: { backgroundColor: c.action },
+    secondary: { backgroundColor: c.lifted, borderWidth: StyleSheet.hairlineWidth, borderColor: c.rule },
+    quiet: { backgroundColor: 'transparent', paddingHorizontal: space.md },
+    dimmed: { opacity: 0.5 },
+    row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
+    label: { fontFamily: font.semibold, fontSize: 16, letterSpacing: -0.1 },
+  });
+
+const themed = sheet(color);
+const staged = STAGE_DIFFERS ? sheet(stage) : themed;

@@ -23,7 +23,7 @@ import { parsePairing, useSession } from '@/engine/session';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { Mark } from '@/ui/Mark';
-import { color, font, motion, radius, space, type } from '@/theme';
+import { alpha, color, font, motion, radius, space, type } from '@/theme';
 
 type Mode = 'scan' | 'type';
 
@@ -293,6 +293,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: space.md,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(226, 128, 110, 0.12)',
+    backgroundColor: alpha(color.error, 0.12),
   },
 });

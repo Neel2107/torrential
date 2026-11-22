@@ -1,11 +1,22 @@
 import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
-import { color, hitSlop, motion } from '@/theme';
+import { alpha, color, hitSlop, motion, stage } from '@/theme';
+
+import { useStaged } from './stage';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const WASH = [alpha(color.ink, 0), alpha(color.ink, 0.06)];
+const STAGE_WASH = [alpha(stage.ink, 0), alpha(stage.ink, 0.06)];
 
 export function Tap({
   children,
@@ -25,9 +36,10 @@ export function Tap({
   highlight?: boolean;
 }) {
   const pressed = useSharedValue(0);
+  const wash = useStaged(WASH, STAGE_WASH);
   const animated = useAnimatedStyle(() => ({
     transform: [{ scale: 1 - (1 - shrink) * pressed.value }],
-    backgroundColor: highlight ? `rgba(240, 233, 220, ${(0.06 * pressed.value).toFixed(3)})` : undefined,
+    backgroundColor: highlight ? interpolateColor(pressed.value, [0, 1], wash) : undefined,
   }));
 
   return (

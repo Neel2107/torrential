@@ -4,7 +4,9 @@ import { StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewS
 
 import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
-import { color, font } from '@/theme';
+import { color, font, stage, type Palette } from '@/theme';
+
+import { STAGE_DIFFERS, useStaged } from './stage';
 
 export type ArtKind = 'poster' | 'background' | 'logo' | 'thumbnail';
 
@@ -32,6 +34,7 @@ export function Art({
   onDisplay?: () => void;
 }) {
   const link = useLink();
+  const styles = useStaged(themed, staged);
   // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
   const { width, height } = useWindowDimensions();
   const orientation = width > height ? 'landscape' : 'portrait';
@@ -66,8 +69,12 @@ export function Art({
   );
 }
 
-const styles = StyleSheet.create({
-  frame: { backgroundColor: color.raised, overflow: 'hidden' },
-  fallback: { ...StyleSheet.absoluteFill, padding: 12, justifyContent: 'flex-end' },
-  fallbackText: { fontFamily: font.semibold, fontSize: 15, lineHeight: 19, color: color.soft },
-});
+const sheet = (c: Palette) =>
+  StyleSheet.create({
+    frame: { backgroundColor: c.raised, overflow: 'hidden' },
+    fallback: { ...StyleSheet.absoluteFill, padding: 12, justifyContent: 'flex-end' },
+    fallbackText: { fontFamily: font.semibold, fontSize: 15, lineHeight: 19, color: c.soft },
+  });
+
+const themed = sheet(color);
+const staged = STAGE_DIFFERS ? sheet(stage) : themed;

@@ -9,7 +9,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
-import { color, font, space, type } from '@/theme';
+import { stage as color, font, space, stageType as type } from '@/theme';
 
 export function videosOf(play: PlayInfo): TorrentFile[] {
   return play.files

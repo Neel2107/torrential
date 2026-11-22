@@ -6,10 +6,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCopy, type Copy } from '@/offline/saved';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
+import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
-import { color, font, space, type } from '@/theme';
+import { stage as color, font, space, stageType as type } from '@/theme';
 
-export default function Offline() {
+export default function OfflineScreen() {
+  return (
+    <Stage value>
+      <Offline />
+    </Stage>
+  );
+}
+
+function Offline() {
   const { job } = useLocalSearchParams<{ job: string }>();
   const copy = useCopy(job ?? '');
   if (copy?.state !== 'saved') {

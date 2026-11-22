@@ -12,7 +12,7 @@ import Animated, {
 
 import { Button } from '@/ui/Button';
 import { icons } from '@/ui/Icon';
-import { color, font, motion, space, type } from '@/theme';
+import { stage as color, font, motion, space, stageType as type } from '@/theme';
 
 const UP_NEXT_SECONDS = 10;
 

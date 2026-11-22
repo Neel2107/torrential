@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { color, motion } from '@/theme';
+import { alpha, color, motion } from '@/theme';
 
 import { useChrome } from './chrome';
 import { Icon, icons } from './Icon';
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     flexDirection: 'row',
-    backgroundColor: 'rgba(20, 18, 15, 0.94)',
+    backgroundColor: alpha(color.paper, 0.94),
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: color.rule,
   },

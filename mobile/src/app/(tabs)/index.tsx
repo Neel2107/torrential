@@ -27,11 +27,12 @@ import { Meter } from '@/ui/Meter';
 import { PosterGrid } from '@/ui/PosterGrid';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
+import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { Button } from '@/ui/Button';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
-import { color, radius, space, type } from '@/theme';
+import { color, radius, space, stage, type } from '@/theme';
 
 export default function Home() {
   const home = useHome();
@@ -169,13 +170,15 @@ function ContinueCard({ item, width, index }: { item: Continue; width: number; i
             locations={[0.45, 1]}
             style={StyleSheet.absoluteFill}
           />
-          <View style={styles.stillBody}>
-            <Logo id={item.title.id} name={item.title.name} style={styles.logo} />
-            <View style={styles.playPill}>
-              <Icon name={icons.play} size={14} tint={color.actionInk} filled />
-              <Text style={styles.playPillText}>{progress ? 'Resume' : 'Play'}</Text>
+          <Stage value>
+            <View style={styles.stillBody}>
+              <Logo id={item.title.id} name={item.title.name} style={styles.logo} />
+              <View style={styles.playPill}>
+                <Icon name={icons.play} size={14} tint={stage.actionInk} filled />
+                <Text style={styles.playPillText}>{progress ? 'Resume' : 'Play'}</Text>
+              </View>
             </View>
-          </View>
+          </Stage>
           {progress !== null ? (
             <View style={styles.edgeMeter}>
               <Meter fraction={progress} />
@@ -264,9 +267,9 @@ const styles = StyleSheet.create({
     height: 34,
     paddingHorizontal: 14,
     borderRadius: radius.pill,
-    backgroundColor: color.ink,
+    backgroundColor: stage.ink,
   },
-  playPillText: { ...type.callout, color: color.actionInk, fontSize: 14 },
+  playPillText: { ...type.callout, color: stage.actionInk, fontSize: 14 },
   edgeMeter: { position: 'absolute', left: space.lg, right: space.lg, bottom: space.md },
   cardText: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingTop: space.md, paddingHorizontal: 2 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: space.xs },

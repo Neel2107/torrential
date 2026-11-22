@@ -18,7 +18,7 @@ import { titleOf } from '@web/lib/video';
 import type { Cast } from '@web/wire';
 
 import { useCastControl, useCasts } from '@/engine/queries';
-import { color, motion, radius, space, type } from '@/theme';
+import { alpha, color, motion, radius, space, type } from '@/theme';
 
 import { Art } from './Art';
 import { Icon, icons } from './Icon';
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: color.raised,
   },
-  thumbFailed: { width: 44, borderRadius: 22, backgroundColor: 'rgba(226,128,110,0.14)' },
+  thumbFailed: { width: 44, borderRadius: 22, backgroundColor: alpha(color.error, 0.14) },
   words: { flex: 1, gap: 1 },
   button: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   line: {
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 2,
-    backgroundColor: 'rgba(240,233,220,0.10)',
+    backgroundColor: alpha(color.ink, 0.1),
   },
   lineFill: { height: 2, backgroundColor: color.action },
 });
