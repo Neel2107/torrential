@@ -194,8 +194,8 @@ export function usePullHeight() {
 export function PullMark({ size = 30 }: { size?: number }) {
   const { pull, spin, busy, holding } = usePull();
   const style = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (pull.value / MOST) * 0.6 }] }));
-  // At rest the last band is the faint one still arriving; while refreshing, light runs down all
-  // three. Each band is its own layer: animated SVG props do not reach the drawing on Android.
+  // At rest all three bands are alike, so the fill and the pass read clearly against them; the app
+  // icon keeps its faint last band. Each band is its own layer: animated SVG props do not reach the drawing on Android.
   // The maths sits inside each style: a helper closure here is rewritten by the React Compiler and
   // never reaches the UI thread.
   // While pulling, as X's logo fills in stroke by stroke, the bands fill in turn: all three are lit
@@ -208,7 +208,7 @@ export function PullMark({ size = 30 }: { size?: number }) {
   }));
   const last = useAnimatedStyle(() => ({
     opacity:
-      holding.value && pull.value > 0 ? fill(pull.value / LINE, 2) : 0.42 + (band(spin.value, 2) - 0.42) * busy.value,
+      holding.value && pull.value > 0 ? fill(pull.value / LINE, 2) : 1 + (band(spin.value, 2) - 1) * busy.value,
   }));
   const layers: [number, number, typeof top][] = [
     [300, 118, top],
