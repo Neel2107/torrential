@@ -460,8 +460,8 @@ export function Player({
           </GestureDetector>
 
           {buffering && !visible ? (
-            <View style={styles.center} pointerEvents="none">
-              <LoadingMark size={40} label="Loading" />
+            <View style={styles.center} pointerEvents="none" accessibilityLiveRegion="polite" accessible>
+              <LoadingMark size={40} label="Buffering" />
             </View>
           ) : null}
 
@@ -772,7 +772,7 @@ function PlayButton({ playing, buffering, onPress }: { playing: boolean; bufferi
     <Tap shrink={0.9} onPress={onPress} accessibilityLabel={playing ? 'Pause' : 'Play'} style={styles.playButton}>
       <Glass interactive fallback="rgba(20, 18, 15, 0.5)" style={styles.disc}>
         {buffering ? (
-          <LoadingMark size={34} label="Loading" />
+          <LoadingMark size={34} label="Buffering" />
         ) : (
           <Animated.View style={style}>
             <Icon name={playing ? icons.pause : icons.play} size={38} tint={color.ink} filled />
