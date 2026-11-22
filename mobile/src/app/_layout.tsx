@@ -83,6 +83,7 @@ function Routes() {
         <Stack
           screenOptions={{
             headerShown: false,
+            statusBarStyle: scheme === 'dark' ? 'light' : 'dark',
             orientation: 'portrait_up',
             contentStyle: { backgroundColor: color.paper },
           }}
