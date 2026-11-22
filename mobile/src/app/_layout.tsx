@@ -18,6 +18,7 @@ import { EngineError } from '@/engine/client';
 import { JobsProvider } from '@/engine/jobs';
 import { SessionProvider, useSession } from '@/engine/session';
 import { HERO, HeroLayer } from '@/ui/hero';
+import { AskHost } from '@/ui/Ask';
 import { PortalHost } from '@/ui/Portal';
 import { color, scheme, stage } from '@/theme';
 
@@ -186,6 +187,7 @@ export default function RootLayout() {
         <SessionProvider>
           <PortalHost>
             <Routes />
+            <AskHost />
           </PortalHost>
         </SessionProvider>
       </ThemeProvider>

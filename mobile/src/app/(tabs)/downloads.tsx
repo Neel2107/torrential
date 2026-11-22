@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeOut,
   LinearTransition,
@@ -24,6 +24,7 @@ import { post } from '@/engine/client';
 import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
 import { qualityOf } from '@/engine/quality';
 import { Art } from '@/ui/Art';
+import { ask, type Question } from '@/ui/Ask';
 import { useLink, useSession } from '@/engine/session';
 import { cancel, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
@@ -331,17 +332,12 @@ type JobAction = {
   /** The SF Symbol for the iOS menu. */
   symbol: SFSymbol;
   danger?: boolean;
-  confirm?: string;
-  ask?: { title: string; message: string };
+  ask?: Question;
   run: () => void | Promise<void>;
 };
 
-function runAsked(action: JobAction) {
-  if (!action.ask) return action.run();
-  Alert.alert(action.ask.title, action.ask.message, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: action.confirm ?? action.label, style: 'destructive', onPress: () => action.run() },
-  ]);
+async function runAsked(action: JobAction) {
+  if (!action.ask || (await ask(action.ask))) return action.run();
 }
 
 function useJobActions(job: Job): JobAction[] {
@@ -416,15 +412,26 @@ function useJobActions(job: Job): JobAction[] {
   actions.push({
     id: 'remove',
     symbol: 'trash',
-    label: 'Remove',
+    label: onPhone ? 'Delete from this phone' : 'Remove from Downloads',
     icon: icons.trash,
     danger: true,
-    confirm: onPhone
-      ? `Delete ${job.progress.verified ? bytes(job.progress.verified) : 'it'} from this phone`
-      : 'Remove from the list',
     ask: onPhone
-      ? { title: 'Delete from this phone?', message: `${name.title} and what it downloaded will be deleted.` }
-      : { title: 'Remove from Downloads?', message: 'The downloaded files stay on the computer.' },
+      ? {
+          title: `Delete ${name.title}?`,
+          message: job.progress.verified
+            ? `This frees ${bytes(job.progress.verified)} on this phone.`
+            : 'The download stops and nothing is kept.',
+          confirm: 'Delete',
+          danger: true,
+          icon: icons.trash,
+        }
+      : {
+          title: `Remove ${name.title}?`,
+          message: 'It leaves Downloads. The files stay on the computer.',
+          confirm: 'Remove',
+          danger: true,
+          icon: icons.trash,
+        },
     run: () => send('/api/remove'),
   });
   return actions;
@@ -484,7 +491,7 @@ function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
           {actions.map((action) => (
             <NativeButton
               key={action.id}
-              label={action.confirm ?? action.label}
+              label={action.label}
               systemImage={action.symbol}
               role={action.danger ? 'destructive' : 'default'}
               onPress={() => runAsked(action)}
@@ -521,7 +528,7 @@ function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
         {actions.map((action) => (
           <Menu.Item key={action.id} id={action.id} destructive={action.danger}>
             <Menu.Item.Icon>{({ color: tint }) => <Icon name={action.icon} size={20} tint={tint} />}</Menu.Item.Icon>
-            <Menu.Item.Title>{action.confirm ?? action.label}</Menu.Item.Title>
+            <Menu.Item.Title>{action.label}</Menu.Item.Title>
           </Menu.Item>
         ))}
       </Menu.Content>
@@ -660,10 +667,18 @@ function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
               onClose();
             };
             if (copy.state !== 'saved') return go();
-            Alert.alert('Delete the saved copy?', `${copy.label} will be deleted from this phone.`, [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete', style: 'destructive', onPress: go },
-            ]);
+            onClose();
+            ask({
+              title: `Delete ${copy.label.title}?`,
+              message: `This frees ${bytes(copy.size)} on this phone.`,
+              confirm: 'Delete',
+              danger: true,
+              icon: icons.trash,
+            }).then((yes) => {
+              if (!yes) return;
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              remove(job);
+            });
           }}
         />
       </View>

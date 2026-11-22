@@ -6,7 +6,7 @@ import { Icon, icons } from './Icon';
 import { STAGE_DIFFERS, useStaged, useTone } from './stage';
 import { Tap } from './Tap';
 
-type Kind = 'primary' | 'secondary' | 'quiet';
+type Kind = 'primary' | 'danger' | 'secondary' | 'quiet';
 
 export function Button({
   label,
@@ -29,7 +29,7 @@ export function Button({
 }) {
   const tone = useTone();
   const styles = useStaged(themed, staged);
-  const ink = kind === 'primary' ? tone.actionInk : tone.ink;
+  const ink = kind === 'primary' ? tone.actionInk : kind === 'danger' ? tone.paper : tone.ink;
   return (
     <Tap
       haptic
@@ -63,6 +63,7 @@ const sheet = (c: Palette) =>
       overflow: 'hidden',
     },
     primary: { backgroundColor: c.action },
+    danger: { backgroundColor: c.error },
     secondary: { backgroundColor: c.lifted, borderWidth: StyleSheet.hairlineWidth, borderColor: c.rule },
     quiet: { backgroundColor: 'transparent', paddingHorizontal: space.md },
     dimmed: { opacity: 0.5 },
