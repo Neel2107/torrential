@@ -19,6 +19,7 @@ export const TABS_HEIGHT = 48;
 
 export function useTopInset(withTabs: boolean): number {
   const insets = useSafeAreaInsets();
+
   return insets.top + BAR_HEIGHT + (withTabs ? TABS_HEIGHT : 0);
 }
 
@@ -38,6 +39,7 @@ export function TopBar({
   const pull = usePullHeight();
 
   const stretch = useAnimatedStyle(() => ({ transform: [{ translateY: pull.get() / 2 }] }));
+  const lower = useAnimatedStyle(() => ({ transform: [{ translateY: pull.get() }] }));
   const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.get() * BAR_HEIGHT }] }));
   const fade = useAnimatedStyle(() => ({ opacity: interpolate(hidden.get(), [0, 0.6], [1, 0]) }));
 
@@ -57,7 +59,7 @@ export function TopBar({
           </View>
           <View style={[styles.side, styles.end]}>{right}</View>
         </Animated.View>
-        {tabs ? <TabStrip {...tabs} /> : <View style={styles.rule} />}
+        <Animated.View style={lower}>{tabs ? <TabStrip {...tabs} /> : <View style={styles.rule} />}</Animated.View>
       </Animated.View>
       <View style={[styles.statusShade, { height: insets.top }]} pointerEvents="none" />
     </>
