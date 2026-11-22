@@ -50,7 +50,11 @@ function Engines() {
     <>
       <Text>{session.state === 'paired' ? `Using ${session.engine.name}` : session.state}</Text>
       <Text>{`Engines: ${engines.map((engine) => engine.name).join(', ')}`}</Text>
-      <Pressable onPress={() => connectOverUsb()}>
+      <Pressable
+        onPress={() => {
+          connectOverUsb();
+        }}
+      >
         <Text>Connect over USB</Text>
       </Pressable>
     </>
@@ -116,5 +120,27 @@ describe('the engines this phone has paired with', () => {
     );
 
     expect(await screen.findByText('unpaired')).toBeOnTheScreen();
+  });
+
+  test('an engine added while the saved ones are still loading is added to them, not saved alone', async () => {
+    const { values, release } = inMemory({ engines: JSON.stringify({ engines: [computer], active: computer.id }) }, [
+      'engines',
+    ]);
+
+    await render(
+      <SessionProvider>
+        <Engines />
+      </SessionProvider>,
+    );
+
+    await fireEvent.press(screen.getByText('Connect over USB'));
+    release();
+
+    expect(await screen.findByText('Using Computer over USB')).toBeOnTheScreen();
+    expect(screen.getByText('Engines: 192.168.1.5, Computer over USB')).toBeOnTheScreen();
+    expect(storedEngines(values).engines.map((engine: { name: string }) => engine.name)).toEqual([
+      '192.168.1.5',
+      'Computer over USB',
+    ]);
   });
 });

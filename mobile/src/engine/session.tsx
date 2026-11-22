@@ -61,34 +61,36 @@ async function load(): Promise<Saved> {
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<Saved | null>(null);
+  const [loading] = useState(() => load().catch(() => NONE));
 
   useEffect(() => {
-    load()
-      .then((loaded) => {
-        once('session loaded');
-        setSaved(loaded);
-      })
-      .catch(() => setSaved({ engines: [], active: null }));
-  }, []);
+    loading.then((loaded) => {
+      once('session loaded');
+      setSaved((now) => now ?? loaded);
+    });
+  }, [loading]);
 
   const latest = useRef<Saved | null>(null);
   latest.current = saved;
-  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const queue = useRef<Promise<unknown>>(loading);
 
-  const change = useCallback((next: (now: Saved) => Saved) => {
-    const run = queue.current.then(async () => {
-      const now = latest.current ?? { engines: [], active: null };
-      const saving = next(now);
-      await keychain.set(KEY, JSON.stringify(saving));
-      await keychain.remove(OLD_KEY);
-      latest.current = saving;
-      setSaved(saving);
-    });
+  const change = useCallback(
+    (next: (now: Saved) => Saved) => {
+      const run = queue.current.then(async () => {
+        const now = latest.current ?? (await loading);
+        const saving = next(now);
+        await keychain.set(KEY, JSON.stringify(saving));
+        await keychain.remove(OLD_KEY);
+        latest.current = saving;
+        setSaved(saving);
+      });
 
-    queue.current = run.catch(() => {});
+      queue.current = run.catch(() => {});
 
-    return run;
-  }, []);
+      return run;
+    },
+    [loading],
+  );
 
   const { engines, engine, session } = useMemo(() => {
     const engines = saved?.engines ?? [];
