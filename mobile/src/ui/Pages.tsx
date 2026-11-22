@@ -152,7 +152,7 @@ export function PageHeader({ title, detail, onBack }: { title: string; detail?: 
     <View style={styles.header}>
       <Tap shrink={0.97} onPress={onBack} accessibilityLabel={`Back from ${title}`} style={styles.back}>
         <Icon name={icons.back} size={20} tint={tone.ink} />
-        <Text style={type.title} accessibilityRole="header">
+        <Text style={[type.title, styles.title]} accessibilityRole="header" numberOfLines={2}>
           {title}
         </Text>
       </Tap>
@@ -164,6 +164,7 @@ export function PageHeader({ title, detail, onBack }: { title: string; detail?: 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: space.xl, paddingBottom: space.sm },
   back: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44, alignSelf: 'flex-start' },
+  title: { flexShrink: 1 },
   detail: { marginLeft: 20 + space.sm },
   clip: { overflow: 'hidden' },
   layer: { position: 'absolute', top: 0, left: 0, right: 0 },

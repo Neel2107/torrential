@@ -57,5 +57,5 @@ export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () =>
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 80 },
   center: { textAlign: 'center' },
-  actions: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
+  actions: { alignSelf: 'stretch', alignItems: 'center', gap: space.sm, marginTop: space.md },
 });
