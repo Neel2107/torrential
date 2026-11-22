@@ -164,19 +164,28 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
   const tags = job.name ? qualityOf(job.name) : [];
   const size = job.progress.size;
   const fraction = size ? job.progress.verified / size : 0;
-  const downloading = job.state === 'downloading';
+  const moving = job.state === 'downloading' && !job.waiting_for;
 
-  const facts =
+  const state =
     job.state === 'done'
-      ? [size ? bytes(size) : null, `finished ${ago(job.finished_at)}`]
+      ? `Finished ${ago(job.finished_at)}`
       : job.state === 'error'
-        ? [sentence(job.error.message)]
-        : [
-            job.waiting_for ? `Waiting for ${job.waiting_for}` : STATE[job.state],
-            size ? `${bytes(job.progress.verified)} of ${bytes(size)}` : null,
-            downloading && !job.waiting_for && job.progress.down_rate > 0 ? rate(job.progress.down_rate) : null,
-            downloading && !job.waiting_for && job.progress.eta ? `${roughly(job.progress.eta)} left` : null,
-          ];
+        ? sentence(job.error.message)
+        : job.waiting_for
+          ? `Waiting for ${job.waiting_for}`
+          : size
+            ? `${STATE[job.state]} ${percent(fraction)}`
+            : STATE[job.state];
+  const numbers =
+    job.state === 'done' || job.state === 'error'
+      ? null
+      : moving && job.progress.down_rate > 0
+        ? [rate(job.progress.down_rate), job.progress.eta ? roughly(job.progress.eta) : null]
+            .filter(Boolean)
+            .join(' · ')
+        : size
+          ? `${bytes(job.progress.verified)} of ${bytes(size)}`
+          : null;
 
   return (
     <Animated.View entering={rise(index)} exiting={FadeOut.duration(motion.quick)}>
@@ -188,44 +197,53 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           onMenu();
         }}
-        accessibilityLabel={`${name.title}, ${facts.filter(Boolean).join(', ')}`}
+        accessibilityLabel={[name.title, name.tags, ...tags.map((tag) => tag.label), state, numbers]
+          .filter(Boolean)
+          .join(', ')}
         accessibilityHint="Long press for pause, resume and remove."
         style={styles.row}
       >
         {name.poster ? (
-          <View>
-            <Art id={name.poster} kind="poster" name={name.title} style={styles.poster} />
-            <JobBadge job={job} landed={landed} small />
-          </View>
+          <Art id={name.poster} kind="poster" name={name.title} style={styles.poster} />
         ) : (
-          <JobBadge job={job} landed={landed} small={false} />
+          <View style={[styles.poster, styles.posterless]}>
+            <Icon name={icons.film} size={18} tint={color.pencil} />
+          </View>
         )}
-        <View style={{ flex: 1, gap: 6 }}>
-          <Text style={type.callout} numberOfLines={2}>
-            {name.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{name.tags}</Text>
-          </Text>
-          {tags.length > 0 ? (
-            <View style={styles.tags} accessibilityLabel={tags.map((tag) => tag.label).join(', ')}>
-              {tags.map((tag) => (
-                <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
-                  {tag.label}
-                </Text>
-              ))}
-            </View>
-          ) : job.name && name.poster ? (
-            <Text style={type.caption} numberOfLines={1}>
-              {job.name}
+        <View style={styles.body}>
+          <View style={styles.head}>
+            <Text style={[type.callout, { flex: 1 }]} numberOfLines={1}>
+              {name.title} <Text style={styles.titleTags}>{name.tags}</Text>
             </Text>
-          ) : null}
+            <MoreButton job={job} onMenu={onMenu} />
+          </View>
+          <View style={styles.tags}>
+            {tags.map((tag) => (
+              <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
+                {tag.label}
+              </Text>
+            ))}
+            {size ? <Text style={styles.size}>{bytes(size)}</Text> : null}
+          </View>
           {job.state !== 'done' && job.state !== 'error' ? (
             <Progress fraction={fraction} paused={job.state === 'paused'} />
           ) : null}
-          <Text style={type.numeric} numberOfLines={2}>
-            {facts.filter(Boolean).join('  ·  ')}
-          </Text>
+          <View style={styles.status}>
+            <JobBadge job={job} landed={landed} />
+            <Text
+              style={[styles.state, job.state === 'error' && { color: color.error }]}
+              numberOfLines={job.state === 'error' ? 2 : 1}
+            >
+              {state}
+            </Text>
+            {numbers ? (
+              <Text style={styles.numbers} numberOfLines={1}>
+                {numbers}
+              </Text>
+            ) : null}
+          </View>
           {copy ? <CopyState copy={copy} /> : null}
         </View>
-        <MoreButton job={job} onMenu={onMenu} />
       </Tap>
     </Animated.View>
   );
@@ -566,7 +584,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.hairline,
   },
-  poster: { width: 40, height: 60, borderRadius: 6 },
+  poster: { width: 48, height: 72, borderRadius: 8 },
+  posterless: { backgroundColor: color.raised, alignItems: 'center', justifyContent: 'center' },
+  body: { flex: 1, gap: 8 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: -4 },
+  titleTags: { color: color.pencil, fontFamily: font.regular },
+  size: { ...type.caption, alignSelf: 'center', fontVariant: ['tabular-nums'] },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  state: { ...type.label, color: color.soft, flexShrink: 1, fontVariant: ['tabular-nums'] },
+  numbers: {
+    ...type.label,
+    color: color.pencil,
+    marginLeft: 'auto',
+    paddingLeft: space.sm,
+    fontVariant: ['tabular-nums'],
+  },
   badge: {
     width: 40,
     height: 40,
