@@ -1,13 +1,14 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { alpha, color, font, motion, radius, space, type } from '@/theme';
+import { font, motion, space } from '@/theme';
 
-import { Button } from './Button';
-import { Icon } from './Icon';
+import { Icon, icons } from './Icon';
+import { surface, surfaceStyles } from './surface';
+import { Tap } from './Tap';
 
 export type Question = { title: string; message: string; confirm: string; danger?: boolean; icon?: LucideIcon };
 
@@ -64,7 +65,6 @@ function Dialog({ asking: question }: { asking: Asking }) {
   const shown = useSharedValue(0);
   const answered = useRef(false);
   const [leaving, setLeaving] = useState(false);
-  const tint = question.danger ? color.error : color.action;
 
   const finish = (yes: boolean) => {
     if (asking === question) show(null);
@@ -75,18 +75,18 @@ function Dialog({ asking: question }: { asking: Asking }) {
     if (answered.current) return;
     answered.current = true;
     setLeaving(true);
-    shown.set(withTiming(0, { duration: 150, easing: motion.out }, (done) => done && scheduleOnRN(finish, yes)));
+    shown.set(withTiming(0, { duration: 140, easing: Easing.linear }, (done) => done && scheduleOnRN(finish, yes)));
   };
 
   useEffect(() => {
-    shown.set(withTiming(1, { duration: 240, easing: motion.out }));
+    shown.set(withTiming(1, { duration: 220, easing: motion.out }));
   }, [shown]);
 
   const backdrop = useAnimatedStyle(() => ({ opacity: shown.get() }));
 
   const card = useAnimatedStyle(() => ({
     opacity: shown.get(),
-    transform: [{ translateY: (1 - shown.get()) * 12 }, { scale: 0.96 + shown.get() * 0.04 }],
+    transform: [{ scale: 0.94 + shown.get() * 0.06 }],
   }));
 
   return (
@@ -103,23 +103,22 @@ function Dialog({ asking: question }: { asking: Asking }) {
           <Pressable style={StyleSheet.absoluteFill} onPress={() => close(false)} accessibilityLabel="Cancel" />
         </Animated.View>
         <View style={styles.center} pointerEvents="box-none">
-          <Animated.View style={[styles.card, card]} accessibilityRole="alert">
-            {question.icon ? (
-              <View style={[styles.badge, { backgroundColor: alpha(tint, 0.14) }]}>
-                <Icon name={question.icon} size={22} tint={tint} />
-              </View>
-            ) : null}
-            <Text style={styles.title} accessibilityRole="header">
-              {question.title}
-            </Text>
-            <Text style={styles.message}>{question.message}</Text>
-            <View style={styles.buttons}>
-              <Button
-                kind={question.danger ? 'danger' : 'primary'}
+          <Animated.View style={[surfaceStyles.panel, styles.card, card]} accessibilityRole="alert">
+            <View style={styles.words}>
+              <Text style={styles.title} accessibilityRole="header">
+                {question.title}
+              </Text>
+              <Text style={styles.message}>{question.message}</Text>
+            </View>
+            <View style={styles.rule} />
+            <View style={styles.actions}>
+              <Choice
+                icon={question.icon ?? icons.check}
                 label={question.confirm}
+                tint={question.danger ? surface.destructive : surface.ink}
                 onPress={() => close(true)}
               />
-              <Button kind="secondary" label="Cancel" onPress={() => close(false)} />
+              <Choice icon={icons.close} label="Cancel" tint={surface.ink} onPress={() => close(false)} />
             </View>
           </Animated.View>
         </View>
@@ -128,28 +127,32 @@ function Dialog({ asking: question }: { asking: Asking }) {
   );
 }
 
+function Choice({
+  icon,
+  label,
+  tint,
+  onPress,
+}: {
+  icon: LucideIcon;
+  label: string;
+  tint: string;
+  onPress: () => void;
+}) {
+  return (
+    <Tap shrink={1} highlight haptic onPress={onPress} accessibilityLabel={label} style={surfaceStyles.row}>
+      <Icon name={icon} size={20} tint={tint} />
+      <Text style={[surfaceStyles.rowLabel, { color: tint }]}>{label}</Text>
+    </Tap>
+  );
+}
+
 const styles = StyleSheet.create({
-  backdrop: { backgroundColor: color.scrim },
+  backdrop: { backgroundColor: 'rgba(0, 0, 0, 0.45)' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl },
-  card: {
-    width: '100%',
-    maxWidth: 380,
-    padding: space.xl,
-    borderRadius: radius.xl,
-    backgroundColor: color.raised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.hairline,
-    alignItems: 'center',
-  },
-  badge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: space.lg,
-  },
-  title: { ...type.headline, fontFamily: font.bold, fontSize: 19, lineHeight: 25, textAlign: 'center' },
-  message: { ...type.body, fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: space.sm },
-  buttons: { alignSelf: 'stretch', gap: space.sm, marginTop: space.xl },
+  card: { width: '100%', maxWidth: 320, paddingBottom: 8 },
+  words: { paddingHorizontal: 24, paddingTop: 22, paddingBottom: 18, gap: 6 },
+  title: { fontFamily: font.semibold, fontSize: 18, lineHeight: 23, color: surface.ink },
+  message: { fontFamily: font.regular, fontSize: 15, lineHeight: 21, color: surface.muted },
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: surface.rule, marginHorizontal: 24 },
+  actions: { paddingTop: 8 },
 });
