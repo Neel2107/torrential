@@ -4,8 +4,10 @@ import type {
   FilesReply,
   Job,
   JobStatus,
+  PlayInfo,
   Position,
   Release,
+  TitleCard,
   TorrentFile,
 } from '@web/wire';
 
@@ -84,6 +86,30 @@ export function someFiles(files: TorrentFile[], change: Partial<FilesReply> = {}
     files,
     metadata_source: 'download',
     elapsed_ms: 0,
+  };
+
+  return { ...base, ...change };
+}
+
+/** A title as the catalog shows it, a film unless the test says, changed only where a test says. */
+export function aTitle(change: Partial<TitleCard> = {}): TitleCard {
+  const base: TitleCard = { id: 'tt0063350', kind: 'film', name: 'Night of the Living Dead', year: 1968, rating: 7.8 };
+
+  return { ...base, ...change };
+}
+
+/** What the engine plays: a download and the video it streams, changed only where a test says. */
+export function aPlay(change: Partial<PlayInfo> = {}): PlayInfo {
+  const video = { index: 0, path: 'Sintel.2010.mkv', size: 100, url: '/a1/0/Sintel.2010.mkv', offset: 0 };
+
+  const base: PlayInfo = {
+    id: 'a1',
+    name: 'Sintel',
+    job: aJob(),
+    files: [aFile()],
+    total_size: 100,
+    video,
+    subtitles: [],
   };
 
   return { ...base, ...change };

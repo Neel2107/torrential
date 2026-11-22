@@ -3,14 +3,15 @@ import { useEffect, useState } from 'react';
 import { PixelRatio, useWindowDimensions } from 'react-native';
 
 import type {
+  AttemptEvent,
   Check,
   EpisodeInfo,
   Error as WireError,
   PlayInfo,
+  PlayingLine,
   PlayTitle,
   Release,
   TitleCard,
-  Tried,
   Viewer,
 } from '@web/wire';
 
@@ -19,14 +20,8 @@ import { useDataSaver } from '@/engine/dataSaver';
 import { useLink } from '@/engine/session';
 import { lap } from '@/perf';
 
-export type PlayMessage =
-  | { type: 'resolved'; video: string; title: TitleCard; episode: EpisodeInfo | null }
-  | { type: 'searched'; found: number }
-  | { type: 'trying'; rank: number; of: number; release: Release }
-  | { type: 'check'; check: Check }
-  | { type: 'skipped'; release: string }
-  | { type: 'failed'; error: WireError; tried: Tried[] }
-  | { type: 'playing'; video: string; release: Release; play: PlayInfo; resume_at: number | null };
+/** A line of `POST /api/title/play`: an attempt's events, with the playing line in place of the engine's own. */
+export type PlayMessage = Exclude<AttemptEvent, { type: 'playing' }> | PlayingLine;
 
 export type Start =
   | { phase: 'finding'; title: TitleCard | null; episode: EpisodeInfo | null }
@@ -105,94 +100,134 @@ export async function replaceStalled(
   return outcome ?? { error: { code: 'interrupted', message: 'The engine stopped answering before a source played.' } };
 }
 
+/** What starting a title has heard so far: the phase to show, the title and episode it resolved to, how many sources it found, and whether it ended. */
+export type Starting = {
+  start: Start;
+  title: TitleCard | null;
+  episode: EpisodeInfo | null;
+  found: number;
+  ended: boolean;
+};
+
+export const STARTING: Starting = {
+  start: { phase: 'finding', title: null, episode: null },
+  title: null,
+  episode: null,
+  found: 0,
+  ended: false,
+};
+
+/** Where starting a title stands after `message`. */
+export function heard(state: Starting, message: PlayMessage): Starting {
+  const { title, episode, found } = state;
+
+  switch (message.type) {
+    case 'resolved':
+      return {
+        ...state,
+        title: message.title,
+        episode: message.episode,
+        start: { phase: 'finding', title: message.title, episode: message.episode },
+      };
+    case 'searched':
+      return { ...state, found: message.found };
+    case 'trying':
+      return {
+        ...state,
+        start: {
+          phase: 'trying',
+          title,
+          episode,
+          rank: message.rank,
+          of: message.of,
+          release: message.release,
+          check: null,
+          found,
+        },
+      };
+    case 'check':
+      return state.start.phase === 'trying' ? { ...state, start: { ...state.start, check: message.check } } : state;
+    case 'skipped':
+      return state;
+    case 'playing':
+      return {
+        ...state,
+        ended: true,
+        start: {
+          phase: 'ready',
+          title,
+          episode,
+          release: message.release,
+          play: message.play,
+          resumeAt: message.resume_at,
+        },
+      };
+    case 'failed':
+      return {
+        ...state,
+        ended: true,
+        start: {
+          phase: 'failed',
+          title,
+          episode,
+          message: message.error.message,
+          hint: message.error.hint ?? null,
+          tried: message.tried.length,
+        },
+      };
+  }
+}
+
+function failedWith(state: Starting, message: string, hint: string | null): Start {
+  return { phase: 'failed', title: state.title, episode: state.episode, message, hint, tried: 0 };
+}
+
+/** Starts a title as `body` asks and shows each phase it reaches. A stream that ends before a source plays, or a lost engine, shows as failed; nothing shows once `signal` aborts. */
+export async function followPlay(
+  link: Link,
+  body: PlayTitle,
+  signal: AbortSignal,
+  show: (start: Start) => void,
+): Promise<void> {
+  let state = STARTING;
+
+  try {
+    await stream<PlayMessage>(link, '/api/title/play', { method: 'POST', body, signal }, (message) => {
+      lap('play', `play ${message.type}`);
+      const next = heard(state, message);
+
+      if (next.start !== state.start) show(next.start);
+      state = next;
+    });
+  } catch (cause) {
+    if (signal.aborted) return;
+    const engine = cause instanceof EngineError;
+
+    show(
+      failedWith(
+        state,
+        engine ? cause.message : 'Lost the engine while starting the video.',
+        engine ? cause.hint : null,
+      ),
+    );
+
+    return;
+  }
+
+  if (state.ended || signal.aborted) return;
+  show(failedWith(state, 'The engine stopped answering before a source played.', null));
+}
+
 export function useTitlePlay(video: string, attempt: number, source?: string): Start {
   const link = useLink();
   const viewer = useViewer();
-  const [start, setStart] = useState<Start>({ phase: 'finding', title: null, episode: null });
+  const [start, setStart] = useState<Start>(STARTING.start);
 
   useEffect(() => {
     const controller = new AbortController();
-    let title: TitleCard | null = null;
-    let episode: EpisodeInfo | null = null;
-    let found = 0;
-    let ended = false;
-    setStart({ phase: 'finding', title, episode });
-
+    setStart(STARTING.start);
     const body: PlayTitle = source ? { video, viewer, source } : { video, viewer };
-    stream<PlayMessage>(link, '/api/title/play', { method: 'POST', body, signal: controller.signal }, (message) => {
-      lap('play', `play ${message.type}`);
-
-      switch (message.type) {
-        case 'resolved':
-          title = message.title;
-          episode = message.episode;
-          setStart({ phase: 'finding', title, episode });
-          break;
-        case 'searched':
-          found = message.found;
-          break;
-        case 'trying':
-          setStart({
-            phase: 'trying',
-            title,
-            episode,
-            rank: message.rank,
-            of: message.of,
-            release: message.release,
-            check: null,
-            found,
-          });
-          break;
-        case 'check':
-          setStart((previous) => (previous.phase === 'trying' ? { ...previous, check: message.check } : previous));
-          break;
-        case 'playing':
-          ended = true;
-          setStart({
-            phase: 'ready',
-            title,
-            episode,
-            release: message.release,
-            play: message.play,
-            resumeAt: message.resume_at,
-          });
-          break;
-        case 'failed':
-          ended = true;
-          setStart({
-            phase: 'failed',
-            title,
-            episode,
-            message: message.error.message,
-            hint: message.error.hint ?? null,
-            tried: message.tried.length,
-          });
-          break;
-      }
-    })
-      .then(() => {
-        if (ended || controller.signal.aborted) return;
-        setStart({
-          phase: 'failed',
-          title,
-          episode,
-          message: 'The engine stopped answering before a source played.',
-          hint: null,
-          tried: 0,
-        });
-      })
-      .catch((cause: unknown) => {
-        if (controller.signal.aborted) return;
-        const engine = cause instanceof EngineError;
-        setStart({
-          phase: 'failed',
-          title,
-          episode,
-          message: engine ? cause.message : 'Lost the engine while starting the video.',
-          hint: engine ? cause.hint : null,
-          tried: 0,
-        });
-      });
+    followPlay(link, body, controller.signal, setStart);
 
     return () => controller.abort();
   }, [link, video, attempt, source]);
