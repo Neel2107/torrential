@@ -38,6 +38,8 @@ import { Tap } from '@/ui/Tap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { color, font, motion, space, type } from '@/theme';
 
+const enter = (index: number) => (Platform.OS === 'android' ? undefined : rise(index));
+
 const ACTIVE = new Set<Job['state']>(['queued', 'metadata', 'checking', 'downloading', 'paused', 'error']);
 
 export default function Downloads() {
@@ -79,7 +81,7 @@ export default function Downloads() {
           contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
           ListHeaderComponent={<FreeSpace />}
           ListEmptyComponent={
-            <Animated.View entering={rise(0)} style={styles.empty}>
+            <Animated.View entering={enter(0)} style={styles.empty}>
               <View style={styles.emptyIcon}>
                 <Icon name={icons.phone} size={26} tint={color.soft} />
               </View>
@@ -143,7 +145,7 @@ function JobList({
       contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
       ListEmptyComponent={
         live ? (
-          <Animated.View entering={rise(0)} style={styles.empty}>
+          <Animated.View entering={enter(0)} style={styles.empty}>
             <View style={styles.emptyIcon}>
               <Icon name={icons.downloads} size={26} tint={color.soft} />
             </View>
@@ -218,7 +220,7 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
           : null;
 
   return (
-    <Animated.View entering={rise(index)} exiting={FadeOut.duration(motion.quick)}>
+    <Animated.View entering={enter(index)} exiting={FadeOut.duration(motion.quick)}>
       <Tap
         shrink={1}
         highlight
@@ -507,7 +509,7 @@ function CopyRow({ copy, index, onMenu }: { copy: Copy; index: number; onMenu: (
         : sentence(copy.error);
 
   return (
-    <Animated.View entering={rise(index)} exiting={FadeOut.duration(motion.quick)}>
+    <Animated.View entering={enter(index)} exiting={FadeOut.duration(motion.quick)}>
       <Tap
         shrink={1}
         highlight
