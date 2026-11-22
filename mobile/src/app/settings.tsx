@@ -1,6 +1,6 @@
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
-import { HardDrive } from 'lucide-react-native';
+import HardDrive from 'lucide-react-native/icons/hard-drive';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';

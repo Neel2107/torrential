@@ -1,5 +1,7 @@
 import * as Brightness from 'expo-brightness';
-import { Sun, Volume2, VolumeX } from 'lucide-react-native';
+import Sun from 'lucide-react-native/icons/sun';
+import Volume2 from 'lucide-react-native/icons/volume-2';
+import VolumeX from 'lucide-react-native/icons/volume-x';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';

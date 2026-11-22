@@ -27,16 +27,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": true,
-      "permissions": [
-        "android.permission.CAMERA"
-      ],
+      "permissions": ["android.permission.CAMERA"],
       "intentFilters": [
         {
           "action": "VIEW",
-          "category": [
-            "DEFAULT",
-            "BROWSABLE"
-          ],
+          "category": ["DEFAULT", "BROWSABLE"],
           "data": [
             {
               "scheme": "magnet"
@@ -45,10 +40,7 @@
         },
         {
           "action": "VIEW",
-          "category": [
-            "DEFAULT",
-            "BROWSABLE"
-          ],
+          "category": ["DEFAULT", "BROWSABLE"],
           "data": [
             {
               "scheme": "content",
@@ -100,10 +92,19 @@
         {
           "android": {
             "enabled": true,
-            "singleShareMimeTypes": [
-              "text/plain",
-              "application/x-bittorrent",
-              "application/octet-stream"
+            "singleShareMimeTypes": ["text/plain", "application/x-bittorrent", "application/octet-stream"]
+          }
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "android": {
+            "fonts": [
+              "node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf",
+              "node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf",
+              "node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf",
+              "node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf"
             ]
           }
         }

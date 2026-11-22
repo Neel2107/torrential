@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { HardDrive } from 'lucide-react-native';
+import HardDrive from 'lucide-react-native/icons/hard-drive';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

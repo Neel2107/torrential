@@ -24,9 +24,7 @@ What we know about the app's speed and what to do next, in order. The `measure-a
 
 ## Backlog, in order
 
-1. **Measure a baseline on the F6** for search scroll, opening a title, player seek and sheet drag (gfxinfo, cold start, meminfo). Check the refresh rate the app gets.
-2. **Icons:** import Lucide icons one by one (or confirm tree shaking works), then check with Atlas.
-3. **Fonts:** embed the 4 Inter weights with the `expo-font` config plugin and drop the `useFonts` gate.
+1. **Measure interactions on the F6** for search scroll, opening a title, player seek and sheet drag (gfxinfo, cold start, meminfo). Check the refresh rate the app gets.
 4. **Loops:** one driver per skeleton group or a Reanimated CSS keyframe, instead of a `withRepeat` per bone (`Skeleton`, then `Bands`, `pull`, `tv`).
 5. **Press:** move `Tap` to Gesture Handler's `Touchable`, then try `ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS`. React Native's `Pressable` on a transformed view can drop presses with that flag on, which is why `Tap` goes first.
 6. **Gestures:** move `SeekBar`, `swipes` and `pull` to hook gestures. Keep the scrub on the UI thread, and don't call back to React every frame.
@@ -41,6 +39,12 @@ What we know about the app's speed and what to do next, in order. The `measure-a
 13. **iOS 27:** test the player's landscape lock and the default Liquid Glass stack header.
 
 ## Done
+
+- **Cold start, 2026-11-22** (Poco F6, release build compiled with `speed-profile`, 6 cold starts each, medians):
+  - Process start → JavaScript running: 970 → 300 ms.
+  - First frame (`am start -W` WaitTime): 3,060 → 555 ms.
+  - Bundle: 6.3 → 4.4 MB. APK: 77.5 → 73.3 MB.
+  - Changes: Lucide icons are imported one by one, so the barrel no longer ships 1,600 icons (ESLint now rejects the barrel). Android has the 4 Inter weights built in through the expo-font plugin and renders without waiting on `useFonts`. iOS loads only those 4 weights.
 
 - React Compiler compiled everything but 63 places at the start of 2026-11-22; it skips 9 now. `npm run check` fails if that number rises.
 - Shared values use `.get()`/`.set()`, worklets call back with `scheduleOnRN`, springs are tokens, and entrances, exits and reflows come from `src/ui/presets.ts`.

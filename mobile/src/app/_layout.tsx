@@ -1,10 +1,4 @@
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts,
-} from '@expo-google-fonts/inter';
+import { useFonts } from 'expo-font';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -19,6 +13,7 @@ import { JobsProvider } from '@/engine/jobs';
 import { SessionProvider, useSession } from '@/engine/session';
 import { HERO, HeroLayer } from '@/ui/hero';
 import { AskHost } from '@/ui/Ask';
+import { FONTS } from '@/fonts';
 import { PortalHost } from '@/ui/Portal';
 import { color, scheme, stage } from '@/theme';
 
@@ -177,7 +172,7 @@ function MaybeJobs({ paired, children }: { paired: boolean; children: ReactNode 
 }
 
 export default function RootLayout() {
-  const [loaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const [loaded] = useFonts(FONTS);
   if (!loaded) return null;
 
   return (

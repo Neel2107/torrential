@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { HardDrive, Smartphone } from 'lucide-react-native';
+import HardDrive from 'lucide-react-native/icons/hard-drive';
+import Smartphone from 'lucide-react-native/icons/smartphone';
 import { StyleSheet, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 
