@@ -266,20 +266,9 @@ type JobAction = {
   id: string;
   label: string;
   icon: LucideIcon;
-  /** The Android glass menu draws its own icons from 24-unit SVG paths. */
-  glyph: string;
   danger?: boolean;
   confirm?: string;
   run: () => void | Promise<void>;
-};
-
-const GLYPHS = {
-  play: 'M8 5v14l11-7z',
-  pause: 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z',
-  resume: 'M12 5a7 7 0 1 1-6.6 4.7M5 4v5h5',
-  phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
-  stop: 'M7 7l10 10M17 7L7 17',
-  trash: 'M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13',
 };
 
 function useJobActions(job: Job): JobAction[] {
@@ -302,7 +291,6 @@ function useJobActions(job: Job): JobAction[] {
       id: 'play',
       label: 'Play',
       icon: icons.play,
-      glyph: GLYPHS.play,
       run: () => router.push({ pathname: '/play', params: { ref: job.id } }),
     },
   ];
@@ -311,7 +299,6 @@ function useJobActions(job: Job): JobAction[] {
       id: 'offline',
       label: 'Play from this phone',
       icon: icons.phone,
-      glyph: GLYPHS.phone,
       run: () => router.push({ pathname: '/offline', params: { job: job.id } }),
     });
   } else if (copy?.state === 'saving') {
@@ -319,7 +306,6 @@ function useJobActions(job: Job): JobAction[] {
       id: 'stop-saving',
       label: 'Stop saving to phone',
       icon: icons.close,
-      glyph: GLYPHS.stop,
       run: () => cancel(job.id),
     });
   } else if (job.state === 'done' && !onPhone) {
@@ -327,7 +313,6 @@ function useJobActions(job: Job): JobAction[] {
       id: 'save',
       label: 'Save to phone',
       icon: icons.phone,
-      glyph: GLYPHS.phone,
       run: () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         save(link, job.id, name);
@@ -339,7 +324,6 @@ function useJobActions(job: Job): JobAction[] {
       id: 'pause',
       label: 'Pause',
       icon: icons.pause,
-      glyph: GLYPHS.pause,
       run: () => send('/api/pause'),
     });
   if (job.state === 'paused' || job.state === 'error') {
@@ -347,7 +331,6 @@ function useJobActions(job: Job): JobAction[] {
       id: 'resume',
       label: 'Resume',
       icon: icons.refresh,
-      glyph: GLYPHS.resume,
       run: () => send('/api/resume'),
     });
   }
@@ -355,7 +338,6 @@ function useJobActions(job: Job): JobAction[] {
     id: 'remove',
     label: 'Remove',
     icon: icons.trash,
-    glyph: GLYPHS.trash,
     danger: true,
     confirm: onPhone
       ? `Delete ${job.progress.verified ? bytes(job.progress.verified) : 'it'} from this phone`
@@ -413,15 +395,14 @@ function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
       <Menu.Trigger glass={false} accessibilityLabel="More" style={styles.more}>
         <Icon name={icons.more} size={20} tint={color.pencil} />
       </Menu.Trigger>
-      <Menu.Content
-        fontFamily="Inter_500Medium"
-        items={actions.map((action) => ({
-          id: action.id,
-          title: action.confirm ?? action.label,
-          iconPath: action.glyph,
-          destructive: action.danger,
-        }))}
-      />
+      <Menu.Content fontFamily="Inter_500Medium">
+        {actions.map((action) => (
+          <Menu.Item key={action.id} id={action.id} destructive={action.danger}>
+            <Menu.Item.Icon>{({ color: tint }) => <Icon name={action.icon} size={20} tint={tint} />}</Menu.Item.Icon>
+            <Menu.Item.Title>{action.confirm ?? action.label}</Menu.Item.Title>
+          </Menu.Item>
+        ))}
+      </Menu.Content>
     </Menu>
   );
 }
