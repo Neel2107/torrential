@@ -1,0 +1,24 @@
+#!/bin/sh
+# Runs mobile/scripts/guard.sh on what is staged, and `pnpm -C mobile -s check` when a staged file is in
+# mobile/. Enable with `git config core.hooksPath mobile/scripts/hooks`; `git commit --no-verify` skips it.
+set -eu
+
+root=$(git rev-parse --show-toplevel)
+sh "$root/mobile/scripts/guard.sh" --staged
+
+git diff --cached --name-only | grep -q '^mobile/' || exit 0
+
+for node in /opt/homebrew/opt/node@22/bin /usr/local/opt/node@22/bin; do
+  [ -d "$node" ] && PATH=$node:$PATH
+done
+export PATH
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-commit: pnpm isn't on PATH, so the app's check can't run. Use Node 22 (mobile/.nvmrc)." >&2
+  exit 1
+fi
+
+pnpm -C "$root/mobile" -s check || {
+  echo "pre-commit: pnpm -C mobile -s check failed; fix it before committing." >&2
+  exit 1
+}

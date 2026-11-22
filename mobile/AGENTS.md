@@ -37,6 +37,17 @@ We build locally, not on EAS. The app runs torrential's engine inside itself, so
 - **Android release ("torrential preview"):** `scripts/build-preview.sh` writes `~/Desktop/torrential-preview.apk`. Judge motion and speed here, never in a dev build.
 - **iOS simulator:** `pnpm exec expo run:ios --device <udid>`. For Release, use xcodebuild with `-sdk iphonesimulator ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, because the engine framework is arm64 only. If the Debug link breaks after a `pod install`, run `CI=1 pnpm exec expo prebuild --platform ios --clean`.
 
+## Commits
+
+Commit straight to `mobile`, one change per commit. CI (`.github/workflows/mobile.yml`) runs `scripts/guard.sh`, `pnpm -s check`, the tests and an Android and iOS bundle on every push.
+
+- **Subject:** at most 72 characters, saying what changed for the person using the app ("mobile: the player remembers subtitle size"). Details go in the body, never in the subject.
+- **Body:** why the change was made and what it does that the subject can't say. End it with a `Checked:` line naming the build, device or commands and any number you measured: `Checked: preview build 1042 on the Poco F6, title opens in 212 ms (was 340)`.
+- **One change per commit.** A fix found in review is its own commit about that fix, never "review fixes" covering several.
+- **Never commit build output** (`build/`, `node_modules/`, `.apk`, `.so`, `.hbc`, `.xcframework/`, the generated `mobile/android/` or `mobile/ios/`). The guard fails on it, and on a hand edit of `web/src/wire.ts` or a raised `--max-warnings` or `--max` in `package.json`. A ceiling that truly has to rise says why on a `Raises-ceiling:` line in the body.
+- **Hooks:** run `git config core.hooksPath mobile/scripts/hooks` once per clone. `commit-msg` rejects a subject over 72 characters; `pre-commit` runs the guard on what is staged and `pnpm -C mobile -s check` when a staged file is in `mobile/`. `git commit --no-verify` skips them; CI still runs.
+- **Before pushing:** `mobile/scripts/guard.sh` checks your commits not yet on `origin/mobile`.
+
 ## Rules
 
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.

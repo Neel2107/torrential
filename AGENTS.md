@@ -15,7 +15,7 @@ This is a private copy of [nexxeln/torrential](https://github.com/nexxeln/torren
 - **Verify on the real thing.** Typecheck is not proof. Check the change in the app on a device or the simulator, and judge motion and speed only on release builds.
 - **Council:** for review, start read-only Codex `gpt-6.2-sol` delegates. Give them the diff, not your conclusions. Verify each finding before you fix it.
 - **No comments in code** (the pstack no-comments rule). Name things so the code reads on its own. A doc comment that states a rule the code cannot show is fine.
-- **Commit messages:** say what changed for the person using the app, in plain words, and why.
+- **Commits:** a subject of at most 72 characters saying what changed for the person using the app; a body saying why, ending with a `Checked:` line; one change per commit. The full rules, the guard CI runs on every push to `mobile`, and the hooks are in `mobile/AGENTS.md` under Commits.
 - **Test titles:** only public-domain or Creative Commons films, such as Night of the Living Dead (tt0063350), Big Buck Bunny, Sintel and Tears of Steel.
 
 ## Engine
