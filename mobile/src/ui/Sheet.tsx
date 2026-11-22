@@ -4,12 +4,12 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
   Keyframe,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { color, motion, radius, space, stage, type Palette } from '@/theme';
@@ -44,7 +44,7 @@ export function Sheet({
     offset.value = withTiming(
       height.value,
       { duration: 200, easing: motion.out },
-      (done) => done && runOnJS(onClose)(),
+      (done) => done && scheduleOnRN(onClose),
     );
   };
 
@@ -66,10 +66,10 @@ export function Sheet({
         offset.value = withTiming(
           height.value,
           { duration: 180, easing: motion.out },
-          (done) => done && runOnJS(onClose)(),
+          (done) => done && scheduleOnRN(onClose),
         );
       } else {
-        offset.value = withSpring(0, motion.settle);
+        offset.value = withSpring(0, { ...motion.settle, velocity: event.velocityY });
       }
     });
 

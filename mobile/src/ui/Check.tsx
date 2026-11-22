@@ -1,11 +1,15 @@
-import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeOut, Keyframe } from 'react-native-reanimated';
 
 import { motion } from '@/theme';
 
 import { Icon, icons } from './Icon';
 import { useTone } from './stage';
 
-const IN = ZoomIn.springify().damping(motion.pop.damping).stiffness(motion.pop.stiffness).mass(motion.pop.mass);
+const IN = new Keyframe({
+  0: { opacity: 0, transform: [{ scale: 0.9 }] },
+  60: { opacity: 1, transform: [{ scale: 1.06 }], easing: motion.out },
+  100: { transform: [{ scale: 1 }], easing: motion.out },
+}).duration(220);
 
 export function Check({ shown, size = 20 }: { shown: boolean; size?: number }) {
   const tone = useTone();

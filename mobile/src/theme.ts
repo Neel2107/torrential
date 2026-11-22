@@ -1,6 +1,6 @@
 import { File, Paths } from 'expo-file-system';
 import { Platform, type TextStyle } from 'react-native';
-import { Easing } from 'react-native-reanimated';
+import { Easing, ReduceMotion } from 'react-native-reanimated';
 
 export type Palette = {
   paper: string;
@@ -218,8 +218,9 @@ export const motion = {
   stagger: 40,
   out: Easing.bezier(0.23, 1, 0.32, 1),
   inOut: Easing.bezier(0.77, 0, 0.175, 1),
-  settle: { damping: 26, stiffness: 320, mass: 0.8 },
-  pop: { damping: 12, stiffness: 380, mass: 0.6 },
+  settle: { duration: 300, dampingRatio: 0.8, reduceMotion: ReduceMotion.System },
+  snap: { duration: 400, dampingRatio: 0.8, reduceMotion: ReduceMotion.System },
+  pop: { duration: 350, dampingRatio: 0.45, reduceMotion: ReduceMotion.System },
 } as const;
 
 export const isAndroid = Platform.OS === 'android';

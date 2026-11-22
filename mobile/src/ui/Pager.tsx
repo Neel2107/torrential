@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, useWindowDimensions, View, type ViewStyle } from
 import Animated, {
   interpolate,
   interpolateColor,
-  runOnJS,
   useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -12,6 +11,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { color, font, motion } from '@/theme';
 
@@ -73,11 +73,11 @@ export function Pager({
       for (const page of [Math.floor(at), Math.ceil(at)]) {
         if (page < 0 || asked.value & (1 << page)) continue;
         asked.value |= 1 << page;
-        runOnJS(near)(page);
+        scheduleOnRN(near, page);
       }
     },
     onMomentumEnd: (event) => {
-      runOnJS(land)(Math.round(event.contentOffset.x / width));
+      scheduleOnRN(land, Math.round(event.contentOffset.x / width));
     },
   });
 

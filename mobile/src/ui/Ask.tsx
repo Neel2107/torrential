@@ -1,7 +1,8 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { useEffect, useSyncExternalStore } from 'react';
 import { Alert, BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
 
@@ -63,7 +64,7 @@ function Dialog({ asking: question }: { asking: Asking }) {
     question.answer(yes);
   };
   const close = (yes: boolean) => {
-    shown.value = withTiming(0, { duration: 150, easing: motion.out }, (done) => done && runOnJS(finish)(yes));
+    shown.value = withTiming(0, { duration: 150, easing: motion.out }, (done) => done && scheduleOnRN(finish, yes));
   };
 
   useEffect(() => {

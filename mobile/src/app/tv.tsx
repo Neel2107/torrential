@@ -28,7 +28,7 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
-import { alpha, color, font, radius, space, type } from '@/theme';
+import { alpha, color, font, motion, radius, space, type } from '@/theme';
 
 const CONTAINERS: Record<string, string> = {
   mkv: 'MKV',
@@ -240,7 +240,7 @@ function Remote({ cast }: { cast: Cast }) {
     if (cast.state !== 'playing' || confirmed.current) return;
     confirmed.current = true;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    pop.value = withSequence(withTiming(1.18, { duration: 140 }), withSpring(1, { damping: 9, stiffness: 260 }));
+    pop.value = withSequence(withTiming(1.18, { duration: 140 }), withSpring(1, motion.pop));
     setJustStarted(true);
     const timer = setTimeout(() => setJustStarted(false), STARTED_SHOWN_MS);
     return () => clearTimeout(timer);

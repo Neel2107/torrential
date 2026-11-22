@@ -5,7 +5,6 @@ import { Gesture } from 'react-native-gesture-handler';
 import {
   cancelAnimation,
   Easing,
-  runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
@@ -14,6 +13,7 @@ import {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { motion } from '@/theme';
 
@@ -87,7 +87,7 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
     (over, was) => {
       if (over && !was && !crossed.value) {
         crossed.value = true;
-        runOnJS(tick)();
+        scheduleOnRN(tick);
       }
       if (!over) crossed.value = false;
     },
@@ -97,8 +97,8 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
     'worklet';
     holding.value = 0;
     const go = pull.value >= LINE;
-    pull.value = withSpring(0, { ...motion.settle, overshootClamping: true });
-    if (go) runOnJS(refresh)();
+    pull.value = withSpring(0, { ...motion.snap, overshootClamping: true });
+    if (go) scheduleOnRN(refresh);
   };
 
   const gesture = useMemo(() => {
@@ -117,7 +117,8 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
       .onFinalize(() => {
         'worklet';
         holding.value = 0;
-        if (pull.value > 0 && pull.value < LINE) pull.value = withSpring(0, motion.settle);
+        if (pull.value > 0 && pull.value < LINE)
+          pull.value = withSpring(0, { ...motion.snap, overshootClamping: true });
       });
     return Gesture.Simultaneous(Gesture.Native(), pan);
   }, [offset, pull, refresh, holding]);

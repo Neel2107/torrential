@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
   FadeIn,
   FadeOut,
   useAnimatedStyle,
@@ -16,6 +15,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { episodeCode, episodeName, findEpisode, playingOrder } from '@web/titles/words';
@@ -407,9 +407,9 @@ export function Player({
     .onEnd((event) => {
       if (event.translationY > 100 || event.velocityY > 800) {
         drop.value = withTiming(600, { duration: 180, easing: motion.out });
-        runOnJS(close)();
+        scheduleOnRN(close);
       } else {
-        drop.value = withSpring(0, motion.settle);
+        drop.value = withSpring(0, { ...motion.snap, velocity: event.velocityY });
       }
     });
   const taps = Gesture.Race(pullDown, sides.swipe, Gesture.Exclusive(doubleTap, tap));

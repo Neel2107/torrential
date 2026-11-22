@@ -1,13 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, {
-  interpolateColor,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { alpha, color, hitSlop, motion, stage } from '@/theme';
 
@@ -51,7 +45,7 @@ export function Tap({
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        pressed.value = withSpring(0, motion.settle);
+        pressed.value = withTiming(0, { duration: motion.quick, easing: motion.out });
         onPressOut?.(event);
       }}
       onPress={(event) => {

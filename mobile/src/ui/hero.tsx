@@ -15,11 +15,11 @@ import Animated, {
   Extrapolation,
   interpolate,
   makeMutable,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { since } from '@/perf';
 import { radius } from '@/theme';
@@ -139,7 +139,7 @@ export function useHeroPage(id: string) {
       if (flown.value) own.value = interpolate(progress.value, PAGE, [0, 1], Extrapolation.CLAMP);
       flown.value = 0;
       own.value = withTiming(0, FADE, (done) => {
-        if (done) runOnJS(go)();
+        if (done) scheduleOnRN(go);
       });
     };
     if (current?.id !== id || current.phase !== 'open') return fade();
@@ -209,7 +209,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
     visible.value = 1;
     update(token, { shown: true });
     progress.value = withTiming(back ? 0 : 1, back ? CLOSE : OPEN, (done) => {
-      if (done) runOnJS(land)(token, back);
+      if (done) scheduleOnRN(land, token, back);
     });
   };
 

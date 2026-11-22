@@ -9,7 +9,6 @@ import Animated, {
   FadeIn,
   interpolate,
   LinearTransition,
-  runOnJS,
   useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -18,6 +17,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -86,7 +86,7 @@ export default function Title() {
   useAnimatedReaction(
     () => scrollY.value < bannerHeight - 80,
     (now, before) => {
-      if (scheme === 'light' && now !== before) runOnJS(setOverArt)(now);
+      if (scheme === 'light' && now !== before) scheduleOnRN(setOverArt, now);
     },
   );
   useEffect(() => {
@@ -499,11 +499,11 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
       if (far && next >= 0 && next <= last) {
         drag.value = Math.sign(event.translationX) * -width * 0.15;
         position.value = withTiming(next, GLIDE);
-        runOnJS(show)(next);
+        scheduleOnRN(show, next);
       } else {
         position.value = withTiming(at, GLIDE);
       }
-      drag.value = withSpring(0, { damping: 22, stiffness: 220 });
+      drag.value = withSpring(0, { ...motion.snap, velocity: event.velocityX });
     });
 
   const carried = useAnimatedStyle(() => ({

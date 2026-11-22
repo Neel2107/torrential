@@ -5,13 +5,13 @@ import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { clock } from '@web/lib/format';
 import { THUMBNAIL_EVERY, type Chapter } from '@web/wire';
@@ -101,16 +101,16 @@ export function SeekBar({
     .onBegin((event) => {
       touching.value = withTiming(1, { duration: motion.press });
       x.value = event.x;
-      runOnJS(begin)();
-      runOnJS(pick)(event.x, false);
+      scheduleOnRN(begin);
+      scheduleOnRN(pick, event.x, false);
     })
     .onUpdate((event) => {
       x.value = Math.max(0, Math.min(width, event.x));
-      runOnJS(pick)(x.value, false);
+      scheduleOnRN(pick, x.value, false);
     })
     .onFinalize((event) => {
       touching.value = withSpring(0, motion.settle);
-      runOnJS(pick)(Math.max(0, Math.min(width, event.x)), true);
+      scheduleOnRN(pick, Math.max(0, Math.min(width, event.x)), true);
     });
 
   const track = useAnimatedStyle(() => ({ height: 3 + touching.value * 4, borderRadius: 4 }));
