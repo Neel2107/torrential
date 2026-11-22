@@ -19,6 +19,7 @@ import { noUnsafeDictionaryTypeRule } from "./rules/no-unsafe-dictionary-type.ts
 import { noWidenThenAssertRule } from "./rules/no-widen-then-assert.ts";
 import { requireReadableSpacingRule } from "./rules/require-readable-spacing.ts";
 import { noCommentsRule } from "./rules/no-comments.ts";
+import { noWorkletReadsLaterConstantRule } from "./rules/no-worklet-reads-later-constant.ts";
 import { requireSafetyCommentForTypeAssertionRule } from "./rules/require-safety-comment-for-type-assertion.ts";
 
 /** Generic Oxlint rules that reject low-evidence and low-signal implementation patterns. */
@@ -44,6 +45,7 @@ const antiSlopPlugin = eslintCompatPlugin({
 		"no-widen-then-assert": noWidenThenAssertRule,
 		"require-readable-spacing": requireReadableSpacingRule,
 		"no-comments": noCommentsRule,
+		"no-worklet-reads-later-constant": noWorkletReadsLaterConstantRule,
 		"require-safety-comment-for-type-assertion": requireSafetyCommentForTypeAssertionRule,
 	},
 });

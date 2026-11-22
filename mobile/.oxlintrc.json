@@ -52,6 +52,7 @@
     "anti-slop/no-widen-then-assert": "error",
     "anti-slop/require-readable-spacing": "error",
     "anti-slop/no-comments": "error",
+    "anti-slop/no-worklet-reads-later-constant": "error",
     "anti-slop/require-safety-comment-for-type-assertion": "error",
     "react/set-state-in-effect": "warn",
     "react/refs": "warn"
