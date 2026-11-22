@@ -4,13 +4,14 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import type { Job, PlayTitle, Viewer } from '@web/wire';
 
-import { pickedEpisodes, useJobsSelect } from '@/engine/jobs';
+import { pickedVideos, useJobsSelect } from '@/engine/jobs';
 import { copyOf, save, type Label } from '@/offline/saved';
 import type { PlayMessage } from '@/player/start';
 import { useViewer } from '@/player/start';
 
 import { stream, type Link } from './client';
 import { useLink, useSession } from './session';
+import { covers, parseSpan, parseVideo } from './span';
 import { readStored, wantedCopies } from './stored';
 
 export type Fetching =
@@ -80,18 +81,20 @@ const NONE: Held = { state: 'none', fraction: 0 };
 const sameHeld = (a: Held, b: Held) =>
   a.state === b.state && Math.round(a.fraction * 200) === Math.round(b.fraction * 200);
 
-function held(jobs: Job[], video: string | null, prefer?: string): Held {
+/** How far the downloads in `jobs` that cover `video` have come; the one `prefer` names counts first. */
+export function held(jobs: Job[], video: string | null, prefer?: string): Held {
   if (!video) return NONE;
-  const [title, season, episode] = video.split(':');
-  const spans = season ? [`s${Number(season)}e${Number(episode)}`, `s${Number(season)}`] : ['film'];
+  const { title, episode } = parseVideo(video);
 
   const covering = jobs.filter((job) => {
-    if (job.title?.title !== title || !spans.includes(job.title.span.toLowerCase())) return false;
+    const span = job.title?.title === title ? parseSpan(job.title.span) : null;
 
-    if (!season || /e\d/i.test(job.title.span)) return true;
-    const picked = pickedEpisodes(job);
+    if (!span || !covers(span, episode)) return false;
 
-    return picked === null || picked.includes(Number(episode));
+    if (!episode || span.kind === 'episode') return true;
+    const picked = pickedVideos(job);
+
+    return picked === null || picked.some((one) => one.season === episode.season && one.episode === episode.episode);
   });
 
   if (covering.some((job) => job.state === 'done')) return { state: 'done', fraction: 1 };

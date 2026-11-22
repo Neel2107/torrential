@@ -8,6 +8,7 @@ import type { Event, Job } from '@web/wire';
 import { events } from './client';
 import { useTitle } from './queries';
 import { useLink } from './session';
+import { parseSpan, type Episode } from './span';
 
 const SILENT_MS = 35_000;
 
@@ -173,24 +174,27 @@ export const STATE: Record<Job['state'], string> = {
 
 const EPISODE = /s(\d{1,2})[ ._-]*e(\d{1,3})|\b(\d{1,2})x(\d{2,3})\b/i;
 
-/** The episode numbers a season download picked, or null when it picked them all or its names do not say. */
-export function pickedEpisodes(job: Job): number[] | null {
+/** The episodes a pack picked, once each, by the season and episode its file names give, in order; null when it picked them all or its names do not say. */
+export function pickedVideos(job: Job): Episode[] | null {
   if (job.selection.kind !== 'patterns') return null;
 
-  const numbers = [
-    ...new Set(
-      job.selection.value
-        .map((name) => EPISODE.exec(name))
-        .filter((found) => found !== null)
-        .map((found) => Number(found[2] ?? found[4])),
-    ),
-  ].sort((a, b) => a - b);
+  const keys = new Set(
+    job.selection.value
+      .map((name) => EPISODE.exec(name))
+      .filter((found) => found !== null)
+      .map((found) => `${Number(found[1] ?? found[3])}:${Number(found[2] ?? found[4])}`),
+  );
 
-  return numbers.length > 0 ? numbers : null;
+  const videos = [...keys]
+    .map((key) => key.split(':').map(Number))
+    .map(([season, episode]) => ({ season, episode }))
+    .sort((a, b) => a.season - b.season || a.episode - b.episode);
+
+  return videos.length > 0 ? videos : null;
 }
 
 function episodesOf(job: Job): string | null {
-  if (job.title && /e\d/i.test(job.title.span)) return null;
+  if (job.title && parseSpan(job.title.span)?.kind === 'episode') return null;
   const names = job.selection.kind === 'patterns' ? job.selection.value : job.path ? [job.path] : [];
 
   const numbers = [
@@ -215,7 +219,7 @@ export function useJobName(job: Job) {
 
   if (job.title && page.data) {
     const span =
-      job.title.span === 'film'
+      parseSpan(job.title.span)?.kind === 'film'
         ? page.data.year
           ? String(page.data.year)
           : ''
