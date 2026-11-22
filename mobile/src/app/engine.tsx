@@ -1,8 +1,8 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import HardDrive from 'lucide-react-native/icons/hard-drive';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { CAN_RUN_LOCALLY } from '../../modules/torrential-engine';
 
@@ -11,28 +11,54 @@ import { useSession } from '@/engine/session';
 import { ask } from '@/ui/Ask';
 import { Button } from '@/ui/Button';
 import { Check } from '@/ui/Check';
+import { engineStatus } from '@/ui/engineStatus';
+import { FormError, FormSheet } from '@/ui/FormSheet';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';
 
 export default function Engine() {
-  const insets = useSafeAreaInsets();
   const { session, engines, switchTo, runOnPhone, forget } = useSession();
   const version = useVersion();
   const me = useMe();
   const [starting, setStarting] = useState(false);
+  const [phoneProblem, setPhoneProblem] = useState(false);
+  const status = engineStatus(version);
   const current = session.state === 'paired' ? session.engine : null;
   const base = current?.link.base.replace(/^https?:\/\//, '') ?? '';
   const device = me.data?.asker === 'device' ? me.data.device : null;
   const hasPhone = engines.some((e) => e.kind === 'phone');
 
   return (
-    <ScrollView
-      style={styles.sheet}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space.xl }]}
+    <FormSheet
+      title="Engines"
+      actions={
+        <Button
+          label={
+            current?.kind === 'phone' ? "Stop using this phone's engine" : `Remove ${current?.name ?? 'this engine'}`
+          }
+          kind="secondary"
+          onPress={() =>
+            ask({
+              title:
+                current?.kind === 'phone'
+                  ? "Stop using this phone's engine?"
+                  : `Remove ${current?.name ?? 'this engine'}?`,
+              message:
+                current?.kind === 'phone'
+                  ? 'What it downloaded stays on this phone until the app is removed.'
+                  : 'The phone forgets this computer. You can pair it again later.',
+              confirm: current?.kind === 'phone' ? 'Stop using it' : 'Remove',
+              danger: true,
+              icon: icons.trash,
+            }).then((yes) => {
+              if (yes) forget();
+            })
+          }
+        />
+      }
     >
-      <Text style={type.title}>Engines</Text>
       <View style={styles.card}>
         {engines.map((engine) => {
           const active = engine.id === current?.id;
@@ -73,21 +99,33 @@ export default function Engine() {
             disabled={starting}
             onPress={async () => {
               setStarting(true);
+              setPhoneProblem(false);
 
               try {
                 await runOnPhone();
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 leave();
-              } catch {}
+              } catch {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                setPhoneProblem(true);
+              }
 
               setStarting(false);
             }}
+            accessibilityState={{ disabled: starting, busy: starting }}
             style={[styles.engine, styles.rowRule]}
           >
             <View style={styles.engineIcon}>
-              <Icon name={icons.phone} size={18} tint={color.action} />
+              {starting ? (
+                <ActivityIndicator size="small" color={color.action} />
+              ) : (
+                <Icon name={icons.phone} size={18} tint={color.action} />
+              )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.value, { color: color.action }]}>Run the engine on this phone</Text>
+              <Text style={[styles.value, { color: color.action }]}>
+                {starting ? 'Starting on this phone…' : 'Run the engine on this phone'}
+              </Text>
               <Text style={type.caption}>Download and play without a computer</Text>
             </View>
           </Tap>
@@ -99,20 +137,11 @@ export default function Engine() {
           <Text style={[styles.value, { flex: 1 }]}>Add a computer</Text>
         </Tap>
       </View>
+      {phoneProblem ? <FormError>Couldn’t start on this phone. Try again.</FormError> : null}
 
       <View style={styles.card}>
         <Row label="Address" value={base} mono />
-        <Row
-          label="Status"
-          value={
-            version.isSuccess
-              ? `Online · torrential ${version.data.version}`
-              : version.isError
-                ? 'Not answering'
-                : 'Checking…'
-          }
-          tint={version.isSuccess ? color.action : version.isError ? color.error : undefined}
-        />
+        <Row label="Status" value={status.label} tint={status.tint} />
         <Row
           label="This phone"
           value={
@@ -133,30 +162,7 @@ export default function Engine() {
           ? 'Removing it stops watching from this phone’s engine. What it downloaded stays until the app is removed.'
           : 'Removing it forgets this computer on the phone. To stop the computer trusting this phone, remove it under Devices on the computer.'}
       </Text>
-      <Button
-        label={
-          current?.kind === 'phone' ? "Stop using this phone's engine" : `Remove ${current?.name ?? 'this engine'}`
-        }
-        kind="secondary"
-        onPress={() =>
-          ask({
-            title:
-              current?.kind === 'phone'
-                ? "Stop using this phone's engine?"
-                : `Remove ${current?.name ?? 'this engine'}?`,
-            message:
-              current?.kind === 'phone'
-                ? 'What it downloaded stays on this phone until the app is removed.'
-                : 'The phone forgets this computer. You can pair it again later.',
-            confirm: current?.kind === 'phone' ? 'Stop using it' : 'Remove',
-            danger: true,
-            icon: icons.trash,
-          }).then((yes) => {
-            if (yes) forget();
-          })
-        }
-      />
-    </ScrollView>
+    </FormSheet>
   );
 }
 
@@ -184,8 +190,6 @@ function Row({
 }
 
 const styles = StyleSheet.create({
-  sheet: { backgroundColor: color.raised },
-  content: { padding: space.xl, gap: space.lg },
   engine: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 56 },
   engineIcon: {
     width: 36,

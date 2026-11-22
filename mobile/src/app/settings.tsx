@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDataSaver } from '@/engine/dataSaver';
 import { useVersion } from '@/engine/queries';
 import { useSession } from '@/engine/session';
+import { engineStatus } from '@/ui/engineStatus';
 import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
@@ -23,13 +24,7 @@ export default function Settings() {
   const [saver, setSaver] = useDataSaver();
   const engine = session.state === 'paired' ? session.engine : null;
 
-  const status = version.isSuccess
-    ? `Online · torrential ${version.data.version}`
-    : version.isError
-      ? 'Not answering'
-      : 'Checking…';
-
-  const tint = version.isSuccess ? color.action : version.isError ? color.error : color.pencil;
+  const { label: status, tint = color.pencil } = engineStatus(version);
 
   return (
     <View style={styles.screen}>

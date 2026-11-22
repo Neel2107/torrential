@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -13,7 +13,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { clock, sentence } from '@web/lib/format';
 import { titleOf } from '@web/lib/video';
@@ -24,6 +23,7 @@ import { findTvs, keys, useTvs } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
+import { FormSheet } from '@/ui/FormSheet';
 import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
@@ -50,7 +50,6 @@ const DECODES = { 'hevc-hdr': '4K HDR', hevc: '4K', h264: 'HD' } as const;
 export default function TvScreen() {
   const params = useLocalSearchParams<{ video?: string; ref?: string; file?: string; at?: string }>();
   const link = useLink();
-  const insets = useSafeAreaInsets();
   const client = useQueryClient();
   const [scanning, setScanning] = useState(true);
   const live = (cast: Cast) => cast.state !== 'ended';
@@ -118,18 +117,16 @@ export default function TvScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={{ padding: space.xl, paddingBottom: insets.bottom + space.xl, gap: space.lg }}
+    <FormSheet
+      fit="fill"
+      title={current ? undefined : 'Play on TV'}
+      large
+      aside={current ? undefined : <Radar active={scanning} />}
     >
       {current ? (
         <Remote cast={current} />
       ) : (
         <>
-          <View style={styles.headingRow}>
-            <Text style={type.display}>Play on TV</Text>
-            <Radar active={scanning} />
-          </View>
           <Text style={type.body}>
             {what
               ? 'Pick a TV. Your phone becomes the remote.'
@@ -204,7 +201,7 @@ export default function TvScreen() {
           </View>
         </>
       )}
-    </ScrollView>
+    </FormSheet>
   );
 }
 
@@ -296,7 +293,7 @@ function Remote({ cast }: { cast: Cast }) {
             {cast.state === 'finding' || cast.state === 'loading' ? 'Starting' : playing ? 'Playing' : 'Paused'}
           </Text>
         </Animated.View>
-        <Text style={type.label} numberOfLines={1}>
+        <Text style={[type.label, styles.nowName]} numberOfLines={2}>
           on {cast.tv_name}
         </Text>
       </View>
@@ -453,9 +450,7 @@ function Scrub({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.raised },
-  headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  radar: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  radar: { flexShrink: 0, width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   ring: { position: 'absolute', width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: color.action },
   problem: {
     flexDirection: 'row',
@@ -481,13 +476,15 @@ const styles = StyleSheet.create({
     backgroundColor: color.raised,
   },
   none: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, backgroundColor: color.lifted },
-  nowRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  nowRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: space.md, rowGap: space.xs },
+  nowName: { flexShrink: 1, minWidth: 0 },
   livePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
-    height: 26,
+    paddingVertical: 4,
+    minHeight: 26,
     borderRadius: radius.pill,
     backgroundColor: alpha(color.action, 0.16),
   },
@@ -509,7 +506,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: color.action,
   },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bottomRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.md,
+  },
   volume: {
     flexDirection: 'row',
     alignItems: 'center',
