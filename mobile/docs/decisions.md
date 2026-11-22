@@ -18,6 +18,7 @@ What was decided while building the app, why, and how each part was checked on t
 | A seek in stream mode asks for a new stream from there | The engine's stream ignores Range; its timestamps are the file's own, and the clock adds the start back when the player counts from zero | Re-encoding with a reset clock |
 | Change address keeps the token | The engine never expires a device token, so moving networks needs a new address, not a new pairing | Pairing again on every network change |
 | Play-cache cap on the Mac set to 6 GiB (`~/.config/torrential/config.yaml`) | The Mac had about 18 GB free during the build | The 20 GiB default |
+| Over-the-air updates for "torrential preview" from our own server over Tailscale, unsigned, fetched only when asked, keyed by the native fingerprint with the engine's sources in it | JavaScript changes reach the F6 in about a minute instead of a 6-minute build, with no request at launch (launch to Home is 525 ms with 2 requests). The build number and commit change every commit, so a runtime version built from them would never match an update; the fingerprint changes only with native code | EAS Update, which needs an Expo account; checking at launch, which costs launch time; code signing, whose key would live beside the server |
 
 ## Found along the way
 
