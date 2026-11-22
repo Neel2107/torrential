@@ -101,3 +101,23 @@ export function serve(engine: (address: string) => string | Promise<string>): st
 
   return asked;
 }
+
+/** An open reply, and how to deliver text down it. */
+export type OpenStream = { reply: Reply; send: (text: string) => void };
+
+/** A reply whose body stays open, as the engine's event stream does: `send` delivers text at once, and the body ends in an error once the request is aborted, as a dropped connection does. The body is the stream itself, since a test `Response` hands each piece over only when the next arrives. */
+export function anOpenStream(init: FetchRequestInit): OpenStream {
+  const encoder = new TextEncoder();
+  let send = (_text: string) => {};
+
+  const body = new ReadableStream<Uint8Array<ArrayBuffer>>({
+    start(controller) {
+      send = (text) => controller.enqueue(encoder.encode(text));
+      init.signal?.addEventListener('abort', () => controller.error(new Error('The request was aborted.')));
+    },
+  });
+
+  const reply: Reply = { ok: true, status: 200, headers: new Headers(), text: async () => '', body };
+
+  return { reply, send: (text) => send(text) };
+}

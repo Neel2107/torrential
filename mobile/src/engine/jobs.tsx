@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import { createContext, use, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { AppState } from 'react-native';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { readable } from '@web/lib/release';
 import type { Event, Job } from '@web/wire';
 
-import { events } from './client';
+import { events, type Link } from './client';
 import { useTitle } from './queries';
 import { useLink } from './session';
 import { parseSpan, type Episode } from './span';
@@ -14,7 +14,8 @@ const SILENT_MS = 35_000;
 
 type Jobs = { jobs: Job[]; live: boolean };
 
-type State = { jobs: Map<string, Job>; live: boolean };
+/** The downloads by ID, and whether the engine's events are reaching the app. */
+export type State = { jobs: Map<string, Job>; live: boolean };
 
 type Store = {
   get: () => Jobs;
@@ -46,83 +47,94 @@ function createStore(): Store {
   };
 }
 
+/** The downloads as they stand after `event`: a snapshot replaces them, a job event adds or updates one, a removal drops one, and any event, a heartbeat too, means the list is live. */
+export function applyEvent(previous: State, event: Event): State {
+  if (event.event === 'snapshot') return { jobs: new Map(event.jobs.map((job) => [job.id, job])), live: true };
+
+  if (event.event === 'job') return { jobs: new Map(previous.jobs).set(event.job.id, event.job), live: true };
+
+  if (event.event === 'removed') {
+    const jobs = new Map(previous.jobs);
+    jobs.delete(event.id);
+
+    return { jobs, live: true };
+  }
+
+  return previous.live ? previous : { ...previous, live: true };
+}
+
+/** Whether the app is in front, and when that changes: React Native's AppState, or one a test drives. */
+export type Foreground = {
+  currentState: string | null | undefined;
+  addEventListener: (type: 'change', listener: (next: AppStateStatus) => void) => { remove: () => void };
+};
+
+/** Follows the engine's events into `update` while the app is in front, reconnecting after a failure 1 s later, doubling to at most 10 s, and dropping a connection that has said nothing for 35 s. Returns how to stop. */
+export function follow(link: Link, update: Store['update'], app: Foreground = AppState): () => void {
+  let stopped = false;
+  let controller: AbortController | null = null;
+  let attempt = 0;
+  let generation = 0;
+  let heard = Date.now();
+
+  const apply = (event: Event) => {
+    heard = Date.now();
+    attempt = 0;
+    update((previous) => applyEvent(previous, event));
+  };
+
+  const open = async () => {
+    generation += 1;
+    const mine = generation;
+
+    while (!stopped && mine === generation && app.currentState === 'active') {
+      controller = new AbortController();
+      heard = Date.now();
+
+      try {
+        await events<Event>(link, '/api/events', controller.signal, apply);
+      } catch {}
+
+      if (stopped || mine !== generation) return;
+      update((previous) => ({ ...previous, live: false }));
+      attempt += 1;
+      await new Promise((resolve) => setTimeout(resolve, Math.min(10_000, 500 * 2 ** attempt)));
+    }
+  };
+
+  const watchdog = setInterval(() => {
+    if (Date.now() - heard > SILENT_MS) controller?.abort();
+  }, 5_000);
+
+  open();
+
+  const subscription = app.addEventListener('change', (next) => {
+    if (next === 'active') {
+      attempt = 0;
+      controller?.abort();
+
+      if (!stopped) open();
+    } else {
+      generation += 1;
+      controller?.abort();
+    }
+  });
+
+  return () => {
+    stopped = true;
+    clearInterval(watchdog);
+    controller?.abort();
+    subscription.remove();
+  };
+}
+
 const Context = createContext<Store | null>(null);
 
 export function JobsProvider({ children }: { children: ReactNode }) {
   const link = useLink();
   const [store] = useState(createStore);
-  const setState = store.update;
 
-  useEffect(() => {
-    let stopped = false;
-    let controller: AbortController | null = null;
-    let attempt = 0;
-    let generation = 0;
-    let heard = Date.now();
-
-    const apply = (event: Event) => {
-      heard = Date.now();
-      attempt = 0;
-      setState((previous) => {
-        if (event.event === 'snapshot') return { jobs: new Map(event.jobs.map((job) => [job.id, job])), live: true };
-
-        if (event.event === 'job') return { jobs: new Map(previous.jobs).set(event.job.id, event.job), live: true };
-
-        if (event.event === 'removed') {
-          const jobs = new Map(previous.jobs);
-          jobs.delete(event.id);
-
-          return { jobs, live: true };
-        }
-
-        return previous.live ? previous : { ...previous, live: true };
-      });
-    };
-
-    const open = async () => {
-      generation += 1;
-      const mine = generation;
-
-      while (!stopped && mine === generation && AppState.currentState === 'active') {
-        controller = new AbortController();
-        heard = Date.now();
-
-        try {
-          await events<Event>(link, '/api/events', controller.signal, apply);
-        } catch {}
-
-        if (stopped || mine !== generation) return;
-        setState((previous) => ({ ...previous, live: false }));
-        attempt += 1;
-        await new Promise((resolve) => setTimeout(resolve, Math.min(10_000, 500 * 2 ** attempt)));
-      }
-    };
-
-    const watchdog = setInterval(() => {
-      if (Date.now() - heard > SILENT_MS) controller?.abort();
-    }, 5_000);
-
-    open();
-
-    const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active') {
-        attempt = 0;
-        controller?.abort();
-
-        if (!stopped) open();
-      } else {
-        generation += 1;
-        controller?.abort();
-      }
-    });
-
-    return () => {
-      stopped = true;
-      clearInterval(watchdog);
-      controller?.abort();
-      subscription.remove();
-    };
-  }, [link]);
+  useEffect(() => follow(link, store.update), [link, store]);
 
   return <Context value={store}>{children}</Context>;
 }
