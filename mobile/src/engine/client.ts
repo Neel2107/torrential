@@ -1,10 +1,18 @@
 import * as Device from 'expo-device';
-import { fetch } from 'expo/fetch';
+import { fetch, type FetchRequestInit } from 'expo/fetch';
 import { Platform } from 'react-native';
 
 import type { ErrorCode, Error as WireError } from '@web/wire';
 
 export type Link = { base: string; token: string | null };
+
+/** What the client reads from the engine's answer: expo/fetch's response, or one a test builds. */
+export type Reply = Pick<Response, 'ok' | 'status' | 'headers' | 'text' | 'body'>;
+
+/** How requests reach the engine. The app sends them with expo/fetch; a test answers them as the engine would. */
+export type Transport = { fetch: (address: string, init: FetchRequestInit) => Promise<Reply> };
+
+export const transport: Transport = { fetch };
 
 export const PORT = 47919;
 export const COOKIE = 'torrential_device';
@@ -56,7 +64,7 @@ function fromEngine<T>(text: string): T {
   return JSON.parse(text) as T;
 }
 
-async function failure(response: Response): Promise<EngineError> {
+async function failure(response: Reply): Promise<EngineError> {
   const text = await response.text().catch(() => '');
   let wire: WireError | null = null;
 
@@ -84,7 +92,7 @@ async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; bo
   init.signal?.addEventListener('abort', cancel);
 
   try {
-    const response = await fetch(`${link.base}${path}`, {
+    const response = await transport.fetch(`${link.base}${path}`, {
       method: init.method,
       headers,
       body,
@@ -114,7 +122,7 @@ export async function post<T, B extends object = object>(
   return fromEngine<T>(await (await send(link, path, { method: 'POST', body, signal })).text());
 }
 
-async function readLines(response: Response, onLine: (line: string) => void): Promise<void> {
+async function readLines(response: Reply, onLine: (line: string) => void): Promise<void> {
   const reader = response.body?.getReader();
 
   if (!reader) {
@@ -156,7 +164,7 @@ export async function stream<T>(
 }
 
 export async function events<T>(link: Link, path: string, signal: AbortSignal, onMessage: (message: T) => void) {
-  const response = await fetch(`${link.base}${path}`, {
+  const response = await transport.fetch(`${link.base}${path}`, {
     headers: { ...authHeaders(link), Accept: 'text/event-stream' },
     signal,
   });
@@ -168,7 +176,7 @@ export async function events<T>(link: Link, path: string, signal: AbortSignal, o
 }
 
 export async function pair(base: string, code: string): Promise<string> {
-  const response = await fetch(`${base}/api/pair`, {
+  const response = await transport.fetch(`${base}/api/pair`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': USER_AGENT },
     body: JSON.stringify({ code }),
