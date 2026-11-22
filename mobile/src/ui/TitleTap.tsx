@@ -3,6 +3,7 @@ import { createContext, use, type ComponentProps, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { usePrefetchTitle } from '@/engine/queries';
+import { mark } from '@/perf';
 
 import { HERO, useHeroSource } from './hero';
 import { Tap } from './Tap';
@@ -30,6 +31,7 @@ export function TitleTap({
       onPress={
         HERO
           ? () => {
+              mark('open');
               onOpen?.();
               open(() => router.navigate(href));
             }

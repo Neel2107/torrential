@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { LoadingMark } from '@/ui/Bands';
 import { SourcesSheet } from '@/player/SourcesSheet';
+import { mark } from '@/perf';
 import { Logo } from '@/ui/Logo';
 import { PortalHost } from '@/ui/Portal';
 import { Stage } from '@/ui/stage';
@@ -43,6 +44,7 @@ function Play() {
   }>();
   if (__DEV__) FORCE_STREAM.value = stream === '1';
   const [attempt, setAttempt] = useState(0);
+  useEffect(() => mark('play'), []);
   return ref ? (
     <ByTorrent
       torrent={ref}

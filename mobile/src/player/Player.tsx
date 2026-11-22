@@ -37,6 +37,7 @@ import { get, post } from '@/engine/client';
 import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { LoadingMark } from '@/ui/Bands';
+import { since } from '@/perf';
 import { Button } from '@/ui/Button';
 import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
@@ -326,6 +327,7 @@ export function Player({
       <View style={styles.backdrop}>
         <Animated.View style={[styles.screen, dropStyle]} onLayout={(event) => setSize(event.nativeEvent.layout)}>
           <VideoView
+            onFirstFrameRender={() => since('play', 'play to first frame')}
             player={player}
             style={StyleSheet.absoluteFill}
             nativeControls={false}

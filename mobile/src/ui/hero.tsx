@@ -21,6 +21,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { since } from '@/perf';
 import { radius } from '@/theme';
 
 import { Art } from './Art';
@@ -201,6 +202,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
   const start = () => {
     if (started.current) return;
     started.current = true;
+    if (!back) since('open', 'tap to flight');
     visible.value = 1;
     update(token, { shown: true });
     progress.value = withTiming(back ? 0 : 1, back ? CLOSE : OPEN, (done) => {
