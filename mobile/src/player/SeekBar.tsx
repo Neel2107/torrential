@@ -1,9 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { clock } from '@web/lib/format';
 import { THUMBNAIL_EVERY } from '@web/wire';
@@ -12,9 +20,10 @@ import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
 import { stage as color, font, motion, radius } from '@/theme';
 
-import { runsOf, type Downloaded } from './downloaded';
+import { arrivals, runsOf, type Downloaded, type Run } from './downloaded';
 
 const THUMB_WIDTH = 160;
+const GLOW = { duration: 1400, easing: Easing.out(Easing.cubic) };
 
 export function SeekBar({
   position,
@@ -40,6 +49,17 @@ export function SeekBar({
   const x = useSharedValue(0);
 
   const runs = useMemo(() => runsOf(downloaded), [downloaded]);
+  const reduced = useReducedMotion();
+  const before = useRef<Downloaded | null>(null);
+  const [fresh, setFresh] = useState<{ wave: number; runs: Run[] }>({ wave: 0, runs: [] });
+
+  useEffect(() => {
+    const previous = before.current;
+    before.current = downloaded;
+    if (!previous || reduced) return;
+    const landed = arrivals(previous, downloaded);
+    if (landed.length > 0) setFresh((last) => ({ wave: last.wave + 1, runs: landed }));
+  }, [downloaded, reduced]);
   const fraction = duration > 0 ? Math.min(1, position / duration) : 0;
   const shown = preview ?? position;
 
@@ -140,6 +160,9 @@ export function SeekBar({
                   ]}
                 />
               ))}
+              {fresh.runs.map((run) => (
+                <Glow key={`${fresh.wave}:${run.from}`} run={run} />
+              ))}
               <View
                 style={[styles.buffered, { width: `${duration > 0 ? Math.min(1, buffered / duration) * 100 : 0}%` }]}
               />
@@ -156,12 +179,27 @@ export function SeekBar({
   );
 }
 
+function Glow({ run }: { run: Run }) {
+  const shine = useSharedValue(0.9);
+  useEffect(() => {
+    shine.value = withTiming(0, GLOW);
+  }, [shine]);
+  const style = useAnimatedStyle(() => ({ opacity: shine.value }));
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.glow, { left: `${run.from * 100}%`, width: `${(run.to - run.from) * 100}%` }, style]}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   wrap: { width: '100%' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   hit: { flex: 1, height: 36, justifyContent: 'center' },
   track: { width: '100%', backgroundColor: 'rgba(240, 233, 220, 0.14)', overflow: 'hidden' },
   downloaded: { position: 'absolute', top: 0, bottom: 0 },
+  glow: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.action },
   buffered: { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: 'rgba(240, 233, 220, 0.32)' },
   played: { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: color.action },
   knob: {

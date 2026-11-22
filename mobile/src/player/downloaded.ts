@@ -69,3 +69,9 @@ export function runsOf(downloaded: Downloaded): Run[] {
   });
   return runs;
 }
+
+/** Stretches whose share grew since `before`, as fractions of the file. */
+export function arrivals(before: Downloaded, now: Downloaded): Run[] {
+  if (before.length !== now.length) return [];
+  return runsOf(now.map((share, i) => (share > before[i] ? 1 : 0)));
+}
