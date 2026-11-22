@@ -34,8 +34,8 @@ Run lint and typecheck before declaring any task done.
 We build locally, not on EAS. The app runs torrential's engine inside itself, so build the engine library before any native build: `scripts/build-engine.sh android|ios`.
 
 - **Android dev:** `CI=1 pnpm exec expo prebuild --platform android`, then in `android/` run `./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a`. Install with `adb install -r`, then `pnpm exec expo start --dev-client` and `adb reverse tcp:8081 tcp:8081`.
-- **Android release ("torrential preview"):** `scripts/build-preview.sh` writes `~/Desktop/torrential-preview.apk`. Judge motion and speed here, never in a dev build.
-- **Build numbers:** `app.config.js` sets Android's `versionCode` and iOS's `buildNumber` to the commit count (`git rev-list --count HEAD`, or `APP_BUILD`), and `extra.commit` to the short commit. Settings → About shows version, build and commit.
+- **Android release ("torrential preview"):** `scripts/build-preview.sh` writes `~/Desktop/torrential-preview.apk` and a copy named `torrential-preview-<version>-<build>-<commit>.apk`. It refuses a tree with uncommitted changes. Judge motion and speed here, never in a dev build.
+- **Build numbers:** `app.config.js` sets Android's `versionCode` and iOS's `buildNumber` to the commit count (`git rev-list --count HEAD`, or `APP_BUILD`), and `extra.commit` to the short commit. Settings → About shows version, build and commit. Recording a build that passed on a device: `docs/releases.md`.
 - **iOS simulator:** `pnpm exec expo run:ios --device <udid>`. For Release, use xcodebuild with `-sdk iphonesimulator ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, because the engine framework is arm64 only. If the Debug link breaks after a `pod install`, run `CI=1 pnpm exec expo prebuild --platform ios --clean`.
 
 ## Commits
