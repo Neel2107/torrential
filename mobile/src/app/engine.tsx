@@ -1,4 +1,3 @@
-import * as Application from 'expo-application';
 import { router } from 'expo-router';
 import { HardDrive } from 'lucide-react-native';
 import { useState } from 'react';
@@ -121,10 +120,6 @@ export default function Engine() {
                   ? `${device.name} · ${device.id}`
                   : '…'
           }
-        />
-        <Row
-          label="App"
-          value={`${Application.nativeApplicationVersion ?? ''} (${Application.nativeBuildVersion ?? ''})`}
           last
         />
       </View>

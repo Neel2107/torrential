@@ -19,7 +19,11 @@ export default function Settings() {
   const { session } = useSession();
   const version = useVersion();
   const engine = session.state === 'paired' ? session.engine : null;
-  const status = version.isSuccess ? 'Online' : version.isError ? 'Not answering' : 'Checking…';
+  const status = version.isSuccess
+    ? `Online · torrential ${version.data.version}`
+    : version.isError
+      ? 'Not answering'
+      : 'Checking…';
   const tint = version.isSuccess ? color.action : version.isError ? color.error : color.pencil;
 
   return (
@@ -62,8 +66,8 @@ export default function Settings() {
           <Line
             label="App"
             value={`${Application.nativeApplicationVersion ?? ''} (${Application.nativeBuildVersion ?? ''})`}
+            last
           />
-          <Line label="Engine" value={version.data ? `torrential ${version.data.version}` : '—'} last />
         </Group>
       </ScrollView>
     </View>

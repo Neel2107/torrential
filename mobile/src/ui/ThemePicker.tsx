@@ -73,9 +73,7 @@ export function ThemePicker() {
           );
         })}
       </View>
-      <Text style={type.caption}>
-        {themes[shown].name} · {themes[shown].note}
-      </Text>
+      <Text style={type.caption}>{themes[shown].note}</Text>
       <Modal visible={covered} transparent animationType="none" statusBarTranslucent navigationBarTranslucent>
         {covered && next ? <Cover id={next} /> : null}
       </Modal>
