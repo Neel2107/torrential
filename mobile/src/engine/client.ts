@@ -195,13 +195,17 @@ export async function stream<T>(
 ): Promise<void> {
   const startedAt = performance.now();
   let chars = 0;
-  await send(link, path, init, (response) =>
-    readLines(response, (line) => {
-      chars += line.length;
-      onMessage(fromEngine<T>(line));
-    }),
-  );
-  net(path, chars, startedAt);
+
+  try {
+    await send(link, path, init, (response) =>
+      readLines(response, (line) => {
+        chars += line.length;
+        onMessage(fromEngine<T>(line));
+      }),
+    );
+  } finally {
+    net(path, chars, startedAt);
+  }
 }
 
 export async function events<T>(link: Link, path: string, signal: AbortSignal, onMessage: (message: T) => void) {

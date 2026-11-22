@@ -8,6 +8,7 @@
 #   mobile/scripts/perf-f6.sh scroll [runs]   Home scrolled down and up; frames
 #   mobile/scripts/perf-f6.sh tabs [runs]     Home to Downloads and back; frames
 #   mobile/scripts/perf-f6.sh net [runs]      engine requests and characters received in the 8 s after launch
+#   mobile/scripts/perf-f6.sh browse [runs]   open a title, stay STAY seconds (default 1.2), go back; requests and characters
 #
 # Taps go through f6-tap.sh, so nothing lands outside the app. Media volume is set to 0 first. Targets are found
 # before the frame counter resets: a uiautomator dump makes the app build its accessibility tree, which costs frames.
@@ -149,6 +150,22 @@ case $scenario in
       sleep 1
     done
     frames
+    ;;
+  browse)
+    home >/dev/null
+    xy=$(find_node 'content-desc="[^"]*, rated [^"]*"')
+    [ -n "$xy" ] || { echo "no poster found" >&2; exit 1; }
+    $A logcat -c
+    for _ in $(seq "$runs"); do
+      "$here/f6-tap.sh" $xy
+      sleep "${STAY:-1.2}"
+      $A shell input keyevent KEYCODE_BACK
+      sleep 1.5
+    done
+    sleep 4
+    $A logcat -d -s ReactNativeJS | grep "\[perf\] net " > /tmp/perf-net.txt || true
+    echo "browse	$runs opens	$(wc -l < /tmp/perf-net.txt | tr -d ' ') requests	$(awk '{for (i = 1; i <= NF; i++) if ($(i + 1) == "B") s += $i} END {print s + 0}' /tmp/perf-net.txt) chars"
+    awk '{for (i = 1; i <= NF; i++) if ($i == "net") {route = $(i + 1); n[route]++; c[route] += $(i + 2)}} END {for (r in n) printf "  %s\t%d requests\t%d chars\n", r, n[r], c[r]}' /tmp/perf-net.txt | sort -t$'\t' -k3 -n -r
     ;;
   net)
     requests=() chars=()
