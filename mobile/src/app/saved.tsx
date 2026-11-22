@@ -24,7 +24,7 @@ export default function SavedVideos() {
           <Icon name={icons.back} size={22} tint={color.ink} />
         </Tap>
         <Text style={styles.title} accessibilityRole="header">
-          Saved videos
+          On this phone
         </Text>
       </View>
       <FlatList

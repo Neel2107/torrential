@@ -12,7 +12,7 @@ import {
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 
-import type { Continue, Home as HomeData } from '@web/wire';
+import type { Continue } from '@web/wire';
 
 import { useHome } from '@/engine/queries';
 import { Art } from '@/ui/Art';
@@ -82,8 +82,6 @@ export default function Home() {
                   <PosterGrid titles={home.data.saved} />
                 </Animated.View>
               ) : null}
-              <PopularRow kind="film" title="Popular films" skip={have(home.data)} index={3} />
-              <PopularRow kind="series" title="Popular shows" skip={have(home.data)} index={4} />
             </>
           )}
         </Animated.ScrollView>
@@ -108,10 +106,6 @@ export default function Home() {
 }
 
 const NONE: ReadonlySet<string> = new Set();
-
-function have(home: HomeData): ReadonlySet<string> {
-  return new Set([...home.continue.map((item) => item.title.id), ...home.saved.map((card) => card.id)]);
-}
 
 function SectionTitle({ children }: { children: string }) {
   return (
@@ -221,7 +215,7 @@ function Empty() {
   return (
     <Animated.View entering={rise(0)} style={styles.empty}>
       <Icon name={icons.film} size={40} tint={color.pencil} />
-      <Text style={[type.title, { textAlign: 'center' }]}>Nothing here yet</Text>
+      <Text style={[type.title, { textAlign: 'center' }]}>Your library is empty</Text>
       <Text style={[type.body, { textAlign: 'center' }]}>
         Find a film or a show and it starts playing in seconds, while it downloads.
       </Text>

@@ -68,7 +68,7 @@ export default function Settings() {
           <View style={styles.toggle}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.value}>Smaller videos on mobile data</Text>
-              <Text style={type.caption}>Picks 720p sources when you are not on Wi-Fi.</Text>
+              <Text style={type.caption}>Prefers smaller sources on mobile data.</Text>
             </View>
             <Switch
               value={saver}

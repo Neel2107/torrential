@@ -72,10 +72,9 @@ export function NewEpisodes({ saved, index }: { saved: TitleCard[]; index: numbe
           <Tap
             key={videoOf(page.id, episode)}
             shrink={0.97}
-            onPress={() => router.push({ pathname: '/play', params: { video: videoOf(page.id, episode) } })}
-            onLongPress={() => router.push({ pathname: '/title/[id]', params: { id: page.id } })}
+            onPress={() => router.push({ pathname: '/title/[id]', params: { id: page.id } })}
             accessibilityLabel={`${page.name}, ${episodeCode(episode)}, ${episodeName(episode)}, aired ${ago(episode.aired ?? 0)}`}
-            accessibilityHint="Plays it. Long press opens the show."
+            accessibilityHint="Opens the show."
             style={{ width: CARD }}
           >
             <View style={styles.still}>

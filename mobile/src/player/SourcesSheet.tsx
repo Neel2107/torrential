@@ -93,7 +93,7 @@ function whyFirst(first: Release, all: Release[]): string {
     peers.length > 1 &&
     peers.every((other) => other === first || (other.size ?? 0) > first.size!)
   ) {
-    return 'Best · smallest';
+    return `Best · smallest at ${first.quality.resolution}`;
   }
   return 'Best';
 }
@@ -176,11 +176,11 @@ function SourceRow({
           shrink={0.88}
           haptic
           onPress={() => setOpen((was) => !was)}
-          accessibilityLabel={open ? 'Hide details' : 'Show details'}
+          accessibilityLabel={`${open ? 'Hide' : 'Show'} details of ${[...tags.map((tag) => tag.label), release.size ? bytes(release.size) : null].filter(Boolean).join(' ')}`}
           accessibilityState={{ expanded: open }}
           style={styles.more}
         >
-          <View style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }}>
+          <View style={{ transform: [{ rotate: open ? '-90deg' : '90deg' }] }}>
             <Icon name={icons.chevron} size={18} tint={color.pencil} />
           </View>
         </Tap>

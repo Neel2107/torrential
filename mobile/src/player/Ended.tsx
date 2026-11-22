@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -60,15 +60,17 @@ export function Ended({
     if (next && !reduced) progress.value = withTiming(1, { duration: UP_NEXT_SECONDS * 1000, easing: Easing.linear });
   }, [next, progress, reduced]);
 
+  useEffect(() => {
+    if (next) AccessibilityInfo.announceForAccessibility(`Up next in ${UP_NEXT_SECONDS} seconds: ${next.name}`);
+  }, [next]);
+
   const bar = useAnimatedStyle(() => ({ transform: [{ scaleX: progress.value }] }));
 
   return (
     <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.screen}>
       {next ? (
         <View style={styles.heading}>
-          <Text style={[type.label, styles.center]} accessibilityLiveRegion="polite">
-            {left === null ? 'Up next' : `Up next in ${left}`}
-          </Text>
+          <Text style={[type.label, styles.center]}>{left === null ? 'Up next' : `Up next in ${left}`}</Text>
           <Animated.View entering={FadeIn.duration(motion.standard).delay(120)} style={styles.still}>
             <Art
               id={next.title}
@@ -94,7 +96,7 @@ export function Ended({
         {next ? <Button label="Play now" icon={icons.play} onPress={onNext} /> : null}
         {left !== null ? (
           <Button
-            label="Cancel"
+            label="Stop autoplay"
             kind="secondary"
             onPress={() => {
               setCancelled(true);

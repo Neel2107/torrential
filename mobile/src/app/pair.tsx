@@ -151,7 +151,7 @@ export default function Pair() {
           <Button
             kind="secondary"
             icon={icons.play}
-            label={`Watch saved videos (${saved})`}
+            label={`Watch what is on this phone (${saved})`}
             onPress={() => router.push('/saved')}
           />
         ) : null}

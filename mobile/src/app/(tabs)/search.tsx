@@ -278,17 +278,17 @@ function Titles({
       contentContainerStyle={{ paddingTop: top, paddingBottom: bottom + space.xl }}
       ListEmptyComponent={
         !query ? (
-          (idle ?? (
-            <>
+          <>
+            {idle ?? (
               <Hint
                 icon={icons.search}
                 title="Find something to watch"
                 body="Search by name. A film or a show starts playing in seconds, while it downloads."
               />
-              <PopularRow kind="film" title="Popular films" skip={NOTHING} index={1} />
-              <PopularRow kind="series" title="Popular shows" skip={NOTHING} index={2} />
-            </>
-          ))
+            )}
+            <PopularRow kind="film" title="Popular films" skip={NOTHING} index={4} />
+            <PopularRow kind="series" title="Popular shows" skip={NOTHING} index={5} />
+          </>
         ) : result.isError ? (
           <EngineProblem error={result.error} onRetry={() => result.refetch()} />
         ) : result.isSuccess && !result.isPlaceholderData ? (

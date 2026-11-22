@@ -473,7 +473,7 @@ export function Player({
               </Text>
               <View style={styles.errorActions}>
                 <Button
-                  label="Try again"
+                  label="Retry this source"
                   icon={icons.refresh}
                   onPress={() => {
                     const at = String(Math.floor(position));

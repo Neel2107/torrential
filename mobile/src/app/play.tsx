@@ -178,7 +178,7 @@ function Starting({
               <View style={styles.actions}>
                 {video && pinned ? (
                   <Button
-                    label="Play another source"
+                    label="Find another source"
                     icon={icons.play}
                     onPress={() => router.replace({ pathname: '/play', params: { video } })}
                   />
