@@ -57,6 +57,7 @@ function keep() {
   } catch {}
 }
 
+/** Reads the saved manifest and clears copies cut off mid-download, once, before anything reads or changes the copies: after that, a .part file is a copy in progress. */
 function load() {
   if (loaded) return;
   loaded = true;
@@ -91,6 +92,8 @@ function order(copy: Copy): number {
 
 /** The copy of `job` as it stands now, outside React. */
 export function copyOf(job: string): Copy | undefined {
+  load();
+
   return copies.get(job);
 }
 
@@ -117,6 +120,7 @@ const claimed = new Set<string>();
 
 /** Copies a finished download's video to this phone; `file` picks which video when the download holds several. */
 export async function save(link: Link, job: string, label: Label, file?: number): Promise<void> {
+  load();
   const before = copies.get(job);
 
   if (claimed.has(job) || before?.state === 'saving' || before?.state === 'saved') return;
@@ -278,6 +282,7 @@ export function cancel(job: string) {
 }
 
 export function remove(job: string) {
+  load();
   const copy = copies.get(job);
 
   if (copy?.state === 'saving') return cancel(job);
