@@ -50,6 +50,7 @@ import { RecoveryNotice, useStallRecovery, type Takeover } from './recovery';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
 import { SettingsSheet } from './SettingsSheet';
+import { SwipeLevel, useSideSwipes } from './swipes';
 import { SubtitleLook } from './SubtitleLook';
 import { SourcesSheet } from './SourcesSheet';
 import { choiceKey, SubtitleOverlay, useOnlineSubtitles, useSubtitleCues, type SubtitleChoice } from './Subtitles';
@@ -269,7 +270,7 @@ export function Player({
     flash(seconds < 0 ? 'left' : 'right');
   };
 
-  const [width, setWidth] = useState(1);
+  const [{ width, height: screenHeight }, setSize] = useState({ width: 1, height: 1 });
   const tap = Gesture.Tap()
     .numberOfTaps(1)
     .maxDuration(250)
@@ -282,7 +283,9 @@ export function Player({
     .onEnd((event) => skip(event.x < width / 2 ? -SKIP : SKIP));
   const drop = useSharedValue(0);
   const close = () => router.back();
+  const sides = useSideSwipes({ width, height: screenHeight });
   const pullDown = Gesture.Pan()
+    .hitSlop(sides.middle)
     .activeOffsetY(18)
     .failOffsetX([-24, 24])
     .onUpdate((event) => {
@@ -296,7 +299,7 @@ export function Player({
         drop.value = withSpring(0, motion.settle);
       }
     });
-  const taps = Gesture.Race(pullDown, Gesture.Exclusive(doubleTap, tap));
+  const taps = Gesture.Race(pullDown, sides.swipe, Gesture.Exclusive(doubleTap, tap));
   const dropStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: drop.value * 0.8 }, { scale: 1 - Math.min(drop.value, 400) / 2400 }],
     borderRadius: Math.min(drop.value / 6, 24),
@@ -323,10 +326,7 @@ export function Player({
     // The player is a modal above the app's root, so its sheets need a portal host of their own.
     <PortalHost>
       <View style={styles.backdrop}>
-        <Animated.View
-          style={[styles.screen, dropStyle]}
-          onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-        >
+        <Animated.View style={[styles.screen, dropStyle]} onLayout={(event) => setSize(event.nativeEvent.layout)}>
           <VideoView
             player={player}
             style={StyleSheet.absoluteFill}
@@ -337,6 +337,7 @@ export function Player({
           />
           <GestureDetector gesture={taps}>
             <View style={StyleSheet.absoluteFill}>
+              <SwipeLevel kind={sides.kind} level={sides.level} shown={sides.shown} />
               <Animated.View style={[styles.skip, styles.skipLeft, leftStyle]} pointerEvents="none">
                 <Icon name={icons.rewind} size={30} tint={color.ink} />
                 <Text style={styles.skipText}>{SKIP} s</Text>

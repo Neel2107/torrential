@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  RefreshControl,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -10,7 +9,8 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useSharedValue } from 'react-native-reanimated';
 
 import type { Continue } from '@web/wire';
 
@@ -22,7 +22,7 @@ import { EngineProblem } from '@/ui/EngineProblem';
 import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { Logo } from '@/ui/Logo';
-import { Mark } from '@/ui/Mark';
+import { PullMark, usePullToRefresh } from '@/ui/pull';
 import { Meter } from '@/ui/Meter';
 import { PosterGrid } from '@/ui/PosterGrid';
 import { rise } from '@/ui/rise';
@@ -36,57 +36,50 @@ import { color, radius, space, type } from '@/theme';
 export default function Home() {
   const home = useHome();
   const top = useTopInset(false);
-  const onScroll = useChromeScroll();
+  const offset = useSharedValue(0);
+  const refetch = home.refetch;
+  const pull = usePullToRefresh(
+    offset,
+    useCallback(() => refetch(), [refetch]),
+  );
+  const onScroll = useChromeScroll({ offset, fromBounce: pull.fromBounce, endBounce: pull.endBounce });
   const { bottom } = useChrome();
-  const [refreshing, setRefreshing] = useState(false);
-
-  const refresh = async () => {
-    setRefreshing(true);
-    await home.refetch();
-    setRefreshing(false);
-  };
 
   return (
     <View style={styles.screen}>
-      <Animated.ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={{
-          paddingTop: top + space.md,
-          paddingBottom: bottom + FAB_ROOM,
-        }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={refresh}
-            tintColor={color.soft}
-            colors={[color.actionInk]}
-            progressBackgroundColor={color.action}
-            progressViewOffset={top}
-          />
-        }
-      >
-        {home.isPending ? (
-          <Loading />
-        ) : home.isError ? (
-          <EngineProblem error={home.error} onRetry={() => home.refetch()} />
-        ) : home.data.continue.length === 0 && home.data.saved.length === 0 ? (
-          <Empty />
-        ) : (
-          <>
-            {home.data.continue.length > 0 ? <ContinueCarousel items={home.data.continue} /> : null}
-            {home.data.saved.length > 0 ? (
-              <Animated.View entering={rise(2)} style={styles.section}>
-                <SectionTitle>Saved</SectionTitle>
-                <PosterGrid titles={home.data.saved} />
-              </Animated.View>
-            ) : null}
-          </>
-        )}
-      </Animated.ScrollView>
+      <GestureDetector gesture={pull.gesture}>
+        <Animated.ScrollView
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          overScrollMode="never"
+          style={pull.feed}
+          contentContainerStyle={{
+            paddingTop: top + space.md,
+            paddingBottom: bottom + FAB_ROOM,
+          }}
+        >
+          {home.isPending ? (
+            <Loading />
+          ) : home.isError ? (
+            <EngineProblem error={home.error} onRetry={() => home.refetch()} />
+          ) : home.data.continue.length === 0 && home.data.saved.length === 0 ? (
+            <Empty />
+          ) : (
+            <>
+              {home.data.continue.length > 0 ? <ContinueCarousel items={home.data.continue} /> : null}
+              {home.data.saved.length > 0 ? (
+                <Animated.View entering={rise(2)} style={styles.section}>
+                  <SectionTitle>Saved</SectionTitle>
+                  <PosterGrid titles={home.data.saved} />
+                </Animated.View>
+              ) : null}
+            </>
+          )}
+        </Animated.ScrollView>
+      </GestureDetector>
       <TopBar
         left={<EngineAvatar />}
-        title={<Mark size={30} />}
+        title={<PullMark size={30} />}
         right={
           <Actions
             actions={[

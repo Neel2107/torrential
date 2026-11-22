@@ -3,6 +3,7 @@ import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from 'r
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
+  Keyframe,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -14,6 +15,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, motion, radius, space } from '@/theme';
 
 import { Portal } from './Portal';
+
+/** What the sheet holds eases up a beat after the sheet itself, so the two read as one motion. */
+const CONTENT_IN = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: 10 }] },
+  100: { opacity: 1, transform: [{ translateY: 0 }], easing: motion.out },
+})
+  .duration(260)
+  .delay(70);
 
 /**
  * A sheet over the current screen, as X shows its menus: it springs up from the bottom, follows the
@@ -102,7 +111,9 @@ export function Sheet({
             </View>
           </GestureDetector>
           {/* Shrinks to the sheet's height, so a long list inside scrolls instead of running off the bottom. */}
-          <View style={styles.body}>{children}</View>
+          <Animated.View entering={CONTENT_IN} style={styles.body}>
+            {children}
+          </Animated.View>
         </Animated.View>
       </View>
     </Portal>

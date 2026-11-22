@@ -1,4 +1,12 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { bytes } from '@web/lib/format';
@@ -8,7 +16,7 @@ import type { Release } from '@web/wire';
 import { Icon, icons } from '@/ui/Icon';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
-import { color, font, radius, space, type } from '@/theme';
+import { color, font, motion, radius, space, type } from '@/theme';
 
 /** The web player's speeds. Its `actions.ts` imports React, which would load a second copy from the web app. */
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -96,6 +104,19 @@ export function Chip({
   onPress: () => void;
   accessibilityLabel: string;
 }) {
+  // The fill blends to its new colour and the chosen chip gives a small pop, so a choice is felt.
+  const on = useSharedValue(selected ? 1 : 0);
+  const pop = useSharedValue(1);
+  useEffect(() => {
+    on.value = withTiming(selected ? 1 : 0, { duration: motion.quick, easing: motion.out });
+    if (selected) pop.value = withSequence(withTiming(1.08, { duration: 90 }), withSpring(1, motion.pop));
+  }, [selected, on, pop]);
+  const fill = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(on.value, [0, 1], [color.lifted, color.ink]),
+    transform: [{ scale: pop.value }],
+  }));
+  const text = useAnimatedStyle(() => ({ color: interpolateColor(on.value, [0, 1], [color.soft, color.paper]) }));
+
   return (
     <Tap
       shrink={0.92}
@@ -103,9 +124,10 @@ export function Chip({
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected }}
-      style={[styles.chip, selected && styles.chipSelected]}
     >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+      <Animated.View style={[styles.chip, fill]}>
+        <Animated.Text style={[styles.chipText, text]}>{label}</Animated.Text>
+      </Animated.View>
     </Tap>
   );
 }
@@ -126,9 +148,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipSelected: { backgroundColor: color.ink },
   chipText: { fontFamily: font.semibold, fontSize: 14, color: color.soft, fontVariant: ['tabular-nums'] },
-  chipTextSelected: { color: color.paper },
   link: {
     flexDirection: 'row',
     alignItems: 'center',

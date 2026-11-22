@@ -12,6 +12,7 @@ import type { OnlineLookup, SubtitleChoice } from './Subtitles';
 
 import { Icon, icons } from '@/ui/Icon';
 import { Sheet } from '@/ui/Sheet';
+import { Check } from '@/ui/Check';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, space, type } from '@/theme';
 
@@ -293,7 +294,7 @@ function Row({
         <Text style={[styles.label, selected && { color: color.ink, fontFamily: font.semibold }]}>{label}</Text>
         {detail ? <Text style={type.caption}>{detail}</Text> : null}
       </View>
-      {selected ? <Icon name={icons.check} size={20} tint={color.action} weight={2.6} /> : null}
+      <Check shown={selected} />
     </Tap>
   );
 }

@@ -35,8 +35,15 @@ export function useChrome(): Chrome {
   return chrome;
 }
 
+/** What a feed that pulls to refresh hears from its scroll: where it is, and its bounce past the top. */
+type PullHooks = {
+  offset: SharedValue<number>;
+  fromBounce: (y: number) => void;
+  endBounce: () => void;
+};
+
 /** A scroll handler that drives the bars. Each screen that owns a feed passes it to its list. */
-export function useChromeScroll() {
+export function useChromeScroll(pull?: PullHooks) {
   const { hidden } = useChrome();
 
   useEffect(() => {
@@ -49,6 +56,10 @@ export function useChromeScroll() {
     },
     onScroll: (event, context) => {
       const y = event.contentOffset.y;
+      if (pull) {
+        pull.offset.value = y;
+        pull.fromBounce(y);
+      }
       const last = context.last ?? y;
       context.last = y;
       if (y <= 0) {
@@ -60,6 +71,7 @@ export function useChromeScroll() {
       hidden.value = Math.min(1, Math.max(0, hidden.value + (y - last) / TRAVEL));
     },
     onEndDrag: (event) => {
+      pull?.endBounce();
       if (event.contentOffset.y <= 0) return;
       hidden.value = withSpring(hidden.value > 0.5 ? 1 : 0, motion.settle);
     },

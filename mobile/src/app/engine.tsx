@@ -10,6 +10,7 @@ import { CAN_RUN_LOCALLY } from '../../modules/torrential-engine';
 import { useMe, useVersion } from '@/engine/queries';
 import { useSession } from '@/engine/session';
 import { Button } from '@/ui/Button';
+import { Check } from '@/ui/Check';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { color, font, radius, space, type } from '@/theme';
@@ -63,7 +64,7 @@ export default function Engine() {
                   {engine.kind === 'phone' ? 'Downloads to this phone' : engine.link.base.replace(/^https?:\/\//, '')}
                 </Text>
               </View>
-              {active ? <Icon name={icons.check} size={20} tint={color.action} weight={2.6} /> : null}
+              <Check shown={active} />
             </Tap>
           );
         })}

@@ -9,6 +9,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { color, font, motion, space } from '@/theme';
 
 import { useChrome } from './chrome';
+import { usePullHeight } from './pull';
 import { Glass, LIQUID_GLASS } from './Glass';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
@@ -40,14 +41,17 @@ export function TopBar({
 }) {
   const insets = useSafeAreaInsets();
   const { hidden } = useChrome();
+  const pull = usePullHeight();
 
+  // A pull to refresh stretches the row, and what it holds stays in its middle.
+  const stretch = useAnimatedStyle(() => ({ height: BAR_HEIGHT + pull.value }));
   const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.value * BAR_HEIGHT }] }));
   const fade = useAnimatedStyle(() => ({ opacity: interpolate(hidden.value, [0, 0.6], [1, 0]) }));
 
   return (
     <>
       <Animated.View style={[styles.wrap, { paddingTop: insets.top }, slide]}>
-        <Animated.View style={[styles.row, fade]}>
+        <Animated.View style={[styles.row, stretch, fade]}>
           <View style={styles.side}>{left}</View>
           <View style={styles.middle}>
             {typeof title === 'string' ? (

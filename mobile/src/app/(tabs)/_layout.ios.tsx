@@ -2,6 +2,7 @@ import { NativeTabs } from 'expo-router/native-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useJobs } from '@/engine/jobs';
+import { PullProvider } from '@/ui/pull';
 import { ChromeProvider } from '@/ui/chrome';
 import { color } from '@/theme';
 
@@ -21,22 +22,24 @@ export default function TabsLayout() {
   const downloading = jobs.some((job) => job.state === 'downloading' || job.state === 'metadata');
 
   return (
-    <ChromeProvider bar={insets.bottom + SYSTEM_TAB_BAR}>
-      <NativeTabs tintColor={color.action}>
-        <NativeTabs.Trigger name="index">
-          <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="downloads">
-          <NativeTabs.Trigger.Label>Downloads</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf={{ default: 'arrow.down.circle', selected: 'arrow.down.circle.fill' }} />
-          {downloading ? <NativeTabs.Trigger.Badge /> : null}
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="search" role="search">
-          <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="magnifyingglass" />
-        </NativeTabs.Trigger>
-      </NativeTabs>
-    </ChromeProvider>
+    <PullProvider>
+      <ChromeProvider bar={insets.bottom + SYSTEM_TAB_BAR}>
+        <NativeTabs tintColor={color.action}>
+          <NativeTabs.Trigger name="index">
+            <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="downloads">
+            <NativeTabs.Trigger.Label>Downloads</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon sf={{ default: 'arrow.down.circle', selected: 'arrow.down.circle.fill' }} />
+            {downloading ? <NativeTabs.Trigger.Badge /> : null}
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="search" role="search">
+            <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger.Icon sf="magnifyingglass" />
+          </NativeTabs.Trigger>
+        </NativeTabs>
+      </ChromeProvider>
+    </PullProvider>
   );
 }
