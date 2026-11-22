@@ -2,13 +2,19 @@
 # Builds static OpenSSL for the phone targets the engine links: Android arm64, iOS devices and the
 # Apple-silicon iOS simulator. Each lands in target/mobile-deps/openssl/<target>/{include,lib}.
 #
+# Runs on the owner's Mac only (Xcode, and Homebrew's android-commandlinetools NDK for android).
+#
 #   mobile/scripts/build-openssl.sh [android|ios|ios-sim ...]
 set -euo pipefail
+if [ "$(uname -s)" != Darwin ]; then
+  echo "build-openssl.sh runs on the owner's Mac only (Xcode, Homebrew's android-commandlinetools)." >&2
+  exit 1
+fi
 version=3.5.4
 root=$(cd "$(dirname "$0")/../.." && pwd)
 deps=$root/target/mobile-deps
 src=$deps/src/openssl-$version
-ndk=${ANDROID_NDK_ROOT:-$(ls -d /opt/homebrew/share/android-commandlinetools/ndk/* | sort | tail -1)}
+ndk=${ANDROID_NDK_ROOT:-$(ls -d /opt/homebrew/share/android-commandlinetools/ndk/* 2>/dev/null | sort | tail -1 || true)}
 
 mkdir -p "$deps/src"
 if [ ! -d "$src" ]; then
@@ -32,6 +38,7 @@ for target in "${@:-android ios ios-sim}"; do
   for t in $target; do
     case $t in
       android)
+        [ -n "$ndk" ] || { echo "build-openssl.sh: no NDK in /opt/homebrew/share/android-commandlinetools/ndk; set ANDROID_NDK_ROOT" >&2; exit 1; }
         ANDROID_NDK_ROOT=$ndk PATH="$ndk/toolchains/llvm/prebuilt/darwin-x86_64/bin:$PATH" \
           build android-arm64 android-arm64 -D__ANDROID_API__=24 ;;
       ios) build ios-arm64 ios64-xcrun -mios-version-min=15.1 ;;

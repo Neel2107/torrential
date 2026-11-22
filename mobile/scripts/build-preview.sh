@@ -5,10 +5,16 @@
 # changes, so every APK is exactly one commit, and its build number (Settings → About) is that commit's
 # count on the branch.
 #
+# Runs on the owner's Mac only: it needs Homebrew's openjdk@17, android-commandlinetools and node@22.
+#
 #   mobile/scripts/build-preview.sh
 set -euo pipefail
 mobile=$(cd "$(dirname "$0")/.." && pwd)
 
+if [ "$(uname -s)" != Darwin ] || ! command -v brew >/dev/null; then
+  echo "build-preview.sh runs on the owner's Mac only (Homebrew's openjdk@17, android-commandlinetools, node@22)." >&2
+  exit 1
+fi
 if [ -n "$(git -C "$mobile" status --porcelain)" ]; then
   echo "build-preview.sh: commit or stash these first, so the APK matches a commit:" >&2
   git -C "$mobile" status --short >&2

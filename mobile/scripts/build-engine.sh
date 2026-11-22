@@ -3,18 +3,31 @@
 # into the module: android → jniLibs/arm64-v8a/libtorrential_mobile.so, ios → TorrentialMobile.xcframework
 # for devices and the Apple-silicon simulator.
 #
+# Runs on the owner's Mac only: it needs Homebrew's boost and android-commandlinetools (with an NDK),
+# rustup's Rust with the phone targets, and Xcode for ios.
+#
 #   mobile/scripts/build-engine.sh android|ios
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 module=$root/mobile/modules/torrential-engine
 deps=$root/target/mobile-deps
+
+if [ "$(uname -s)" != Darwin ] || ! command -v brew >/dev/null; then
+  echo "build-engine.sh runs on the owner's Mac only (Homebrew's boost and android-commandlinetools, rustup, Xcode)." >&2
+  exit 1
+fi
+boost=$(brew --prefix --installed boost) || { echo "build-engine.sh: brew install boost" >&2; exit 1; }
 export PATH=/opt/homebrew/opt/rustup/bin:$HOME/.cargo/bin:$PATH
-export BOOST_ROOT=$(brew --prefix boost) TORRENTIAL_WEB_DIST=$root/web/dist
+export BOOST_ROOT=$boost TORRENTIAL_WEB_DIST=$root/web/dist
 "$root/mobile/scripts/build-openssl.sh" "$1" >/dev/null
 
 case $1 in
   android)
-    export ANDROID_NDK_HOME=${ANDROID_NDK_HOME:-$(ls -d /opt/homebrew/share/android-commandlinetools/ndk/* | sort | tail -1)}
+    if [ -z "${ANDROID_NDK_HOME:-}" ]; then
+      ANDROID_NDK_HOME=$(ls -d /opt/homebrew/share/android-commandlinetools/ndk/* 2>/dev/null | sort | tail -1 || true)
+      [ -n "$ANDROID_NDK_HOME" ] || { echo "build-engine.sh: no NDK in /opt/homebrew/share/android-commandlinetools/ndk; set ANDROID_NDK_HOME" >&2; exit 1; }
+    fi
+    export ANDROID_NDK_HOME
     export OPENSSL_INCLUDE_DIR=$deps/openssl/android-arm64/include OPENSSL_LIB_DIR=$deps/openssl/android-arm64/lib
     (cd "$root" && cargo ndk -t arm64-v8a -P 24 -o "$module/android/src/main/jniLibs" build --release -p torrential-mobile)
     ;;
