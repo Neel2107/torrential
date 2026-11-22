@@ -19,9 +19,15 @@ export function Logo({ id, name, style }: { id: string; name: string; style?: St
   const missing = missingUri === uri;
 
   return (
-    <View style={style} accessibilityLabel={name} accessibilityRole="text">
+    <View style={[style, missing && styles.fallback]} accessibilityLabel={name} accessibilityRole="text">
       {missing ? (
-        <Text style={styles.name} numberOfLines={2}>
+        <Text
+          style={styles.name}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+          maxFontSizeMultiplier={1}
+        >
           {name}
         </Text>
       ) : (
@@ -43,11 +49,8 @@ export function Logo({ id, name, style }: { id: string; name: string; style?: St
 
 const sheet = (c: Palette) =>
   StyleSheet.create({
+    fallback: { justifyContent: 'flex-end' },
     name: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
       fontFamily: font.bold,
       fontSize: 22,
       lineHeight: 26,

@@ -46,6 +46,7 @@ import { ProgressRing } from '@/ui/ProgressRing';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { TabStrip, usePagerPosition } from '@/ui/Pager';
+import { TitleFacts } from '@/ui/TitleFacts';
 import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
 import { alpha, color, font, motion, radius, scheme, space, type } from '@/theme';
@@ -205,15 +206,7 @@ function Body({ page }: { page: Page }) {
         <Text style={type.display} accessibilityRole="header">
           {page.name}
         </Text>
-        <View style={styles.facts}>
-          {page.rating ? (
-            <View style={styles.rating}>
-              <Icon name={icons.star} size={13} tint={color.action} filled />
-              <Text style={[type.numeric, { color: color.ink }]}>{page.rating.toFixed(1)}</Text>
-            </View>
-          ) : null}
-          <Text style={type.label}>{facts(page).join('  ·  ')}</Text>
-        </View>
+        <TitleFacts rating={page.rating} facts={facts(page)} size="page" />
       </Animated.View>
 
       <Animated.View entering={enter(2)} style={styles.actions}>
@@ -425,7 +418,8 @@ function SaveButton({ id, saved }: { id: string; saved: boolean }) {
 
 function Synopsis({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
-  const long = text.length > 170;
+  const [lines, setLines] = useState(0);
+  const long = lines > SYNOPSIS_LINES;
 
   return (
     <Tap
@@ -435,7 +429,16 @@ function Synopsis({ text }: { text: string }) {
       accessibilityHint={long ? 'Shows all of it' : undefined}
       style={styles.block}
     >
-      <Animated.Text layout={reflow} style={type.body} numberOfLines={open ? undefined : 3}>
+      <Text
+        style={[type.body, styles.measure]}
+        onTextLayout={(event) => setLines(event.nativeEvent.lines.length)}
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        aria-hidden
+      >
+        {text}
+      </Text>
+      <Animated.Text layout={reflow} style={type.body} numberOfLines={open ? undefined : SYNOPSIS_LINES}>
         {text}
       </Animated.Text>
       {long && !open ? <Text style={[type.label, { color: color.ink, marginTop: 2 }]}>More</Text> : null}
@@ -443,8 +446,11 @@ function Synopsis({ text }: { text: string }) {
   );
 }
 
+const SYNOPSIS_LINES = 3;
+
 function Episodes({ page, watched, current }: { page: Page; watched: Map<string, Watched>; current: string | null }) {
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
+  const fit = episodeFit(width, fontScale);
   const seasons = page.seasons.filter((s) => s.episodes.length > 0);
   const currentSeason = current ? findEpisode(page, current)?.season : undefined;
 
@@ -550,6 +556,7 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
               watched={watched.get(videoOf(page.id, episode))}
               index={index}
               current={current === videoOf(page.id, episode)}
+              fit={fit}
             />
           ))}
         </Animated.View>
@@ -559,6 +566,20 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
 }
 
 const GLIDE = { duration: 260, easing: motion.out };
+const STILL_WIDTH = 136;
+const STILL_MIN_WIDTH = 88;
+
+type EpisodeFit = { width: number; height: number; number: number; titleLines: number };
+
+/** The still gives up width as the text grows, so the episode's words keep room on a narrow phone. */
+function episodeFit(screenWidth: number, fontScale: number): EpisodeFit {
+  const room = (screenWidth * 0.38) / Math.max(1, fontScale * 0.8);
+  const width = Math.round(Math.max(STILL_MIN_WIDTH, Math.min(STILL_WIDTH, room)));
+  const height = Math.round((width * 77) / STILL_WIDTH);
+
+  return { width, height, number: Math.round(height * 0.52), titleLines: fontScale > 1.15 ? 3 : 2 };
+}
+
 const NEAR_STILLS = 6;
 
 function EpisodeRow({
@@ -567,12 +588,14 @@ function EpisodeRow({
   watched,
   index,
   current,
+  fit,
 }: {
   page: Page;
   episode: EpisodeInfo;
   watched?: Watched;
   index: number;
   current: boolean;
+  fit: EpisodeFit;
 }) {
   const video = videoOf(page.id, episode);
   const held = useHeldState(video);
@@ -591,8 +614,17 @@ function EpisodeRow({
         accessibilityLabel={`${episodeCode(episode)}, ${episodeName(episode)}${aired ? '' : ', not out yet'}${held === 'none' ? '' : held === 'done' ? (onComputer ? ', on your computer' : ', on this phone') : ', downloading'}`}
         style={[styles.episode, !aired && { opacity: 0.45 }]}
       >
-        <View style={styles.still}>
-          <Text style={styles.stillNumber}>{episode.episode}</Text>
+        <View style={[styles.still, { width: fit.width, height: fit.height }]}>
+          <Text
+            style={[styles.stillNumber, { fontSize: fit.number, maxWidth: fit.width - 16 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            allowFontScaling={false}
+            accessible={false}
+            importantForAccessibility="no"
+          >
+            {episode.episode}
+          </Text>
           {episode.thumbnail ? (
             <Art
               id={page.id}
@@ -613,20 +645,17 @@ function EpisodeRow({
           ) : null}
         </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[type.callout, current && { color: color.action }]} numberOfLines={2}>
+          <Text style={[type.callout, current && { color: color.action }]} numberOfLines={fit.titleLines}>
             {episode.episode}. {episodeName(episode)}
           </Text>
-          <Text style={type.caption}>
-            {[episode.aired ? day(episode.aired) : null, watched?.finished ? 'Watched' : null]
-              .filter(Boolean)
-              .join(' · ')}
-            {held === 'none' ? null : (
-              <Text style={{ color: color.action }}>
-                {episode.aired || watched?.finished ? ' · ' : ''}
-                {held === 'done' ? (onComputer ? 'On your computer' : 'On this phone') : 'Downloading'}
+          <View style={styles.episodeFacts}>
+            {episodeFacts(episode, watched, held, onComputer).map((fact, at) => (
+              <Text key={fact.text} style={[type.caption, fact.held && { color: color.action }]}>
+                {at > 0 ? ' · ' : ''}
+                {fact.text}
               </Text>
-            )}
-          </Text>
+            ))}
+          </View>
           {episode.overview ? (
             <Text style={[type.caption, { color: color.soft }]} numberOfLines={2}>
               {episode.overview}
@@ -636,6 +665,23 @@ function EpisodeRow({
       </Tap>
     </Animated.View>
   );
+}
+
+function episodeFacts(
+  episode: EpisodeInfo,
+  watched: Watched | undefined,
+  held: ReturnType<typeof useHeldState>,
+  onComputer: boolean,
+): { text: string; held: boolean }[] {
+  const pieces = [
+    episode.aired ? { text: day(episode.aired), held: false } : null,
+    watched?.finished ? { text: 'Watched', held: false } : null,
+    held === 'none'
+      ? null
+      : { text: held === 'done' ? (onComputer ? 'On your computer' : 'On this phone') : 'Downloading', held: true },
+  ];
+
+  return pieces.filter((piece) => piece !== null);
 }
 
 function PosterSlot({ id, name }: { id: string; name?: string }) {
@@ -718,8 +764,7 @@ const styles = StyleSheet.create({
   saveOn: { backgroundColor: color.ink },
   saveText: { fontFamily: font.bold, fontSize: 15 },
   block: { marginTop: space.lg },
-  facts: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.sm, flexWrap: 'wrap' },
-  rating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  measure: { position: 'absolute', top: 0, left: 0, right: 0, opacity: 0 },
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
   squareButton: {
     width: 48,
@@ -743,13 +788,13 @@ const styles = StyleSheet.create({
     marginHorizontal: -space.page,
     paddingHorizontal: space.page,
   },
-  still: { width: 136, height: 77, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: color.raised },
+  episodeFacts: { flexDirection: 'row', flexWrap: 'wrap' },
+  still: { borderRadius: radius.sm, overflow: 'hidden', backgroundColor: color.raised },
   stillNumber: {
     position: 'absolute',
     right: 10,
     bottom: 2,
     fontFamily: font.bold,
-    fontSize: 40,
     letterSpacing: -1.5,
     color: color.lifted,
   },
