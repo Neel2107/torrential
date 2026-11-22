@@ -50,7 +50,6 @@ export default function Engine() {
                   : 'The phone forgets this computer. You can pair it again later.',
               confirm: current?.kind === 'phone' ? 'Stop using it' : 'Remove',
               danger: true,
-              icon: icons.trash,
             }).then((yes) => {
               if (yes) forget();
             })

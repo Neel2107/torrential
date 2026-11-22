@@ -4,7 +4,6 @@ import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 
 import { font, scheme } from '@/theme';
 
-import { Icon, type Glyph } from './Icon';
 import { Tap } from './Tap';
 
 /** The look of the Android glass menu (modules/glass-menu-android), for what React Native draws beside it. */
@@ -17,6 +16,7 @@ export function surfaceFor(dark: boolean) {
     ink: dark ? 'rgba(255, 255, 255, 0.96)' : 'rgba(0, 0, 0, 0.92)',
     muted: dark ? 'rgba(235, 235, 245, 0.6)' : 'rgba(60, 60, 67, 0.6)',
     destructive: dark ? 'rgb(255, 82, 84)' : 'rgb(220, 30, 48)',
+    button: dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
     shadow: dark ? 0.5 : 0.18,
     backdrop: 'rgba(0, 0, 0, 0.45)',
     radius: 28,
@@ -57,30 +57,39 @@ export function PanelHeading({ title, message }: { title: string; message?: stri
   );
 }
 
-export function PanelRule() {
-  return <View style={styles.rule} />;
+/** A dialog's two choices as pills side by side, as iOS lays out an alert: Cancel first, then the action; a destructive action in the menu's red. */
+export function PanelButtons({
+  confirm,
+  danger = false,
+  onCancel,
+  onConfirm,
+}: {
+  confirm: string;
+  danger?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <View style={styles.buttons}>
+      <PanelButton label="Cancel" tint={surface.ink} onPress={onCancel} />
+      <PanelButton label={confirm} tint={danger ? surface.destructive : surface.ink} onPress={onConfirm} />
+    </View>
+  );
 }
 
-/** One choice in a panel, laid out like a menu item: icon, then label; destructive ones in the menu's red. */
-export function PanelRow({
-  icon,
-  label,
-  destructive = false,
-  onPress,
-}: {
-  icon: Glyph;
-  label: string;
-  destructive?: boolean;
-  onPress: () => void;
-}) {
-  const tint = destructive ? surface.destructive : surface.ink;
-
+function PanelButton({ label, tint, onPress }: { label: string; tint: string; onPress: () => void }) {
   return (
-    <Tap shrink={1} highlight haptic onPress={onPress} accessibilityLabel={label} style={styles.row}>
-      <View style={styles.icon}>
-        <Icon name={icon} size={20} tint={tint} />
-      </View>
-      <Text style={[styles.label, { color: tint }]}>{label}</Text>
+    <Tap
+      shrink={0.97}
+      haptic
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={styles.button}
+    >
+      <Text style={[styles.buttonLabel, { color: tint }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+        {label}
+      </Text>
     </Tap>
   );
 }
@@ -96,23 +105,19 @@ const styles = StyleSheet.create({
     shadowRadius: 28,
     shadowOffset: { width: 0, height: 14 },
     elevation: 24,
-    paddingBottom: 8,
   },
   heading: { paddingHorizontal: 24, paddingTop: 22, paddingBottom: 18, gap: 6 },
   title: { fontFamily: font.semibold, fontSize: 18, lineHeight: 23, color: surface.ink },
   message: { fontFamily: font.regular, fontSize: 15, lineHeight: 21, color: surface.muted },
-  rule: { height: StyleSheet.hairlineWidth, backgroundColor: surface.rule, marginHorizontal: 24, marginBottom: 8 },
-  row: {
-    flexDirection: 'row',
+  buttons: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 16 },
+  button: {
+    flex: 1,
+    minHeight: 50,
+    paddingHorizontal: 12,
+    borderRadius: 25,
     alignItems: 'center',
-    minHeight: 48,
-    marginHorizontal: 8,
-    paddingVertical: 12,
-    paddingLeft: 22,
-    paddingRight: 16,
-    gap: 16,
-    borderRadius: 16,
+    justifyContent: 'center',
+    backgroundColor: surface.button,
   },
-  icon: { flexShrink: 0 },
-  label: { flexShrink: 1, fontFamily: font.medium, fontSize: 17, color: surface.ink },
+  buttonLabel: { fontFamily: font.medium, fontSize: 17 },
 });

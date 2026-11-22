@@ -6,10 +6,9 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { motion, space } from '@/theme';
 
-import { icons, type Glyph } from './Icon';
-import { Panel, PanelHeading, PanelRow, PanelRule, surface } from './Panel';
+import { Panel, PanelButtons, PanelHeading, surface } from './Panel';
 
-export type Question = { title: string; message: string; confirm: string; danger?: boolean; icon?: Glyph };
+export type Question = { title: string; message: string; confirm: string; danger?: boolean };
 
 type Asking = Question & { id: number; answer: (yes: boolean) => void };
 
@@ -115,14 +114,12 @@ function Dialog({ asking: question }: { asking: Asking }) {
             <ScrollView style={styles.words} alwaysBounceVertical={false} overScrollMode="never">
               <PanelHeading title={question.title} message={question.message} />
             </ScrollView>
-            <PanelRule />
-            <PanelRow
-              icon={question.icon ?? icons.check}
-              label={question.confirm}
-              destructive={question.danger}
-              onPress={() => close(true)}
+            <PanelButtons
+              confirm={question.confirm}
+              danger={question.danger}
+              onCancel={() => close(false)}
+              onConfirm={() => close(true)}
             />
-            <PanelRow icon={icons.close} label="Cancel" onPress={() => close(false)} />
           </Panel>
         </View>
       </View>

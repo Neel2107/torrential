@@ -13,7 +13,7 @@ The owner likes floating surfaces, so they're the default for anything that sits
 
 - **The look** is the Android glass menu's (`modules/glass-menu-android`): a near-black fill (light on the Linen theme), a light rim, a 28 radius, a soft shadow below, and a dimmed screen behind. `surface` in `src/ui/Panel.tsx` holds these values.
 - **Sheets float.** They sit 8 points in from the sides and above the bottom edge, with all four corners rounded (`src/ui/Sheet.tsx`). The player's sheets always use the dark version.
-- **Dialogs and popovers are Panels:** `Panel`, `PanelHeading`, `PanelRule` and `PanelRow`. The words sit on the left; the choices are menu rows with an icon, and the destructive one is the menu's red. iOS uses the system alert instead (`ask()` in `src/ui/Ask.tsx`).
+- **Dialogs and popovers are Panels:** `Panel`, `PanelHeading` and `PanelButtons`. The words sit on the left; the two choices are pills side by side below them, Cancel then the action, as iOS lays out its alert, and a destructive action is the menu's red. iOS uses the system alert itself (`ask()` in `src/ui/Ask.tsx`).
 - **Menus are native.** A row's ··· is `MoreMenu`: the system menu on iOS, the glass menu on Android. Its long press is `ActionSheet`. Both take the same `RowAction[]` (`src/ui/RowMenu.tsx`).
 
 ## Pieces

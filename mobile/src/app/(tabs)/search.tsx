@@ -754,7 +754,6 @@ function UnfinishedRow({ item }: { item: Continue }) {
         message: 'It plays from the start next time.',
         confirm: 'Forget',
         danger: true,
-        icon: icons.close,
       },
       run: async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

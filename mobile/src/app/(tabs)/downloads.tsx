@@ -379,14 +379,12 @@ function useJobActions(job: Job): RowAction[] {
             : 'The download stops and nothing is kept.',
           confirm: 'Delete',
           danger: true,
-          icon: icons.trash,
         }
       : {
           title: `Remove ${name.title}?`,
           message: 'It leaves Downloads. The files stay on the computer.',
           confirm: 'Remove',
           danger: true,
-          icon: icons.trash,
         },
     run: () => send('/api/remove'),
   });
@@ -548,7 +546,6 @@ function useCopyActions(copy: Copy): RowAction[] {
         message: `This frees ${bytes(copy.size)} on this phone.`,
         confirm: 'Delete',
         danger: true,
-        icon: icons.trash,
       },
       run: when('saved'),
     },
