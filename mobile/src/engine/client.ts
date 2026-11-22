@@ -61,7 +61,7 @@ export function url(
 }
 
 /** The engine's reply as the type its route answers with. */
-function fromEngine<T>(text: string): T {
+export function fromEngine<T>(text: string): T {
   // SAFETY: the engine is the only server these calls reach, and web/src/wire.ts is generated from the Rust types it serializes, so each route's JSON is that route's wire type.
   return JSON.parse(text) as T;
 }

@@ -5,6 +5,7 @@ import { useCallback } from 'react';
 import type { Cast, CastAction, Home, Me, TitlePage, TitleSearch, TvList, Version } from '@web/wire';
 
 import { authHeaders, get, post, url, type Link } from './client';
+import { keepReply, keptOptions } from './kept';
 import { useLink } from './session';
 
 export const keys = {
@@ -22,7 +23,13 @@ export function useHome() {
 
   return useQuery({
     queryKey: [...keys.home, link.base],
-    queryFn: ({ signal }) => get<Home>(link, '/api/home', signal),
+    queryFn: async ({ signal }) => {
+      const home = await get<Home>(link, '/api/home', signal);
+      keepReply(link, '/api/home', home);
+
+      return home;
+    },
+    ...keptOptions<Home>(link, '/api/home'),
   });
 }
 
@@ -64,7 +71,13 @@ export function usePopular(kind: 'film' | 'series', enabled = true) {
     enabled,
     staleTime: 60 * 60_000,
     retry: false,
-    queryFn: ({ signal }) => get<TitleSearch>(link, `/api/titles/popular?kind=${kind}`, signal),
+    queryFn: async ({ signal }) => {
+      const popular = await get<TitleSearch>(link, `/api/titles/popular?kind=${kind}`, signal);
+      keepReply(link, `/api/titles/popular?kind=${kind}`, popular);
+
+      return popular;
+    },
+    ...keptOptions<TitleSearch>(link, `/api/titles/popular?kind=${kind}`),
   });
 }
 
