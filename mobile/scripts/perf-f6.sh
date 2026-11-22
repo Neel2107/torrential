@@ -83,16 +83,24 @@ home() {
 
 case $scenario in
   cold)
-    first=() ready=()
+    first=() ready=() js=() session=()
+    at() {
+      local line
+      line=$($A logcat -d -v epoch -s ReactNativeJS | grep -m1 "\[perf\] $1\$" | awk '{print $1}')
+      [ -n "$start" ] && [ -n "$line" ] && python3 -c "print(($line - $start) * 1000)"
+    }
     for _ in $(seq "$runs"); do
       first+=("$(launch)")
       start=$($A logcat -d -v epoch -b events,main,system | grep -m1 -E "START u0 .*$P" | awk '{print $1}')
-      line=$(perf_line "home ready" 20)
-      end=$(awk '{print $1}' <<<"$line")
-      [ -n "$start" ] && [ -n "$end" ] && ready+=("$(python3 -c "print(($end - $start) * 1000)")")
+      perf_line "home ready" 20 >/dev/null
+      ready+=("$(at "home ready")")
+      js+=("$(at "js running")")
+      session+=("$(at "session loaded")")
       sleep 2
     done
     stats "first frame ms" "${first[@]}"
+    stats "js running ms" "${js[@]:-}"
+    stats "session loaded ms" "${session[@]:-}"
     stats "home ready ms" "${ready[@]:-}"
     ;;
   title)

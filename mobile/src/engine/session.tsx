@@ -4,6 +4,8 @@ import { AppState, PermissionsAndroid, Platform } from 'react-native';
 
 import type { Me } from '@web/wire';
 
+import { once } from '@/perf';
+
 import { LocalEngine } from '../../modules/torrential-engine';
 import { get, pair as pairWithCode, PORT, type Link } from './client';
 import { oldLink, readStored, savedEngines } from './stored';
@@ -55,7 +57,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     load()
-      .then(setSaved)
+      .then((loaded) => {
+        once('session loaded');
+        setSaved(loaded);
+      })
       .catch(() => setSaved({ engines: [], active: null }));
   }, []);
 

@@ -16,6 +16,9 @@ import { AskHost } from '@/ui/Ask';
 import { FONTS } from '@/fonts';
 import { PortalHost } from '@/ui/Portal';
 import { color, scheme, stage } from '@/theme';
+import { once } from '@/perf';
+
+once('js running');
 
 SplashScreen.preventAutoHideAsync();
 
