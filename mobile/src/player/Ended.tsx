@@ -3,7 +3,6 @@ import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, V
 import Animated, {
   cancelAnimation,
   Easing,
-  useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withTiming,
@@ -13,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { icons } from '@/ui/Icon';
+import { Meter } from '@/ui/Meter';
 import { stage as color, font, radius, space, stageType as type } from '@/theme';
 
 import { useSources } from './sources';
@@ -80,8 +80,6 @@ export function Ended({
     if (next) AccessibilityInfo.announceForAccessibility(`Up next in ${UP_NEXT_SECONDS} seconds: ${next.name}`);
   }, [next]);
 
-  const bar = useAnimatedStyle(() => ({ transform: [{ scaleX: progress.get() }] }));
-
   return (
     <Animated.View
       entering={appear}
@@ -110,15 +108,24 @@ export function Ended({
                   style={StyleSheet.absoluteFill}
                 />
                 {left !== null ? (
-                  <View style={styles.track}>
-                    <Animated.View style={[styles.fill, bar]} />
-                  </View>
+                  <Meter
+                    follow={progress}
+                    rounded={false}
+                    tint={color.action}
+                    track="rgba(0,0,0,0.45)"
+                    valueText={`${left} seconds left`}
+                    style={styles.track}
+                  />
                 ) : null}
               </Animated.View>
             ) : left !== null ? (
-              <View style={[styles.track, styles.bareTrack]}>
-                <Animated.View style={[styles.fill, bar]} />
-              </View>
+              <Meter
+                follow={progress}
+                tint={color.action}
+                track={color.lifted}
+                valueText={`${left} seconds left`}
+                style={styles.bareTrack}
+              />
             ) : null}
             <Text style={[styles.next, styles.center]} numberOfLines={short ? 1 : 2}>
               {next.name}
@@ -162,14 +169,7 @@ const styles = StyleSheet.create({
   still: { borderRadius: radius.md, overflow: 'hidden', backgroundColor: color.raised },
   center: { textAlign: 'center' },
   next: { fontFamily: font.bold, fontSize: 20, lineHeight: 26, letterSpacing: -0.4, color: color.ink },
-  track: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, backgroundColor: 'rgba(0,0,0,0.45)' },
-  fill: { height: 4, width: '100%', backgroundColor: color.action, transformOrigin: 'left' },
-  bareTrack: {
-    position: 'relative',
-    width: SMALL_STILL.width,
-    borderRadius: 2,
-    overflow: 'hidden',
-    backgroundColor: color.lifted,
-  },
+  track: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  bareTrack: { width: SMALL_STILL.width },
   actions: { flexShrink: 0, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm },
 });
