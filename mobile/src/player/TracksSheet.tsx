@@ -65,7 +65,7 @@ function namesOf(
 
 function languageDetail(language: string | null | undefined, label: string): string | null {
   const name = languageName(language);
-  return name && name.length > 3 && name.toLowerCase() !== label.toLowerCase() ? name : null;
+  return name && name.length > 3 && !label.toLowerCase().startsWith(name.toLowerCase()) ? name : null;
 }
 
 export function TracksSheet({
@@ -156,7 +156,7 @@ export function TracksSheet({
             key={`${track.id ?? index}`}
             label={audio.length === 1 && !languageName(track.language) ? 'Original' : namesOf(audio, 'Audio')[index]!}
             detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${channels(fromEngine.channels)}` : null}
-            selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
+            selected={audioTrack ? audioTrack.id === track.id && audioTrack.label === track.label : index === 0}
             onPress={() => {
               chooseAudio(player, track);
               if (track.language) onAudioLanguage(track.language);
