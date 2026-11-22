@@ -46,6 +46,8 @@ What we know about the app's speed and what to do next, in order. The `measure-a
   - Glancing at a title: 140 KB → 19 KB over five looks. Its sources are searched only after 1.5 s on the page (`useLingered`); a stay still warms Play.
   - Opening a show: the frame it lands on fell from about 100 ms (82 ms mounting every episode row) to p99 32 ms; rows mount a few per frame (`useGrowing`) and only the first four rise in.
   - Not worth a change: press-in prefetch during scrolls (one 1.6 KB request in 12 swipes); a synchronous session read (the keystore can't read while the phone is locked, which must never look unpaired).
+  - Player, Night of the Living Dead on the phone's engine: first play 34.4 s to the first frame (sources searched at 0.7 s, playing at 8.8 s, then 25.6 s for the first pieces from the swarm); played again, 0.7 s (playing at 67 ms). The cold start is the swarm, not the app; the player UI stays at p99 19 ms throughout.
+  - First switch to Downloads after a launch: one frame of about 90-110 ms, 59 ms of it creating the first native glass menu view (the rows' ···). A baseline profile for the app's modules took 10 ms off; loading the module's classes in the background made it worse and was dropped. Next: one shared native menu opened on press instead of one native view per row.
   - Search: 389–783 ms per query after the 280 ms pause, almost all of it the engine asking Cinemeta and IMDb.
   - Method: the phone drifts within an hour (battery, heat, downloads), so compare builds measured back to back, never against an old number. A launch behind the lock screen waits for SecureStore; the script wakes the phone first.
 
