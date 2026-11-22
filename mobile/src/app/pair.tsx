@@ -41,7 +41,7 @@ function explain(error: unknown): string {
 }
 
 export default function Pair() {
-  const { pair, useLoopback, usePhone } = useSession();
+  const { pair, connectOverUsb, runOnPhone } = useSession();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('scan');
   const [address, setAddress] = useState('');
@@ -57,15 +57,14 @@ export default function Pair() {
     setStarting(true);
     setPhoneProblem(false);
     try {
-      await usePhone();
+      await runOnPhone();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/');
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setPhoneProblem(true);
-    } finally {
-      setStarting(false);
     }
+    setStarting(false);
   };
 
   const attempt = async (base: string, pairingCode: string) => {
@@ -79,9 +78,8 @@ export default function Pair() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setProblem(explain(error));
       scanned.current = false;
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   };
 
   const onScan = (data: string) => {
@@ -143,7 +141,7 @@ export default function Pair() {
             />
             {phoneProblem ? (
               <Text style={[type.label, { color: color.error }]} accessibilityLiveRegion="assertive">
-                Couldn't start on this phone. Try again.
+                Couldn’t start on this phone. Try again.
               </Text>
             ) : null}
           </View>
@@ -186,7 +184,7 @@ export default function Pair() {
             setMode(mode === 'scan' ? 'type' : 'scan');
           }}
         />
-        {__DEV__ ? <Button kind="quiet" label="Use the USB connection (development)" onPress={useLoopback} /> : null}
+        {__DEV__ ? <Button kind="quiet" label="Use the USB connection (development)" onPress={connectOverUsb} /> : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -200,7 +198,7 @@ function Scanner({ onScan, busy }: { onScan: (data: string) => void; busy: boole
     return (
       <View style={[styles.viewfinder, styles.center]}>
         <Icon name={icons.qr} size={40} tint={color.soft} />
-        <Text style={[type.body, { textAlign: 'center' }]}>The camera reads the code on your computer's screen.</Text>
+        <Text style={[type.body, { textAlign: 'center' }]}>The camera reads the code on your computer’s screen.</Text>
         <Button label="Allow the camera" kind={CAN_RUN_LOCALLY ? 'secondary' : 'primary'} onPress={request} />
       </View>
     );

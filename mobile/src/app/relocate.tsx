@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,9 +34,8 @@ export default function Relocate() {
             ? sentence(error.message)
             : 'Nothing answered at that address.',
       );
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   };
 
   return (

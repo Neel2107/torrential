@@ -3,10 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withDelay,
-  withRepeat,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -69,8 +67,6 @@ function Ping() {
     </View>
   );
 }
-
-const PING_MS = 2000;
 
 const styles = StyleSheet.create({
   ping: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },

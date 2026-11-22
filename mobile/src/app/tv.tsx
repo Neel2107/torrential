@@ -102,9 +102,8 @@ export default function TvScreen() {
       await client.invalidateQueries({ queryKey: keys.tvs });
     } catch (error) {
       setProblem(error instanceof EngineError ? sentence(error.message) : 'Could not reach the engine.');
-    } finally {
-      setStarting(null);
     }
+    setStarting(null);
   };
 
   return (
@@ -129,7 +128,7 @@ export default function TvScreen() {
             <View style={styles.problem}>
               <Icon name={icons.warning} size={18} tint={color.error} />
               <Text style={[type.label, { color: color.error, flex: 1 }]}>
-                Couldn't play on {failedCast.tv_name}. {sentence(failedCast.error.message)}
+                Couldn’t play on {failedCast.tv_name}. {sentence(failedCast.error.message)}
               </Text>
             </View>
           ) : null}
@@ -293,7 +292,7 @@ function Remote({ cast }: { cast: Cast }) {
       {unreached ? (
         <View style={styles.problem}>
           <Icon name={icons.warning} size={18} tint={color.error} />
-          <Text style={[type.label, { color: color.error, flex: 1 }]}>Couldn't reach {cast.tv_name}. Try again.</Text>
+          <Text style={[type.label, { color: color.error, flex: 1 }]}>Couldn’t reach {cast.tv_name}. Try again.</Text>
         </View>
       ) : null}
       {cast.video || cast.download ? (

@@ -45,13 +45,15 @@ We build locally, not on EAS. The app runs torrential's engine inside itself, so
 
 ## This app
 
-- **Check:** `npm run -s check` runs tsc, Prettier and `scripts/compiler-check.js`. The compiler check fails when React Compiler skips more components and hooks than it does today (17). Don't raise that number; fix the cause.
+- **Check:** `npm run -s check` runs tsc, ESLint (`eslint.config.js`, at most 37 warnings, all known debt), Prettier and `scripts/compiler-check.js`. The compiler check fails when React Compiler skips more components and hooks than it does today (9). Don’t raise that number; fix the cause.
 - **Shared values:** read and write them with `.get()` and `.set()`, never `.value`. `.value` makes React Compiler skip the whole component.
 - **Worklet to React:** call back from a worklet with `scheduleOnRN` from `react-native-worklets` (`runOnJS` is deprecated). Never call back every frame; use `useAnimatedReaction` at a threshold.
+- **Names:** only hooks start with `use`. An action named `useX` makes ESLint and React Compiler treat it as a hook (`runOnPhone`, not `usePhone`). React Compiler can't compile `try/finally` yet, so put the cleanup after the `try/catch`.
 - **Refs and hook results:** don't read refs while rendering, and don't change a hook's result in place. Set expo-video's properties through `src/player/control.ts`.
 - **Motion tokens:** use the ones in `src/theme.ts` (`motion.out`, `motion.inOut`, `motion.press`, `motion.quick`, `motion.tick`) and the springs `motion.settle`, `motion.snap` and `motion.pop`. Springs take a duration and damping ratio, respect reduced motion, and carry the finger's release velocity.
 - **What animates:** follow Emil Kowalski's `animate-expo` skill. Nothing used 100+ times a day animates: tab switches, list rows, typing. Never put `entering` on rows of a FlatList or LegendList. Animate `transform` and `opacity`, not layout, except an absolute element with no children.
 - **Staggered entrances:** `rise(i)` from `src/ui/rise.ts`. A Reanimated Keyframe keeps the first delay it's built with, so never call `.delay()` on a shared Keyframe.
+- **Design system:** fix a row, sheet, header, haptic or motion in its shared piece and move every caller onto it in the same change; never patch one copy. Rows are `OptionRow`, `NavRow` and `ActionRow` (`src/ui/Row.tsx`); sheets with pages use `Pages` and `PageHeader` (`src/ui/Pages.tsx`).
 - **Sheets:** `src/ui/Sheet.tsx`. Give it a function child to get `close(after)`, which slides the sheet away and then runs what was picked, once. Use `onBack` for sheets with pages and `morph` to ease to a new height.
 - **Confirmations:** `ask()` from `src/ui/Ask.tsx`. It shows the native alert on iOS and the app's own dialog on Android.
 - **Going back:** use `leave()` from `src/ui/leave.ts`, never `router.back()`. A screen opened from a link has nothing behind it, so `leave()` goes home instead.

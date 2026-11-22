@@ -51,6 +51,16 @@ export default function Add() {
       .catch(() => {});
   }, [params.link]);
 
+  const readFile = (uri: string) => {
+    setReading(true);
+    setProblem(null);
+    return magnetFromTorrentFile(uri)
+      .then(setText, (error: unknown) =>
+        setProblem(error instanceof Error ? error.message : 'Could not read that file.'),
+      )
+      .then(() => setReading(false));
+  };
+
   useEffect(() => {
     const payload = share.sharedPayloads[0];
     if (!payload) return;
@@ -68,18 +78,6 @@ export default function Add() {
   useEffect(() => {
     if (params.file) readFile(params.file);
   }, [params.file]);
-
-  async function readFile(uri: string) {
-    setReading(true);
-    setProblem(null);
-    try {
-      setText(await magnetFromTorrentFile(uri));
-    } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'Could not read that file.');
-    } finally {
-      setReading(false);
-    }
-  }
 
   const play = (ref: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

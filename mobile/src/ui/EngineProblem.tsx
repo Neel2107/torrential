@@ -12,7 +12,7 @@ import { Button } from './Button';
 import { Icon, icons } from './Icon';
 
 export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () => void }) {
-  const { session, usePhone } = useSession();
+  const { session, runOnPhone } = useSession();
   const engine = error instanceof EngineError;
   const base = session.state === 'paired' ? session.link.base.replace(/^https?:\/\//, '') : '';
   const onPhone = session.state === 'paired' && session.engine.kind === 'phone';
@@ -35,7 +35,7 @@ export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () =>
           label={onPhone && !engine ? 'Start it again' : 'Try again'}
           icon={icons.refresh}
           onPress={async () => {
-            if (onPhone) await usePhone().catch(() => {});
+            if (onPhone) await runOnPhone().catch(() => {});
             onRetry();
           }}
         />

@@ -6,7 +6,6 @@ import { bytes } from '@web/lib/format';
 import { readable } from '@web/lib/release';
 import type { Release } from '@web/wire';
 
-import { Icon, icons } from '@/ui/Icon';
 import { PageHeader, Pages } from '@/ui/Pages';
 import { NavRow } from '@/ui/Row';
 import { Sheet } from '@/ui/Sheet';

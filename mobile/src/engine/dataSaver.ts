@@ -25,8 +25,9 @@ export function useDataSaver(): [boolean, (next: boolean) => void] {
   );
   const set = (next: boolean) => {
     on = next;
+    const text = next ? 'on' : 'off';
     try {
-      stored.writeSync(next ? 'on' : 'off');
+      stored.writeSync(text);
     } catch {}
     for (const listener of listeners) listener();
   };

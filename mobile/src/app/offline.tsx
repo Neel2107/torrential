@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEvent } from 'expo';
 import { File } from 'expo-file-system';
 import { useVideoPlayer, VideoView } from 'expo-video';

@@ -28,12 +28,12 @@ type Fresh = { page: TitlePage; episode: EpisodeInfo };
 /** Episodes of saved shows that aired in the last two weeks and are not watched yet, newest first. */
 function useFresh(saved: TitleCard[]): Fresh[] {
   const link = useLink();
-  const [settled, setSettled] = useState(false);
+  const [settled, setSettled] = useState<number | null>(null);
   useEffect(() => {
-    const timer = setTimeout(() => setSettled(true), AFTER_HOME_MS);
+    const timer = setTimeout(() => setSettled(Date.now()), AFTER_HOME_MS);
     return () => clearTimeout(timer);
   }, []);
-  const shows = settled ? saved.filter((title) => title.kind === 'series') : [];
+  const shows = settled !== null ? saved.filter((title) => title.kind === 'series') : [];
   const pages = useQueries({
     queries: shows.map((show) => ({
       queryKey: [...keys.title(show.id), link.base],
@@ -42,7 +42,7 @@ function useFresh(saved: TitleCard[]): Fresh[] {
       staleTime: 30 * 60_000,
     })),
   });
-  const since = Date.now() / 1000 - RECENT_DAYS * 86_400;
+  const since = (settled ?? 0) / 1000 - RECENT_DAYS * 86_400;
   return pages
     .flatMap(({ data: page }) => {
       if (!page) return [];

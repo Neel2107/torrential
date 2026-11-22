@@ -1,12 +1,10 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 
 import { bytes } from '@web/lib/format';
 import { fileName, isVideoFile, readable } from '@web/lib/release';
 import type { PlayInfo, TorrentFile } from '@web/wire';
 
 import { Icon, icons } from '@/ui/Icon';
-import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { stage as color, font, space, stageType as type } from '@/theme';

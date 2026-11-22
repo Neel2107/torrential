@@ -19,8 +19,8 @@ type SessionApi = {
   session: Session;
   engines: Engine[];
   pair: (base: string, code: string) => Promise<void>;
-  useLoopback: () => Promise<void>;
-  usePhone: () => Promise<void>;
+  connectOverUsb: () => Promise<void>;
+  runOnPhone: () => Promise<void>;
   switchTo: (id: string) => Promise<void>;
   relocate: (base: string) => Promise<void>;
   forget: (id?: string) => Promise<void>;
@@ -111,11 +111,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const link = { base, token: await pairWithCode(base, code) };
         await add({ id: base, name: computerName(base), kind: 'computer', link });
       },
-      useLoopback: () => {
+      connectOverUsb: () => {
         const base = `http://127.0.0.1:${PORT}`;
         return add({ id: base, name: computerName(base), kind: 'computer', link: { base, token: null } });
       },
-      usePhone: async () => {
+      runOnPhone: async () => {
         if (!LocalEngine) throw new Error('This build cannot run the engine on the phone');
         // Android 13 and later show the engine's notification only with permission.
         if (Platform.OS === 'android' && Platform.Version >= 33) {

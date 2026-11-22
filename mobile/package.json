@@ -52,6 +52,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-expo": "58.0.4",
     "prettier": "^3.10.1",
     "typescript": "~6.0.3"
   },
@@ -62,7 +64,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "check": "tsc --noEmit && prettier --check \"src/**/*.{ts,tsx}\" && node scripts/compiler-check.js --max 17 > /dev/null"
+    "check": "tsc --noEmit && eslint src --max-warnings 37 && prettier --check \"src/**/*.{ts,tsx}\" && node scripts/compiler-check.js --max 9 > /dev/null"
   },
   "private": true
 }

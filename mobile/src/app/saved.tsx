@@ -7,7 +7,6 @@ import { ago, bytes } from '@web/lib/format';
 
 import { useCopies, type Copy } from '@/offline/saved';
 import { Icon, icons } from '@/ui/Icon';
-import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';

@@ -18,7 +18,7 @@ import { color, font, radius, space, type } from '@/theme';
 
 export default function Engine() {
   const insets = useSafeAreaInsets();
-  const { session, engines, switchTo, usePhone, forget } = useSession();
+  const { session, engines, switchTo, runOnPhone, forget } = useSession();
   const version = useVersion();
   const me = useMe();
   const [starting, setStarting] = useState(false);
@@ -73,11 +73,10 @@ export default function Engine() {
             onPress={async () => {
               setStarting(true);
               try {
-                await usePhone();
+                await runOnPhone();
                 leave();
-              } finally {
-                setStarting(false);
-              }
+              } catch {}
+              setStarting(false);
             }}
             style={[styles.engine, styles.rowRule]}
           >
