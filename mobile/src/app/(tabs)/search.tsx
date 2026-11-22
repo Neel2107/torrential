@@ -112,7 +112,6 @@ export default function Search() {
   const query = typed !== settled && known(typed) ? typed : settled;
   const top = insets.top + BAR_HEIGHT + TABS_HEIGHT;
   const recents = useRecentSearches();
-  const remember = () => recents.remember(text);
   const pickup = usePickup();
 
   const idle =
@@ -142,14 +141,14 @@ export default function Search() {
         position={position}
         preload={false}
       >
-        <Titles query={query} top={top} idle={idle} onOpen={remember} onBusy={tab === 0 ? setBusy : ignore} />
+        <Titles query={query} top={top} idle={idle} onOpen={recents.remember} onBusy={tab === 0 ? setBusy : ignore} />
         <Torrents
           query={query}
           everything={everything}
           onScope={setEverything}
           top={top}
           idle={idle}
-          onOpen={remember}
+          onOpen={recents.remember}
           onBusy={tab === 1 ? setBusy : ignore}
         />
       </Pager>
@@ -159,7 +158,7 @@ export default function Search() {
         tab={tab}
         setTab={setTab}
         position={position}
-        onSubmit={remember}
+        onSubmit={recents.remember}
         searching={searching}
       />
     </View>
@@ -180,7 +179,7 @@ function SearchHeader({
   tab: number;
   setTab: (tab: number) => void;
   position: SharedValue<number>;
-  onSubmit: () => void;
+  onSubmit: (text: string) => void;
   searching: boolean;
 }) {
   const insets = useSafeAreaInsets();
@@ -232,7 +231,7 @@ function SearchHeader({
               placeholderTextColor={color.pencil}
               style={styles.input}
               returnKeyType="search"
-              onSubmitEditing={onSubmit}
+              onSubmitEditing={() => onSubmit(text)}
               autoCorrect={false}
               autoCapitalize="none"
               selectionColor={color.action}
@@ -274,7 +273,7 @@ function Titles({
   query: string;
   top: number;
   idle: ReactElement | null;
-  onOpen: () => void;
+  onOpen: (query: string) => void;
   onBusy: (busy: boolean) => void;
 }) {
   const onScroll = useChromeScroll();
@@ -330,7 +329,7 @@ function Titles({
       }
       renderItem={({ item }) => (
         <Animated.View style={stale} pointerEvents={result.isPlaceholderData ? 'none' : 'auto'}>
-          <TitleRow title={item} onOpen={onOpen} />
+          <TitleRow title={item} onOpen={() => onOpen(query)} />
         </Animated.View>
       )}
     />
@@ -404,7 +403,7 @@ function Torrents({
   onScope: (everything: boolean) => void;
   top: number;
   idle: ReactElement | null;
-  onOpen: () => void;
+  onOpen: (query: string) => void;
   onBusy: (busy: boolean) => void;
 }) {
   const link = useLink();
@@ -520,7 +519,7 @@ function Torrents({
         renderItem={({ item }) => (
           <ReleaseRow
             release={item}
-            onOpen={onOpen}
+            onOpen={() => onOpen(query)}
             onNotVideo={() => {
               Keyboard.dismiss();
               setNotVideo(item);
