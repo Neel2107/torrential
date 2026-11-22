@@ -17,7 +17,7 @@ import { EngineError, post, stream, type Link } from '@/engine/client';
 import { useLink } from '@/engine/session';
 import { lap } from '@/perf';
 
-type PlayMessage =
+export type PlayMessage =
   | { type: 'resolved'; video: string; title: TitleCard; episode: EpisodeInfo | null }
   | { type: 'searched'; found: number }
   | { type: 'trying'; rank: number; of: number; release: Release }

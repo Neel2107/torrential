@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SaveWhenDone } from '@/engine/download';
 import { useJobsSelect } from '@/engine/jobs';
 import { CastBar } from '@/ui/CastBar';
 import { PullProvider } from '@/ui/pull';
@@ -16,6 +17,7 @@ export default function TabsLayout() {
 
   return (
     <PullProvider>
+      <SaveWhenDone />
       <ChromeProvider bar={insets.bottom + TAB_BAR_HEIGHT}>
         <Tabs
           tabBar={(props) => <TabBar {...props} badges={{ downloads: downloading }} />}

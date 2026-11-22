@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Extrapolation,
+  FadeIn,
   interpolate,
   LinearTransition,
   runOnJS,
@@ -19,17 +20,20 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { day, minutes, minutesLeft } from '@web/lib/format';
+import { day, minutes, minutesLeft, sentence } from '@web/lib/format';
 import { videoOf } from '@web/lib/video';
 import { episodeCode, episodeName, findEpisode, seasonName } from '@web/titles/words';
 import type { EpisodeInfo, TitlePage as Page, Watched } from '@web/wire';
 
 import { authHeaders, url } from '@/engine/client';
+import { useDownload, useHeld, type Fetching } from '@/engine/download';
 import { useSaveTitle, useTitle } from '@/engine/queries';
-import { useLink } from '@/engine/session';
+import { useLink, useSession } from '@/engine/session';
 import { useSources } from '@/player/sources';
 import { SourcesSheet } from '@/player/SourcesSheet';
+import type { Label } from '@/offline/saved';
 import { Art } from '@/ui/Art';
+import { LoadingMark } from '@/ui/Bands';
 import { Burst, type BurstHandle } from '@/ui/Burst';
 import { Button } from '@/ui/Button';
 import { CastBar } from '@/ui/CastBar';
@@ -160,6 +164,9 @@ function Body({ page }: { page: Page }) {
   const resume = target?.resume_at ?? null;
   const targetWatched = target ? watched.get(target.video) : undefined;
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [fetching, setFetching] = useState<Fetching>({ state: 'idle' });
+  const { session } = useSession();
+  const onComputer = session.state === 'paired' && session.engine.kind !== 'phone';
 
   const playLabel = resume ? 'Resume' : 'Play';
   const playDetail = targetEpisode
@@ -198,6 +205,15 @@ function Body({ page }: { page: Page }) {
           disabled={!target}
           style={{ flex: 1 }}
         />
+        <DownloadButton
+          video={target?.video ?? null}
+          label={{
+            title: page.name,
+            tags: targetEpisode ? episodeCode(targetEpisode) : page.year ? String(page.year) : '',
+            poster: page.id,
+          }}
+          onState={setFetching}
+        />
         <Tap
           haptic
           shrink={0.92}
@@ -208,6 +224,18 @@ function Body({ page }: { page: Page }) {
           <Icon name={icons.cast} size={20} tint={color.ink} />
         </Tap>
       </Animated.View>
+      {fetching.state === 'started' || fetching.state === 'failed' ? (
+        <Animated.Text
+          entering={FadeIn.duration(motion.standard)}
+          style={[type.caption, { color: fetching.state === 'failed' ? color.error : color.action }]}
+        >
+          {fetching.state === 'failed'
+            ? sentence(fetching.message)
+            : onComputer
+              ? 'Downloading. It comes to this phone when it finishes.'
+              : 'Downloading to this phone. Follow it in Downloads.'}
+        </Animated.Text>
+      ) : null}
       {playDetail ? (
         <Animated.View entering={enter(3)} style={styles.playDetail}>
           {resume && targetWatched?.duration ? <Meter fraction={resume / targetWatched.duration} /> : null}
@@ -256,6 +284,41 @@ function Body({ page }: { page: Page }) {
         />
       ) : null}
     </View>
+  );
+}
+
+function DownloadButton({
+  video,
+  label,
+  onState,
+}: {
+  video: string | null;
+  label: Label;
+  onState: (fetching: Fetching) => void;
+}) {
+  const { fetching: asked, start } = useDownload(video, label);
+  const held = useHeld(video);
+  const fetching: Fetching = asked.state === 'idle' && held ? { state: 'started', job: '' } : asked;
+  useEffect(() => onState(asked), [asked, onState]);
+  return (
+    <Tap
+      shrink={0.92}
+      disabled={!video || fetching.state === 'finding' || fetching.state === 'started'}
+      onPress={start}
+      accessibilityLabel={fetching.state === 'started' ? 'Downloading to this phone' : 'Download to this phone'}
+      accessibilityState={{ busy: fetching.state === 'finding' }}
+      style={styles.squareButton}
+    >
+      {fetching.state === 'finding' ? (
+        <LoadingMark size={20} label="Finding a source" />
+      ) : (
+        <Icon
+          name={fetching.state === 'started' ? icons.check : icons.downloads}
+          size={20}
+          tint={fetching.state === 'started' ? color.action : color.ink}
+        />
+      )}
+    </Tap>
   );
 }
 

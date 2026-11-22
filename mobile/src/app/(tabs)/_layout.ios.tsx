@@ -1,6 +1,7 @@
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SaveWhenDone } from '@/engine/download';
 import { useJobsSelect } from '@/engine/jobs';
 import { PullProvider } from '@/ui/pull';
 import { ChromeProvider } from '@/ui/chrome';
@@ -20,6 +21,7 @@ export default function TabsLayout() {
 
   return (
     <PullProvider>
+      <SaveWhenDone />
       <ChromeProvider bar={insets.bottom + SYSTEM_TAB_BAR}>
         <NativeTabs
           tintColor={color.action}
