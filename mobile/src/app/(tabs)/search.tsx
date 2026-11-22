@@ -45,6 +45,7 @@ import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { Skeleton } from '@/ui/Skeleton';
 import { Tap } from '@/ui/Tap';
+import { PopularRow } from '@/ui/Popular';
 import { TitlePoster, TitleTap } from '@/ui/TitleTap';
 import { Pager, TabStrip, usePagerPosition } from '@/ui/Pager';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
@@ -64,6 +65,7 @@ const CATEGORIES: Record<Category, string> = {
 };
 
 const ignore = () => {};
+const NOTHING: ReadonlySet<string> = new Set();
 
 function useDebounced<T>(value: T, ms: number): T {
   const [settled, setSettled] = useState(value);
@@ -277,11 +279,15 @@ function Titles({
       ListEmptyComponent={
         !query ? (
           (idle ?? (
-            <Hint
-              icon={icons.search}
-              title="Find something to watch"
-              body="Search by name. A film or a show starts playing in seconds, while it downloads."
-            />
+            <>
+              <Hint
+                icon={icons.search}
+                title="Find something to watch"
+                body="Search by name. A film or a show starts playing in seconds, while it downloads."
+              />
+              <PopularRow kind="film" title="Popular films" skip={NOTHING} index={1} />
+              <PopularRow kind="series" title="Popular shows" skip={NOTHING} index={2} />
+            </>
           ))
         ) : result.isError ? (
           <EngineProblem error={result.error} onRetry={() => result.refetch()} />
