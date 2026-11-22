@@ -42,7 +42,7 @@ export function SettingsSheet({
         <Text style={[type.title, styles.heading]}>Settings</Text>
 
         {source ? (
-          <Tap shrink={1} highlight haptic onPress={onSources} accessibilityLabel="Other sources" style={styles.link}>
+          <Tap shrink={1} highlight haptic onPress={onSources} accessibilityLabel="Choose a source" style={styles.link}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={type.headline}>Source</Text>
               <Text style={type.caption} numberOfLines={1}>

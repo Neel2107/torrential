@@ -7,6 +7,7 @@ import { readable } from '@web/lib/release';
 import type { Release } from '@web/wire';
 
 import { qualityOf } from '@/engine/quality';
+import { Button } from '@/ui/Button';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { STAGE_DIFFERS, useStaged, useTone } from '@/ui/stage';
@@ -41,7 +42,7 @@ export function SourcesSheet({
   return (
     <Sheet onClose={onClose}>
       <View style={styles.head}>
-        <Text style={type.title}>Sources</Text>
+        <Text style={type.title}>Choose a source</Text>
         <Text style={type.caption}>{label}</Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: space.md }}>
@@ -61,12 +62,15 @@ export function SourcesSheet({
         {!state.done ? (
           <View style={styles.status}>
             <ActivityIndicator color={color.soft} />
-            <Text style={type.caption}>Asking sources…</Text>
+            <Text style={type.caption}>Looking for sources…</Text>
           </View>
-        ) : state.error ? (
-          <Text style={[type.label, styles.statusText, { color: color.error }]}>{state.error}</Text>
-        ) : state.releases.length === 0 ? (
-          <Text style={[type.label, styles.statusText]}>No source was found.</Text>
+        ) : state.error || state.releases.length === 0 ? (
+          <View style={styles.problem}>
+            <Text style={[type.label, { color: state.error ? color.error : color.soft }]}>
+              {state.error ? `Couldn't load sources. ${state.error}` : 'No playable sources found.'}
+            </Text>
+            <Button label="Try again" kind="secondary" onPress={() => sources.refetch()} />
+          </View>
         ) : null}
       </ScrollView>
     </Sheet>
@@ -181,7 +185,7 @@ const sheet = (c: Palette, t: typeof themedType) =>
       paddingHorizontal: space.xl,
       paddingVertical: space.lg,
     },
-    statusText: { paddingHorizontal: space.xl, paddingVertical: space.lg },
+    problem: { paddingHorizontal: space.xl, paddingVertical: space.lg, gap: space.md, alignItems: 'flex-start' },
   });
 
 const themed = sheet(themedColor, themedType);

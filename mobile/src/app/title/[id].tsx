@@ -131,20 +131,6 @@ export default function Title() {
             </Text>
             {title.data?.year ? <Text style={type.caption}>{title.data.year}</Text> : null}
           </Animated.View>
-          <Tap
-            shrink={0.88}
-            haptic
-            onPress={() =>
-              router.push({
-                pathname: '/tv',
-                params: title.data?.play_target ? { video: title.data.play_target.video } : {},
-              })
-            }
-            accessibilityLabel="Play on TV"
-            style={styles.round}
-          >
-            <Icon name={icons.cast} size={20} tint={color.ink} />
-          </Tap>
         </View>
         <CastBar bottom={insets.bottom + space.sm} onHeight={setDocked} />
       </Animated.View>
