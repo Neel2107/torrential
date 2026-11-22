@@ -22,6 +22,7 @@ import { episodeCode, episodeName, findEpisode, seasonName } from '@web/titles/w
 import type { EpisodeInfo, TitlePage as Page, Watched } from '@web/wire';
 
 import { useSaveTitle, useTitle } from '@/engine/queries';
+import { useSources } from '@/player/sources';
 import { SourcesSheet } from '@/player/SourcesSheet';
 import { Art } from '@/ui/Art';
 import { Burst, type BurstHandle } from '@/ui/Burst';
@@ -159,6 +160,9 @@ function facts(page: Page): string[] {
 
 function Body({ page }: { page: Page }) {
   const target = page.play_target ?? page.next;
+  // Search for sources now, while the page is read: Sources opens filled, and Play finds the
+  // engine's answers already in hand.
+  useSources(target?.video ?? null);
   const targetEpisode = target ? findEpisode(page, target.video) : null;
   const watched = useMemo(() => new Map(page.watched.map((w) => [w.video, w])), [page.watched]);
   const resume = target?.resume_at ?? null;

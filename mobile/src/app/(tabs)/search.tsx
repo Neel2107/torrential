@@ -30,7 +30,7 @@ import {
 
 import { post, stream } from '@/engine/client';
 import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
-import { keys, useHome, useTitleSearch } from '@/engine/queries';
+import { keys, useHome, usePrefetchTitle, useTitleSearch } from '@/engine/queries';
 import { useRecentSearches } from '@/engine/recent';
 import { useLink } from '@/engine/session';
 import { Art } from '@/ui/Art';
@@ -320,11 +320,13 @@ function Titles({
 }
 
 function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; onOpen: () => void }) {
+  const prefetch = usePrefetchTitle();
   return (
     <Animated.View entering={rise(index)}>
       <Tap
         shrink={1}
         highlight
+        onPressIn={() => prefetch(title.id)}
         onPress={() => {
           onOpen();
           Keyboard.dismiss();

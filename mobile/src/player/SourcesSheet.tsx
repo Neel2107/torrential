@@ -1,23 +1,18 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { bytes, sentence } from '@web/lib/format';
+import { bytes } from '@web/lib/format';
 import { readable } from '@web/lib/release';
-import type { Release, SearchMessage } from '@web/wire';
+import type { Release } from '@web/wire';
 
-import { stream, url } from '@/engine/client';
-import { useLink } from '@/engine/session';
 import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { color, font, radius, space, type } from '@/theme';
 
-import { useViewer } from './start';
-
-type State = { releases: Release[]; done: boolean; error: string | null };
+import { useSources, type Sources } from './sources';
 
 /**
  * Every release of a film or episode, ranked for this phone's screen and decoders, in the order Play
@@ -37,35 +32,12 @@ export function SourcesSheet({
   onPick?: (release: Release) => void;
   onClose: () => void;
 }) {
-  const link = useLink();
-  const viewer = useViewer();
-  const [state, setState] = useState<State>({ releases: [], done: false, error: null });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const path = url({ ...link, base: '' }, '/api/title/sources', {
-      video,
-      width: viewer.width,
-      height: viewer.height,
-      scale: viewer.scale,
-      playback: viewer.playback,
-      h264: viewer.decoders?.h264,
-      hevc: viewer.decoders?.hevc,
-      av1: viewer.decoders?.av1,
-    });
-    stream<SearchMessage>(link, path, { method: 'GET', signal: controller.signal }, (message) => {
-      if (message.type === 'update') setState({ releases: message.result.releases, done: false, error: null });
-      if (message.type === 'done') setState({ releases: message.result.releases, done: true, error: null });
-      if (message.type === 'error')
-        setState((previous) => ({ ...previous, done: true, error: sentence(message.error.message) }));
-    }).catch(
-      (error: Error) =>
-        !controller.signal.aborted && setState((previous) => ({ ...previous, done: true, error: error.message })),
-    );
-    return () => controller.abort();
-    // The viewer is read once when the sheet opens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [link, video]);
+  const sources = useSources(video);
+  const state: Sources = sources.data ?? {
+    releases: [],
+    done: sources.isError,
+    error: sources.error ? sources.error.message : null,
+  };
 
   return (
     <Sheet onClose={onClose}>

@@ -17,7 +17,8 @@ import { Portal } from './Portal';
 
 /**
  * A sheet over the current screen, as X shows its menus: it springs up from the bottom, follows the
- * finger down, and a flick or a drag past a third of its height closes it. Back closes it too.
+ * finger down from its grab strip, and a flick or a drag past a third of its height closes it. Back
+ * and the dimmed screen behind close it too. Only the strip drags: the lists inside own their scroll.
  */
 export function Sheet({
   children,
@@ -51,6 +52,7 @@ export function Sheet({
   });
 
   const drag = Gesture.Pan()
+    .activeOffsetY([-6, 6])
     .onUpdate((event) => {
       offset.value = event.translationY > 0 ? event.translationY : event.translationY * 0.15;
     })
@@ -79,26 +81,29 @@ export function Sheet({
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdrop]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
         </Animated.View>
-        <GestureDetector gesture={drag}>
-          <Animated.View
-            onLayout={(event) => {
-              height.value = event.nativeEvent.layout.height;
-              if (offset.value >= screen) offset.value = withSpring(0, motion.settle);
-            }}
-            style={[
-              styles.sheet,
-              {
-                paddingBottom: insets.bottom + space.lg,
-                width,
-                left: (screenWidth - width) / 2,
-              },
-              sheet,
-            ]}
-          >
-            <View style={styles.grabber} />
-            {children}
-          </Animated.View>
-        </GestureDetector>
+        <Animated.View
+          onLayout={(event) => {
+            height.value = event.nativeEvent.layout.height;
+            if (offset.value >= screen) offset.value = withSpring(0, motion.settle);
+          }}
+          style={[
+            styles.sheet,
+            {
+              paddingBottom: insets.bottom + space.lg,
+              width,
+              left: (screenWidth - width) / 2,
+            },
+            sheet,
+          ]}
+        >
+          <GestureDetector gesture={drag}>
+            <View style={styles.handle}>
+              <View style={styles.grabber} />
+            </View>
+          </GestureDetector>
+          {/* Shrinks to the sheet's height, so a long list inside scrolls instead of running off the bottom. */}
+          <View style={styles.body}>{children}</View>
+        </Animated.View>
       </View>
     </Portal>
   );
@@ -113,14 +118,9 @@ const styles = StyleSheet.create({
     backgroundColor: color.raised,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    paddingTop: space.sm,
   },
-  grabber: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: color.rule,
-    marginBottom: space.md,
-  },
+  // A strip the width of the sheet and tall enough for a thumb, above the content.
+  handle: { height: 28, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
+  body: { flexShrink: 1 },
+  grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: color.rule },
 });
