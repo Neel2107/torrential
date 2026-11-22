@@ -37,6 +37,7 @@ import { get, post } from '@/engine/client';
 import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { LoadingMark } from '@/ui/Bands';
+import { Button } from '@/ui/Button';
 import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
 import { PortalHost } from '@/ui/Portal';
@@ -147,6 +148,7 @@ export function Player({
   });
   const duration = timeline.duration;
   const position = time.currentTime >= 0 ? timeline.now() : 0;
+  const failed = status === 'error' || Boolean(timeline.problem);
   const [visible, setVisible] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
@@ -351,12 +353,28 @@ export function Player({
             </View>
           ) : null}
 
-          {status === 'error' || timeline.problem ? (
+          {failed ? (
             <View style={[styles.center, styles.errorBox]}>
               <Icon name={icons.warning} size={28} tint={color.error} />
               <Text style={styles.errorText}>
                 {timeline.problem ?? error?.message ?? 'This video does not play on this phone.'}
               </Text>
+              <View style={styles.errorActions}>
+                <Button
+                  label="Try again"
+                  icon={icons.refresh}
+                  onPress={() => {
+                    const at = String(Math.floor(position));
+                    router.replace({
+                      pathname: '/play',
+                      params: video
+                        ? { video, source: release.id, at }
+                        : { ref: play.id, file: String(play.video.index), at },
+                    });
+                  }}
+                />
+                {video ? <Button label="Choose a source" kind="secondary" onPress={() => setSheet('sources')} /> : null}
+              </View>
             </View>
           ) : null}
 
@@ -441,7 +459,7 @@ export function Player({
                 </Glass>
               </View>
 
-              <View style={styles.middle} pointerEvents="box-none">
+              <View style={[styles.middle, failed && styles.gone]} pointerEvents={failed ? 'none' : 'box-none'}>
                 <Tap
                   shrink={0.86}
                   onPress={() => skip(-SKIP)}
@@ -651,12 +669,21 @@ const styles = StyleSheet.create({
   capsule: { flexDirection: 'row', alignItems: 'center', borderRadius: 22 },
   bottom: { paddingTop: space.sm },
   center: { position: 'absolute', alignSelf: 'center', top: '45%' },
+  gone: { opacity: 0 },
   errorBox: {
+    zIndex: 2,
     alignItems: 'center',
     gap: space.sm,
     maxWidth: 360,
     padding: space.lg,
     top: '38%',
+  },
+  errorActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: space.sm,
+    marginTop: space.sm,
   },
   errorText: {
     fontFamily: font.medium,
