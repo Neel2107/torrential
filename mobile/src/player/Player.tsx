@@ -352,6 +352,10 @@ export function Player({
   }, [sleep, player]);
 
   useEffect(() => {
+    if (ended) setLocked(false);
+  }, [ended]);
+
+  useEffect(() => {
     if (!unlockShown) return;
     const timer = setTimeout(() => setUnlockShown(false), UNLOCK_SHOWN_MS);
     return () => clearTimeout(timer);
@@ -545,7 +549,7 @@ export function Player({
                       setVisible(false);
                       setUnlockShown(true);
                     }}
-                    accessibilityLabel="Lock the screen"
+                    accessibilityLabel="Lock controls"
                     style={styles.round}
                   >
                     <Icon name={icons.lock} size={21} tint={color.ink} />
@@ -646,11 +650,11 @@ export function Player({
             look={preferences.subtitleStyle}
           />
 
-          {locked && unlockShown ? (
+          {locked ? (
             <Animated.View
               entering={FadeIn.duration(motion.quick)}
               exiting={FadeOut.duration(motion.quick)}
-              style={[styles.unlockWrap, { top: Math.max(insets.top, space.lg) }]}
+              style={[styles.unlockWrap, { top: Math.max(insets.top, space.lg), opacity: unlockShown ? 1 : 0.35 }]}
             >
               <Tap
                 haptic
@@ -660,7 +664,7 @@ export function Player({
                   setUnlockShown(false);
                   setVisible(true);
                 }}
-                accessibilityLabel="Unlock the screen"
+                accessibilityLabel="Unlock controls"
                 style={styles.unlock}
               >
                 <Icon name={icons.unlock} size={18} tint={color.ink} />

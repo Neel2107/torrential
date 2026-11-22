@@ -159,7 +159,7 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
     const target = new File(folder, whole);
     if (target.exists) target.delete();
     part.rename(whole);
-    const subtitles = await keepSubtitles(link, job, file.index, reply).catch(() => null);
+    const subtitles = await keepSubtitles(link, job, file.index, reply, label.poster).catch(() => null);
     put({
       job,
       label,
@@ -183,17 +183,27 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
 
 const SUBTITLE_FILE = /\.(srt|vtt|ass|ssa)$/i;
 
-/** The language the player last turned subtitles on in, two letters, if any. */
-async function wantedLanguage(): Promise<string | null> {
+/** The subtitle language the player keeps for this show, or the last one picked anywhere. */
+async function wantedLanguage(title: string | null): Promise<string | null> {
   const saved = await SecureStore.getItemAsync('player-preferences').catch(() => null);
   if (!saved) return null;
-  const language = (JSON.parse(saved) as { subtitles?: string | null }).subtitles;
-  return language ?? null;
+  const preferences = JSON.parse(saved) as {
+    subtitles?: string | null;
+    shows?: Record<string, { subtitles?: string | null }>;
+  };
+  const own = title ? preferences.shows?.[title] : undefined;
+  return (own && 'subtitles' in own ? own.subtitles : preferences.subtitles) ?? null;
 }
 
 /** Keeps beside the copy a subtitle file in the language the player remembers: the torrent's own first, then one found online. */
-async function keepSubtitles(link: Link, job: string, video: number, reply: FilesReply): Promise<string | null> {
-  const language = await wantedLanguage();
+async function keepSubtitles(
+  link: Link,
+  job: string,
+  video: number,
+  reply: FilesReply,
+  title: string | null,
+): Promise<string | null> {
+  const language = await wantedLanguage(title);
   if (!language) return null;
   const own = reply.files.find(
     (candidate) =>

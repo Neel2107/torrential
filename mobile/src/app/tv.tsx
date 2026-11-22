@@ -53,6 +53,13 @@ export default function TvScreen() {
   const tvs = useTvs(true);
   const casts = tvs.data?.casts ?? [];
   const current = casts.find(live) ?? null;
+  const [opened] = useState(() => Date.now() / 1000);
+  const failedCast = casts
+    .filter(
+      (cast): cast is Extract<Cast, { state: 'ended' }> & { error: NonNullable<unknown> } =>
+        cast.state === 'ended' && Boolean(cast.error) && cast.started_at >= opened - 60,
+    )
+    .sort((a, b) => b.started_at - a.started_at)[0];
   const startAt = params.at ? Number(params.at) : undefined;
   const what = params.video
     ? { video: params.video, start_at: startAt }
@@ -117,6 +124,14 @@ export default function TvScreen() {
               ? 'Pick a TV. Your phone becomes the remote.'
               : 'TVs on your home network. Open a film or an episode to play it on one.'}
           </Text>
+          {!problem && failedCast ? (
+            <View style={styles.problem}>
+              <Icon name={icons.warning} size={18} tint={color.error} />
+              <Text style={[type.label, { color: color.error, flex: 1 }]}>
+                Couldn't play on {failedCast.tv_name}. {sentence(failedCast.error.message)}
+              </Text>
+            </View>
+          ) : null}
           {problem ? (
             <View style={styles.problem}>
               <Icon name={icons.warning} size={18} tint={color.error} />
@@ -220,19 +235,17 @@ function Remote({ cast }: { cast: Cast }) {
   const pop = useSharedValue(1);
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
   const [justStarted, setJustStarted] = useState(false);
-  const wasPlaying = useRef(cast.state === 'playing');
+  const confirmed = useRef(cast.state === 'playing' || cast.state === 'paused');
   useEffect(() => {
-    const now = cast.state === 'playing';
-    if (now && !wasPlaying.current) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      pop.value = withSequence(withTiming(1.18, { duration: 140 }), withSpring(1, { damping: 9, stiffness: 260 }));
-      setJustStarted(true);
-      const timer = setTimeout(() => setJustStarted(false), STARTED_SHOWN_MS);
-      wasPlaying.current = now;
-      return () => clearTimeout(timer);
-    }
-    wasPlaying.current = now;
+    if (cast.state !== 'playing' || confirmed.current) return;
+    confirmed.current = true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    pop.value = withSequence(withTiming(1.18, { duration: 140 }), withSpring(1, { damping: 9, stiffness: 260 }));
+    setJustStarted(true);
+    const timer = setTimeout(() => setJustStarted(false), STARTED_SHOWN_MS);
+    return () => clearTimeout(timer);
   }, [cast.state, pop]);
+  const [moving, setMoving] = useState(false);
   const focused = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -287,12 +300,16 @@ function Remote({ cast }: { cast: Cast }) {
       ) : null}
       {cast.video || cast.download ? (
         <Button
-          label="Watch on this phone"
+          label={moving ? 'Moving to this phone…' : 'Watch on this phone'}
           kind="quiet"
           icon={icons.phone}
+          busy={moving}
           onPress={async () => {
             const at = String(Math.floor(position));
-            if (!(await control({ action: 'stop' })) || !focused.current) return;
+            setMoving(true);
+            const stopped = await control({ action: 'stop' });
+            setMoving(false);
+            if (!stopped || !focused.current) return;
             router.replace({
               pathname: '/play',
               params: cast.video

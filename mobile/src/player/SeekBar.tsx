@@ -160,11 +160,34 @@ export function SeekBar({
             onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
             accessibilityRole="adjustable"
             accessibilityLabel="Position"
-            accessibilityValue={{ text: `${clock(position)} of ${clock(duration)}` }}
-            accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-            onAccessibilityAction={(event) =>
-              onSeek(position + (event.nativeEvent.actionName === 'increment' ? 10 : -10))
-            }
+            accessibilityValue={{
+              text: [`${clock(position)} of ${clock(duration)}`, chapterAt(position)?.title].filter(Boolean).join(', '),
+            }}
+            accessibilityActions={[
+              { name: 'increment' },
+              { name: 'decrement' },
+              ...(marks.length > 0
+                ? [
+                    { name: 'next', label: 'Next chapter' },
+                    { name: 'previous', label: 'Previous chapter' },
+                  ]
+                : []),
+            ]}
+            onAccessibilityAction={(event) => {
+              const action = event.nativeEvent.actionName;
+              if (action === 'next') {
+                const after = chapters.find((chapter) => chapter.start > position + 1);
+                if (after) onSeek(after.start);
+                return;
+              }
+              if (action === 'previous') {
+                const here = chapterAt(position);
+                const before = here && position - here.start < 3 ? chapterAt(here.start - 1) : here;
+                onSeek(before?.start ?? 0);
+                return;
+              }
+              onSeek(position + (action === 'increment' ? 10 : -10));
+            }}
           >
             <Animated.View style={[styles.track, track]}>
               {runs.map((run) => (

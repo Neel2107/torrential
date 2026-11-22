@@ -5,6 +5,7 @@ import { sentence } from '@web/lib/format';
 
 import { EngineError } from '@/engine/client';
 import { useSession } from '@/engine/session';
+import { useCopies } from '@/offline/saved';
 import { color, space, type } from '@/theme';
 
 import { Button } from './Button';
@@ -15,6 +16,7 @@ export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () =>
   const engine = error instanceof EngineError;
   const base = session.state === 'paired' ? session.link.base.replace(/^https?:\/\//, '') : '';
   const onPhone = session.state === 'paired' && session.engine.kind === 'phone';
+  const saved = useCopies().filter((copy) => copy.state === 'saved').length;
 
   return (
     <View style={styles.wrap} accessibilityLiveRegion="polite">
@@ -40,6 +42,13 @@ export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () =>
         {engine || onPhone ? null : (
           <Button label="Change address" kind="quiet" onPress={() => router.push('/relocate')} />
         )}
+        {!engine && saved > 0 ? (
+          <Button
+            label={`Watch what is on this phone (${saved})`}
+            kind="secondary"
+            onPress={() => router.push('/saved')}
+          />
+        ) : null}
       </View>
     </View>
   );
