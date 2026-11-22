@@ -51,6 +51,7 @@ import { stage as color, font, motion, space } from '@/theme';
 import { useDownloaded, usePlayingJob } from './downloaded';
 import { Ended, type UpNext } from './Ended';
 import { FilesSheet, videosOf } from './FilesSheet';
+import { PlaybackProblem } from './PlaybackProblem';
 import { usePlayerPreferences } from './preferences';
 import { RecoveryNotice, useStallRecovery, type Takeover } from './recovery';
 import { SeekBar } from './SeekBar';
@@ -67,6 +68,7 @@ import { appear, vanish } from '@/ui/presets';
 
 const HIDE_AFTER_MS = 3200;
 const SKIP = 10;
+const CONTROL_BAR = 44 + space.sm;
 
 type OpenSheet = 'tracks' | 'settings' | 'sources' | 'files';
 
@@ -539,28 +541,30 @@ export function Player({
           ) : null}
 
           {failed ? (
-            <View style={[styles.center, styles.errorBox]}>
-              <Icon name={icons.warning} size={28} tint={color.error} />
-              <Text style={styles.errorText}>
-                {timeline.problem ?? error?.message ?? 'This video does not play on this phone.'}
-              </Text>
-              <View style={styles.errorActions}>
-                <Button
-                  label="Retry this source"
-                  icon={icons.refresh}
-                  onPress={() => {
-                    const at = String(Math.floor(position));
-                    router.replace({
-                      pathname: '/play',
-                      params: video
-                        ? { video, source: release.id, at }
-                        : { ref: play.id, file: String(play.video.index), at },
-                    });
-                  }}
-                />
-                {video ? <Button label="Choose a source" kind="secondary" onPress={() => setSheet('sources')} /> : null}
-              </View>
-            </View>
+            <PlaybackProblem
+              message={timeline.problem ?? error?.message ?? 'This video does not play on this phone.'}
+              room={{ top: CONTROL_BAR, bottom: CONTROL_BAR }}
+              actions={
+                <>
+                  <Button
+                    label="Retry this source"
+                    icon={icons.refresh}
+                    onPress={() => {
+                      const at = String(Math.floor(position));
+                      router.replace({
+                        pathname: '/play',
+                        params: video
+                          ? { video, source: release.id, at }
+                          : { ref: play.id, file: String(play.video.index), at },
+                      });
+                    }}
+                  />
+                  {video ? (
+                    <Button label="Choose a source" kind="secondary" onPress={() => setSheet('sources')} />
+                  ) : null}
+                </>
+              }
+            />
           ) : null}
 
           {visible && !locked ? (
@@ -905,27 +909,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20, 18, 15, 0.72)',
   },
   unlockText: { fontFamily: font.semibold, fontSize: 15, color: color.ink },
-  errorBox: {
-    zIndex: 2,
-    alignItems: 'center',
-    gap: space.sm,
-    maxWidth: 360,
-    padding: space.lg,
-    top: '38%',
-  },
-  errorActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: space.sm,
-    marginTop: space.sm,
-  },
-  errorText: {
-    fontFamily: font.medium,
-    fontSize: 15,
-    color: color.ink,
-    textAlign: 'center',
-  },
   skip: {
     position: 'absolute',
     top: 0,

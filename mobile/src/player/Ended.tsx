@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -8,6 +8,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
@@ -20,6 +21,10 @@ import { appear, appearAfter } from '@/ui/presets';
 export type UpNext = { video: string; name: string; title: string; season: number; episode: number; still: boolean };
 
 const UP_NEXT_SECONDS = 10;
+const STILL = { width: 288, height: 162 };
+const SMALL_STILL = { width: 192, height: 108 };
+const ROOM_FOR_FULL_STILL = 380;
+const ROOM_FOR_SMALL_STILL = 260;
 
 export function Ended({
   next,
@@ -36,6 +41,11 @@ export function Ended({
   onBack: () => void;
 }) {
   const reduced = useReducedMotion();
+  const insets = useSafeAreaInsets();
+  const viewport = useWindowDimensions();
+  const short = viewport.height < ROOM_FOR_FULL_STILL * viewport.fontScale;
+  const showStill = viewport.height >= ROOM_FOR_SMALL_STILL * viewport.fontScale;
+  const still = short ? SMALL_STILL : STILL;
   const [left, setLeft] = useState<number | null>(next ? UP_NEXT_SECONDS : null);
   const [cancelled, setCancelled] = useState(false);
   const progress = useSharedValue(0);
@@ -73,31 +83,51 @@ export function Ended({
   const bar = useAnimatedStyle(() => ({ transform: [{ scaleX: progress.get() }] }));
 
   return (
-    <Animated.View entering={appear} style={styles.screen}>
-      {next ? (
-        <View style={styles.heading}>
-          <Text style={[type.label, styles.center]}>{left === null ? 'Up next' : `Up next in ${left}`}</Text>
-          <Animated.View entering={appearAfter(120)} style={styles.still}>
-            <Art
-              id={next.title}
-              kind={next.still ? 'thumbnail' : 'background'}
-              season={next.still ? next.season : undefined}
-              episode={next.still ? next.episode : undefined}
-              style={StyleSheet.absoluteFill}
-            />
-            {left !== null ? (
-              <View style={styles.track}>
+    <Animated.View
+      entering={appear}
+      style={[
+        styles.screen,
+        {
+          paddingTop: Math.max(insets.top, space.lg),
+          paddingBottom: Math.max(insets.bottom, space.lg),
+          paddingLeft: insets.left + space.xl,
+          paddingRight: insets.right + space.xl,
+          gap: short ? space.md : space.xl,
+        },
+      ]}
+    >
+      <ScrollView style={styles.words} contentContainerStyle={styles.wordsContent} bounces={false}>
+        {next ? (
+          <View style={styles.heading}>
+            <Text style={[type.label, styles.center]}>{left === null ? 'Up next' : `Up next in ${left}`}</Text>
+            {showStill ? (
+              <Animated.View entering={appearAfter(120)} style={[styles.still, still]}>
+                <Art
+                  id={next.title}
+                  kind={next.still ? 'thumbnail' : 'background'}
+                  season={next.still ? next.season : undefined}
+                  episode={next.still ? next.episode : undefined}
+                  style={StyleSheet.absoluteFill}
+                />
+                {left !== null ? (
+                  <View style={styles.track}>
+                    <Animated.View style={[styles.fill, bar]} />
+                  </View>
+                ) : null}
+              </Animated.View>
+            ) : left !== null ? (
+              <View style={[styles.track, styles.bareTrack]}>
                 <Animated.View style={[styles.fill, bar]} />
               </View>
             ) : null}
-          </Animated.View>
-          <Text style={[styles.next, styles.center]} numberOfLines={2}>
-            {next.name}
-          </Text>
-        </View>
-      ) : (
-        <Text style={[type.title, styles.center]}>{slept ? 'Sleep timer ended' : 'The end'}</Text>
-      )}
+            <Text style={[styles.next, styles.center]} numberOfLines={short ? 1 : 2}>
+              {next.name}
+            </Text>
+          </View>
+        ) : (
+          <Text style={[type.title, styles.center]}>{slept ? 'Sleep timer ended' : 'The end'}</Text>
+        )}
+      </ScrollView>
       <View style={styles.actions}>
         {next ? <Button label="Play now" icon={icons.play} onPress={onNext} /> : null}
         {left !== null ? (
@@ -125,14 +155,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.78)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: space.xl,
-    padding: space.xl,
   },
+  words: { flexGrow: 0, flexShrink: 1, alignSelf: 'stretch' },
+  wordsContent: { alignItems: 'center' },
   heading: { gap: space.sm, maxWidth: 520, alignItems: 'center' },
-  still: { width: 288, height: 162, borderRadius: radius.md, overflow: 'hidden', backgroundColor: color.raised },
+  still: { borderRadius: radius.md, overflow: 'hidden', backgroundColor: color.raised },
   center: { textAlign: 'center' },
   next: { fontFamily: font.bold, fontSize: 20, lineHeight: 26, letterSpacing: -0.4, color: color.ink },
   track: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, backgroundColor: 'rgba(0,0,0,0.45)' },
   fill: { height: 4, width: '100%', backgroundColor: color.action, transformOrigin: 'left' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm },
+  bareTrack: {
+    position: 'relative',
+    width: SMALL_STILL.width,
+    borderRadius: 2,
+    overflow: 'hidden',
+    backgroundColor: color.lifted,
+  },
+  actions: { flexShrink: 0, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space.sm },
 });
