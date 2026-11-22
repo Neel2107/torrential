@@ -5,6 +5,8 @@ import { useCallback } from 'react';
 import type { Cast, CastAction, Home, Me, TitlePage, TitleSearch, TvList, Version } from '@web/wire';
 
 import { authHeaders, get, post, url, type Link } from './client';
+import { lap } from '@/perf';
+
 import { keepReply, keptOptions, keptReply } from './kept';
 import { useLink } from './session';
 
@@ -102,6 +104,7 @@ export function useTitleSearch(q: string) {
   return useQuery({
     queryKey: [...keys.titles(query), link.base],
     queryFn: async ({ signal }) => {
+      lap('typed', 'search sent');
       const found = await get<TitleSearch>(link, route, signal);
       keepReply(link, route, found);
 
