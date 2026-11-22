@@ -1,13 +1,14 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { Platform, StyleSheet } from 'react-native';
-import Animated, { interpolate, LinearTransition, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
 
-import { color, motion, space } from '@/theme';
+import { color, space } from '@/theme';
 
 import { useChrome } from './chrome';
 import { Icon } from './Icon';
 import { TAB_BAR_HEIGHT } from './TabBar';
 import { Tap } from './Tap';
+import { reflow } from '@/ui/presets';
 
 /** The system tab bar on iOS keeps Search in the corner the floating button takes, so there it sits in the top bar. */
 export const ADD_IN_TOP_BAR = Platform.OS === 'ios';
@@ -23,10 +24,7 @@ export function Fab({ icon, label, onPress }: { icon: LucideIcon; label: string;
 
   if (ADD_IN_TOP_BAR) return null;
   return (
-    <Animated.View
-      layout={LinearTransition.duration(motion.standard).easing(motion.out)}
-      style={[styles.wrap, { bottom: bottom + space.lg }, fade]}
-    >
+    <Animated.View layout={reflow} style={[styles.wrap, { bottom: bottom + space.lg }, fade]}>
       <Tap haptic shrink={0.92} onPress={onPress} accessibilityLabel={label} style={styles.fab}>
         <Icon name={icon} size={26} tint={color.actionInk} weight={2.4} />
       </Tap>

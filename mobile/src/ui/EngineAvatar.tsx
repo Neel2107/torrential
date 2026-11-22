@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { HardDrive, Smartphone } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { useVersion } from '@/engine/queries';
 import { useSession } from '@/engine/session';
@@ -10,6 +10,7 @@ import { color, motion } from '@/theme';
 import { Glass, LIQUID_GLASS } from './Glass';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
+import { vanish } from '@/ui/presets';
 
 export function EngineAvatar() {
   const version = useVersion();
@@ -29,7 +30,7 @@ export function EngineAvatar() {
         <Animated.View
           key={phone ? 'phone' : 'computer'}
           entering={ZoomIn.duration(motion.standard).easing(motion.out)}
-          exiting={FadeOut.duration(motion.quick)}
+          exiting={vanish}
           style={styles.glyph}
         >
           <Icon name={phone ? Smartphone : HardDrive} size={18} tint={color.soft} />

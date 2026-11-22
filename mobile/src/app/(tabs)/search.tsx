@@ -5,13 +5,10 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Keyboard, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
-  FadeIn,
-  FadeOut,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  LinearTransition,
   type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,6 +48,7 @@ import { Pager, TabStrip, usePagerPosition } from '@/ui/Pager';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
+import { appear, reflow, vanish } from '@/ui/presets';
 
 const TABS = ['Films & shows', 'Torrents'] as const;
 const SHOWN = 3;
@@ -220,7 +218,7 @@ function SearchHeader({
               accessibilityLabel="Search"
             />
             {text ? (
-              <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(120)}>
+              <Animated.View entering={appear} exiting={vanish}>
                 <Tap shrink={0.85} onPress={() => setText('')} accessibilityLabel="Clear" style={styles.clear}>
                   <Icon name={icons.close} size={14} tint={color.paper} weight={3} />
                 </Tap>
@@ -508,8 +506,8 @@ function Scope({
       })}
       {status ? (
         <Animated.Text
-          entering={FadeIn.duration(motion.quick)}
-          exiting={FadeOut.duration(motion.quick)}
+          entering={appear}
+          exiting={vanish}
           style={[type.caption, styles.scopeStatus]}
           accessibilityLiveRegion="polite"
           numberOfLines={1}
@@ -653,12 +651,7 @@ function Recent({
         <Animated.View entering={rise(0)}>
           <SectionHead title="Continue watching" />
           {unfinished.map((item, index) => (
-            <Animated.View
-              key={item.video}
-              entering={rise(index + 1)}
-              exiting={FadeOut.duration(motion.quick)}
-              layout={LinearTransition.duration(motion.standard)}
-            >
+            <Animated.View key={item.video} entering={rise(index + 1)} exiting={vanish} layout={reflow}>
               <UnfinishedRow item={item} />
             </Animated.View>
           ))}
@@ -671,11 +664,7 @@ function Recent({
             action={more ? { label: 'See all', onPress: () => router.navigate('/downloads') } : undefined}
           />
           {downloads.map((id, index) => (
-            <Animated.View
-              key={id}
-              entering={rise(afterUnfinished + index + 1)}
-              layout={LinearTransition.duration(motion.standard)}
-            >
+            <Animated.View key={id} entering={rise(afterUnfinished + index + 1)} layout={reflow}>
               <DownloadRow id={id} />
             </Animated.View>
           ))}
@@ -685,12 +674,7 @@ function Recent({
         <Animated.View entering={rise(afterDownloads)}>
           <SectionHead title="Recent searches" action={{ label: 'Clear all', onPress: onClear }} />
           {searches.map((item, index) => (
-            <Animated.View
-              key={item}
-              entering={rise(afterDownloads + index + 1)}
-              exiting={FadeOut.duration(motion.quick)}
-              layout={LinearTransition.duration(motion.standard)}
-            >
+            <Animated.View key={item} entering={rise(afterDownloads + index + 1)} exiting={vanish} layout={reflow}>
               <Tap
                 shrink={1}
                 highlight

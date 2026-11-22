@@ -7,8 +7,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  FadeIn,
-  FadeOut,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -65,6 +63,7 @@ import { SourcesSheet } from './SourcesSheet';
 import { choiceKey, SubtitleOverlay, useOnlineSubtitles, useSubtitleCues, type SubtitleChoice } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
 import { chooseAudio, chooseSubtitles, setSpeed } from './control';
+import { appear, vanish } from '@/ui/presets';
 
 const HIDE_AFTER_MS = 3200;
 const SKIP = 10;
@@ -507,12 +506,7 @@ export function Player({
           ) : null}
 
           {visible && !locked ? (
-            <Animated.View
-              entering={FadeIn.duration(motion.quick)}
-              exiting={FadeOut.duration(motion.quick)}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="box-none"
-            >
+            <Animated.View entering={appear} exiting={vanish} style={StyleSheet.absoluteFill} pointerEvents="box-none">
               <View style={styles.scrim} pointerEvents="none" />
               <View
                 style={[
@@ -659,8 +653,8 @@ export function Player({
 
           {locked ? (
             <Animated.View
-              entering={FadeIn.duration(motion.quick)}
-              exiting={FadeOut.duration(motion.quick)}
+              entering={appear}
+              exiting={vanish}
               style={[styles.unlockWrap, { top: Math.max(insets.top, space.lg), opacity: unlockShown ? 1 : 0.35 }]}
             >
               <Tap

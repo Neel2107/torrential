@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bytes, sentence } from '@web/lib/format';
@@ -24,7 +24,8 @@ import { PortalHost } from '@/ui/Portal';
 import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
-import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
+import { stage as color, font, radius, space, stageType as type } from '@/theme';
+import { appear, reflow, vanish } from '@/ui/presets';
 
 export default function PlayScreen() {
   return (
@@ -170,7 +171,7 @@ function Starting({
           {detail ? <Text style={styles.detail}>{detail}</Text> : null}
 
           {start.phase === 'failed' ? (
-            <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.failed}>
+            <Animated.View entering={appear} style={styles.failed}>
               <View style={styles.failedLine}>
                 <Icon name={icons.warning} size={20} tint={color.error} />
                 <Text style={styles.failedText}>{sentence(start.message)}</Text>
@@ -209,21 +210,16 @@ function Starting({
                 <LoadingMark size={22} label="Starting" />
                 <Animated.Text
                   key={stepOf(start)}
-                  entering={FadeIn.duration(motion.quick)}
-                  exiting={FadeOut.duration(120)}
-                  layout={LinearTransition}
+                  entering={appear}
+                  exiting={vanish}
+                  layout={reflow}
                   style={styles.step}
                 >
                   {stepOf(start)}
                 </Animated.Text>
               </View>
               {start.phase === 'trying' ? (
-                <Animated.Text
-                  key={start.release.id}
-                  entering={FadeIn.duration(motion.quick)}
-                  style={styles.release}
-                  numberOfLines={1}
-                >
+                <Animated.Text key={start.release.id} entering={appear} style={styles.release} numberOfLines={1}>
                   {[
                     start.release.quality.resolution?.toUpperCase(),
                     start.release.size ? bytes(start.release.size) : null,

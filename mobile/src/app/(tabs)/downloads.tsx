@@ -3,13 +3,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { router, useIsFocused } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  Easing,
-  LinearTransition,
-  useAnimatedStyle,
-  useDerivedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useDerivedValue, withTiming } from 'react-native-reanimated';
 
 import { Button as NativeButton, Host, Image as SwiftImage, Menu as NativeMenu } from '@expo/ui/swift-ui';
 import { contentShape, frame, shapes } from '@expo/ui/swift-ui/modifiers';
@@ -41,6 +35,7 @@ import { Tap } from '@/ui/Tap';
 import { TitlePoster, TitleTap } from '@/ui/TitleTap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { alpha, color, font, motion, scheme, space, type } from '@/theme';
+import { reflow } from '@/ui/presets';
 
 const enter = (index: number) => (Platform.OS === 'android' ? undefined : rise(index));
 
@@ -81,7 +76,7 @@ export default function Downloads() {
           keyExtractor={(copy) => copy.job}
           onScroll={onScroll}
           scrollEventThrottle={16}
-          itemLayoutAnimation={LinearTransition.duration(motion.standard)}
+          itemLayoutAnimation={reflow}
           contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
           ListHeaderComponent={<FreeSpace />}
           ListEmptyComponent={
@@ -145,7 +140,7 @@ function JobList({
       keyExtractor={(job) => job.id}
       onScroll={onScroll}
       scrollEventThrottle={16}
-      itemLayoutAnimation={LinearTransition.duration(motion.standard)}
+      itemLayoutAnimation={reflow}
       contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
       ListHeaderComponent={
         !live && jobs.length > 0 ? (

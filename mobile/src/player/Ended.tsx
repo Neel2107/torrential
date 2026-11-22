@@ -3,7 +3,6 @@ import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
-  FadeIn,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -13,9 +12,10 @@ import Animated, {
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { icons } from '@/ui/Icon';
-import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
+import { stage as color, font, radius, space, stageType as type } from '@/theme';
 
 import { useSources } from './sources';
+import { appear, appearAfter } from '@/ui/presets';
 
 export type UpNext = { video: string; name: string; title: string; season: number; episode: number; still: boolean };
 
@@ -70,11 +70,11 @@ export function Ended({
   const bar = useAnimatedStyle(() => ({ transform: [{ scaleX: progress.get() }] }));
 
   return (
-    <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.screen}>
+    <Animated.View entering={appear} style={styles.screen}>
       {next ? (
         <View style={styles.heading}>
           <Text style={[type.label, styles.center]}>{left === null ? 'Up next' : `Up next in ${left}`}</Text>
-          <Animated.View entering={FadeIn.duration(motion.standard).delay(120)} style={styles.still}>
+          <Animated.View entering={appearAfter(120)} style={styles.still}>
             <Art
               id={next.title}
               kind={next.still ? 'thumbnail' : 'background'}

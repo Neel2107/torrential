@@ -6,9 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Extrapolation,
-  FadeIn,
   interpolate,
-  LinearTransition,
   useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -51,6 +49,7 @@ import { TabStrip, usePagerPosition } from '@/ui/Pager';
 import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
 import { alpha, color, font, motion, radius, scheme, space, type } from '@/theme';
+import { appear, reflow } from '@/ui/presets';
 
 export default function Title() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -242,7 +241,7 @@ function Body({ page }: { page: Page }) {
         </Tap>
       </Animated.View>
       {fetching.state === 'started' || fetching.state === 'failed' ? (
-        <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.fetched}>
+        <Animated.View entering={appear} style={styles.fetched}>
           {fetching.state === 'failed' ? (
             <Text style={[type.caption, { color: color.error }]}>{sentence(fetching.message)}</Text>
           ) : (
@@ -409,10 +408,7 @@ function SaveButton({ id, saved }: { id: string; saved: boolean }) {
           <Icon name={icons.save} size={17} tint={saved ? color.actionInk : color.ink} filled={saved} />
         </Animated.View>
       </View>
-      <Animated.Text
-        layout={LinearTransition.duration(motion.quick)}
-        style={[styles.saveText, { color: saved ? color.actionInk : color.ink }]}
-      >
+      <Animated.Text layout={reflow} style={[styles.saveText, { color: saved ? color.actionInk : color.ink }]}>
         {saved ? 'Saved' : 'Save'}
       </Animated.Text>
     </Tap>
@@ -430,11 +426,7 @@ function Synopsis({ text }: { text: string }) {
       accessibilityHint={long ? 'Shows all of it' : undefined}
       style={styles.block}
     >
-      <Animated.Text
-        layout={LinearTransition.duration(motion.standard)}
-        style={type.body}
-        numberOfLines={open ? undefined : 3}
-      >
+      <Animated.Text layout={reflow} style={type.body} numberOfLines={open ? undefined : 3}>
         {text}
       </Animated.Text>
       {long && !open ? <Text style={[type.label, { color: color.ink, marginTop: 2 }]}>More</Text> : null}

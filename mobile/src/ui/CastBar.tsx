@@ -4,9 +4,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
-  FadeOutDown,
   Keyframe,
-  LinearTransition,
   useAnimatedStyle,
   useDerivedValue,
   withTiming,
@@ -23,6 +21,7 @@ import { alpha, color, motion, radius, space, type } from '@/theme';
 import { Art } from './Art';
 import { Icon, icons } from './Icon';
 import { Tap } from './Tap';
+import { reflow, vanishDown } from '@/ui/presets';
 
 const ARRIVE = new Keyframe({
   0: { opacity: 0, transform: [{ translateY: 16 }] },
@@ -102,12 +101,7 @@ function Live({ cast }: { cast: Cast }) {
         : `${playing ? 'Playing' : 'Paused'} on ${cast.tv_name}`;
 
   return (
-    <Animated.View
-      entering={ARRIVE}
-      exiting={FadeOutDown.duration(motion.quick)}
-      layout={LinearTransition}
-      style={styles.float}
-    >
+    <Animated.View entering={ARRIVE} exiting={vanishDown} layout={reflow} style={styles.float}>
       <Tap
         shrink={0.98}
         onPress={() => router.push('/tv')}
@@ -152,8 +146,8 @@ function Failed({ cast }: { cast: Extract<Cast, { state: 'ended' }> }) {
   return (
     <Animated.View
       entering={ARRIVE}
-      exiting={FadeOutDown.duration(motion.quick)}
-      layout={LinearTransition}
+      exiting={vanishDown}
+      layout={reflow}
       accessibilityRole="alert"
       style={[styles.card, styles.float]}
     >

@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
-  FadeIn,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -30,6 +29,7 @@ import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
+import { appear } from '@/ui/presets';
 
 const CONTAINERS: Record<string, string> = {
   mkv: 'MKV',
@@ -175,7 +175,7 @@ export default function TvScreen() {
               </Animated.View>
             ))}
             {!scanning && (scanFailed || (tvs.data?.tvs.length ?? 0) === 0) ? (
-              <Animated.View entering={FadeIn} style={styles.none}>
+              <Animated.View entering={appear} style={styles.none}>
                 <Text style={type.headline}>{scanFailed ? "Couldn't look for TVs" : 'No TVs found'}</Text>
                 <Text style={type.label}>
                   {scanFailed ??

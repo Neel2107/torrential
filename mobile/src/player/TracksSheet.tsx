@@ -3,7 +3,7 @@ import { useEvent } from 'expo';
 import type { AudioTrack, SubtitleTrack, VideoPlayer } from 'expo-video';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import type { MediaInfo, OnlineSubtitle } from '@web/wire';
 
@@ -13,8 +13,9 @@ import type { OnlineLookup, SubtitleChoice } from './Subtitles';
 import { PageHeader, Pages } from '@/ui/Pages';
 import { NavRow, OptionRow } from '@/ui/Row';
 import { Sheet } from '@/ui/Sheet';
-import { stage as color, motion, space, stageType as type } from '@/theme';
+import { stage as color, space, stageType as type } from '@/theme';
 import { chooseAudio, chooseSubtitles } from './control';
+import { appear } from '@/ui/presets';
 
 type FileChoice = Extract<SubtitleChoice, { kind: 'file' }>;
 
@@ -321,7 +322,7 @@ function OnlineRows({
             onPress={() => setVersionsOpen((open) => !open)}
           />
           {versionsOpen ? (
-            <Animated.View entering={FadeIn.duration(motion.quick)}>
+            <Animated.View entering={appear}>
               {versions.map((subtitle) => row(subtitle, subtitle.name ?? subtitle.source, subtitle.source))}
               <Text style={[type.caption, styles.empty]}>
                 A version made for another release can run early or late. Shift its timing in Settings.
@@ -338,7 +339,7 @@ function OnlineRows({
             expanded={moreOpen}
             onPress={() => setMoreOpen((open) => !open)}
           />
-          {moreOpen ? <Animated.View entering={FadeIn.duration(motion.quick)}>{rest.map(best)}</Animated.View> : null}
+          {moreOpen ? <Animated.View entering={appear}>{rest.map(best)}</Animated.View> : null}
         </>
       ) : null}
     </>

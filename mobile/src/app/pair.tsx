@@ -4,8 +4,6 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
-  FadeIn,
-  FadeOut,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
@@ -26,6 +24,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { Mark } from '@/ui/Mark';
 import { leave } from '@/ui/leave';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
+import { appear, vanish } from '@/ui/presets';
 
 type Mode = 'scan' | 'type';
 
@@ -170,7 +169,7 @@ export default function Pair() {
         )}
 
         {problem ? (
-          <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.problem} accessibilityLiveRegion="assertive">
+          <Animated.View entering={appear} exiting={vanish} style={styles.problem} accessibilityLiveRegion="assertive">
             <Icon name={icons.warning} size={18} tint={color.error} />
             <Text style={[type.label, { color: color.error, flex: 1 }]}>{problem}</Text>
           </Animated.View>

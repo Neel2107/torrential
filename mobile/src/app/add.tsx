@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { clearSharedPayloads, useIncomingShare } from 'expo-sharing';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { findTorrent, magnetFromTorrentFile } from '@/engine/torrentFile';
@@ -12,6 +12,7 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { alpha, color, font, radius, space, type } from '@/theme';
+import { appear, vanish } from '@/ui/presets';
 
 function decoded(text: string): string {
   try {
@@ -92,7 +93,7 @@ export default function Add() {
       </Text>
 
       {clip && !text ? (
-        <Animated.View entering={FadeIn} exiting={FadeOut}>
+        <Animated.View entering={appear} exiting={vanish}>
           <Tap
             shrink={0.98}
             haptic
@@ -130,7 +131,7 @@ export default function Add() {
       />
 
       {found ? (
-        <Animated.View entering={FadeIn.duration(160)} style={styles.found}>
+        <Animated.View entering={appear} style={styles.found}>
           <Icon name={icons.magnet} size={16} tint={color.soft} />
           <Text style={[type.label, { flex: 1 }]} numberOfLines={1}>
             {describe(found)}

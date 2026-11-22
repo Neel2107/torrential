@@ -1,16 +1,17 @@
 import type { VideoPlayer, VideoPlayerStatus } from 'expo-video';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { recover, WATCHING, type Recovery } from '@web/player/recovery';
 import type { Job, PlayInfo, Release } from '@web/wire';
 
 import { useLink } from '@/engine/session';
 import { Button } from '@/ui/Button';
-import { stage as color, font, motion, radius, space } from '@/theme';
+import { stage as color, font, radius, space } from '@/theme';
 
 import { replaceStalled, useViewer } from './start';
+import { appear, vanish } from '@/ui/presets';
 
 const SWITCHED_MS = 6000;
 const SAMPLE_MS = 1000;
@@ -116,8 +117,8 @@ export function RecoveryNotice({
     <View style={styles.wrap} pointerEvents="box-none">
       <Animated.View
         key={recovery.kind}
-        entering={FadeIn.duration(motion.quick)}
-        exiting={FadeOut.duration(motion.quick)}
+        entering={appear}
+        exiting={vanish}
         style={styles.pill}
         accessibilityLiveRegion="polite"
         accessibilityRole="alert"

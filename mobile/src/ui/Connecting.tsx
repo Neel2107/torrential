@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
-import { color, motion, space, type } from '@/theme';
+import { color, space, type } from '@/theme';
 
 import { LoadingMark } from './Bands';
 import { Button } from './Button';
+import { appear } from '@/ui/presets';
 
 const PATIENT_MS = 6000;
 
@@ -18,11 +19,11 @@ export function Connecting() {
   }, []);
 
   return (
-    <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.wrap}>
+    <Animated.View entering={appear} style={styles.wrap}>
       <LoadingMark size={44} label="Connecting to the engine" />
       <Text style={[type.headline, styles.center]}>Connecting to the engine</Text>
       {slow ? (
-        <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.slow}>
+        <Animated.View entering={appear} style={styles.slow}>
           <Text style={[type.body, styles.center, { color: color.soft }]}>
             This is taking longer than usual. The engine may be asleep, or on another network.
           </Text>

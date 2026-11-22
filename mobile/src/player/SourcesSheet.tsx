@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
-import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { ago, bytes } from '@web/lib/format';
 import { readable } from '@web/lib/release';
@@ -19,7 +19,6 @@ import {
   alpha,
   color as themedColor,
   font,
-  motion,
   radius,
   space,
   stage,
@@ -29,6 +28,7 @@ import {
 } from '@/theme';
 
 import { useSources, type Sources } from './sources';
+import { appear, reflow } from '@/ui/presets';
 
 export function SourcesSheet({
   video,
@@ -169,7 +169,7 @@ function SourceRow({
   ].filter(Boolean);
 
   return (
-    <Animated.View entering={rise(index)} layout={LinearTransition.duration(motion.standard)}>
+    <Animated.View entering={rise(index)} layout={reflow}>
       <View style={styles.line}>
         <Tap
           shrink={1}
@@ -228,7 +228,7 @@ function SourceRow({
         </Tap>
       </View>
       {open ? (
-        <Animated.View entering={FadeIn.duration(motion.quick)} style={styles.details}>
+        <Animated.View entering={appear} style={styles.details}>
           <Text style={styles.fullName} selectable>
             {release.name}
           </Text>
