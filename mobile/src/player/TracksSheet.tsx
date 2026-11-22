@@ -1,19 +1,20 @@
 import type { ReactNode } from 'react';
 import { useEvent } from 'expo';
 import type { AudioTrack, SubtitleTrack, VideoPlayer } from 'expo-video';
-import { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Fragment, useState } from 'react';
+import { FlatList, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import type { MediaInfo, OnlineSubtitle } from '@web/wire';
 
 import { languageLabel, languageName, phoneLanguage, sameLanguage } from './languages';
-import type { OnlineLookup, SubtitleChoice } from './Subtitles';
+import { SubtitleStatus, type SubtitleStatusShown } from './SubtitleStatus';
+import { useDrawnSubtitleLoad, type OnlineLookup, type SubtitleChoice } from './Subtitles';
 
 import { PageHeader, Pages } from '@/ui/Pages';
 import { NavRow, OptionRow } from '@/ui/Row';
 import { Sheet } from '@/ui/Sheet';
-import { stage as color, space, stageType as type } from '@/theme';
+import { space, stageType as type } from '@/theme';
 import { chooseAudio, chooseSubtitles } from './control';
 import { appear } from '@/ui/presets';
 
@@ -32,6 +33,9 @@ function trackName(
 type Page = 'menu' | 'subtitles' | 'audio' | 'style';
 
 const MENU_AUDIO = 3;
+const LIST_PAST = 40;
+
+type Entry = { key: string; node: ReactNode };
 
 /** Names for a list of tracks where two would read the same: the second English becomes English 2. */
 function namesOf(
@@ -85,13 +89,35 @@ export function TracksSheet({
   onClose: () => void;
 }) {
   const [page, setPage] = useState<Page>('menu');
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const window = useWindowDimensions();
   const wide = window.width > window.height;
   const { subtitleTrack } = useEvent(player, 'subtitleTrackChange', { subtitleTrack: player.subtitleTrack });
   const { audioTrack } = useEvent(player, 'audioTrackChange', { audioTrack: player.audioTrack });
-  const subtitles = player.availableSubtitleTracks;
-  const audio = player.availableAudioTracks;
+
+  const { availableSubtitleTracks: subtitles } = useEvent(player, 'availableSubtitleTracksChange', {
+    availableSubtitleTracks: player.availableSubtitleTracks,
+  });
+
+  const { availableAudioTracks: audio } = useEvent(player, 'availableAudioTracksChange', {
+    availableAudioTracks: player.availableAudioTracks,
+  });
+
   const subtitleNames = namesOf(subtitles, 'Subtitles');
+  const audioNames = namesOf(audio, 'Audio');
+  const drawnLoad = useDrawnSubtitleLoad(drawn);
+
+  const drawnStatus: SubtitleStatusShown | null =
+    drawnLoad?.kind === 'loading'
+      ? { kind: 'loading', message: 'Loading subtitles…' }
+      : drawnLoad?.kind === 'failed'
+        ? { kind: 'failed', message: drawnLoad.message, retry: drawnLoad.retry }
+        : null;
+
+  const drawnStatusEntry: Entry[] = drawnStatus
+    ? [{ key: 'drawn-status', node: <SubtitleStatus status={drawnStatus} /> }]
+    : [];
 
   const off = (
     <OptionRow
@@ -120,12 +146,14 @@ export function TracksSheet({
     />
   );
 
+  const isDrawnFile = (candidate: FileChoice) => drawn?.kind === 'file' && drawn.index === candidate.index;
+
   const file = (candidate: FileChoice) => (
     <OptionRow
       key={`file-${candidate.index}`}
       label={candidate.name.replace(/\.(srt|vtt|ass|ssa|sub)$/i, '')}
       detail="Subtitle file in the torrent"
-      selected={drawn?.kind === 'file' && drawn.index === candidate.index}
+      selected={isDrawnFile(candidate)}
       onPress={() => onDraw(candidate)}
     />
   );
@@ -149,7 +177,7 @@ export function TracksSheet({
         return (
           <OptionRow
             key={`${track.id ?? index}`}
-            label={audio.length === 1 && !languageName(track.language) ? 'Original' : namesOf(audio, 'Audio')[index]!}
+            label={audio.length === 1 && !languageName(track.language) ? 'Original' : audioNames[index]!}
             detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${channels(fromEngine.channels)}` : null}
             selected={audioTrack ? audioTrack.id === track.id && audioTrack.label === track.label : index === 0}
             onPress={() => {
@@ -191,6 +219,7 @@ export function TracksSheet({
           onPress={() => {}}
         />
       ) : null}
+      {drawnStatus ? <SubtitleStatus status={drawnStatus} /> : null}
       {suggested.map(({ track, index }) => embedded(track, index))}
       <NavRow label="All subtitles" count={allSubtitles} onPress={() => setPage('subtitles')} />
     </View>
@@ -220,26 +249,56 @@ export function TracksSheet({
     </ScrollView>
   );
 
-  const pages: Record<Exclude<Page, 'menu'>, { title: string; body: ReactNode }> = {
-    subtitles: {
-      title: 'Subtitles',
-      body: (
-        <>
-          {off}
-          {subtitles.length > 0 ? <Text style={[type.section, styles.section]}>In the video</Text> : null}
-          {subtitles.map(embedded)}
-          {files.length > 0 ? <Text style={[type.section, styles.section]}>In the torrent</Text> : null}
-          {files.map(file)}
-          {subtitles.length === 0 && files.length === 0 ? (
-            <Text style={[type.caption, styles.empty]}>This video has no subtitles of its own.</Text>
-          ) : null}
-          <Text style={[type.section, styles.section]}>Found online</Text>
-          <OnlineRows lookup={online} drawn={drawn} onDraw={onDraw} />
-        </>
-      ),
-    },
-    audio: { title: 'Audio', body: audioRows },
-    style: { title: 'Timing and style', body: look },
+  const section = (key: string, title: string): Entry => ({
+    key,
+    node: <Text style={[type.section, styles.section]}>{title}</Text>,
+  });
+
+  const caption = (key: string, words: string): Entry => ({
+    key,
+    node: <Text style={[type.caption, styles.empty]}>{words}</Text>,
+  });
+
+  const onlineParts = onlineEntries({
+    lookup: online,
+    chosen: drawn?.kind === 'online' ? drawn.subtitle : null,
+    versionsOpen,
+    moreOpen,
+    onVersions: () => setVersionsOpen((open) => !open),
+    onMore: () => setMoreOpen((open) => !open),
+    onDraw,
+    drawnStatus: drawnStatusEntry,
+    caption,
+  });
+
+  const fixedSubtitles: Entry[] = [
+    { key: 'off', node: off },
+    ...(subtitles.length > 0 ? [section('in-video', 'In the video')] : []),
+    ...subtitles.map((track, index) => ({
+      key: `embedded-${track.id ?? index}-${index}`,
+      node: embedded(track, index),
+    })),
+    ...(files.length > 0 ? [section('in-torrent', 'In the torrent')] : []),
+    ...files.flatMap((candidate) => [
+      { key: `file-${candidate.index}`, node: file(candidate) },
+      ...(isDrawnFile(candidate) ? drawnStatusEntry : []),
+    ]),
+    ...(subtitles.length === 0 && files.length === 0
+      ? [caption('none-own', 'This video has no subtitles of its own.')]
+      : []),
+    section('online', 'Found online'),
+  ];
+
+  const subtitleCount =
+    fixedSubtitles.length +
+    onlineParts.reduce((total, part) => total + (part.kind === 'one' ? 1 : part.rows.length), 0);
+
+  const subtitleEntries = [...fixedSubtitles, ...flatten(onlineParts, subtitleCount > LIST_PAST)];
+
+  const pages: Record<Exclude<Page, 'menu'>, { title: string; entries: Entry[] }> = {
+    subtitles: { title: 'Subtitles', entries: subtitleEntries },
+    audio: { title: 'Audio', entries: audioRows.map((row, index) => ({ key: `${row.key ?? index}`, node: row })) },
+    style: { title: 'Timing and style', entries: [{ key: 'look', node: look }] },
   };
 
   return (
@@ -260,9 +319,7 @@ export function TracksSheet({
           ) : (
             <>
               <PageHeader title={pages[shown].title} onBack={() => setPage('menu')} />
-              <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
-                {pages[shown].body}
-              </ScrollView>
+              <PageBody entries={pages[shown].entries} />
             </>
           )
         }
@@ -271,59 +328,134 @@ export function TracksSheet({
   );
 }
 
-function OnlineRows({
+function PageBody({ entries }: { entries: Entry[] }) {
+  if (entries.length > LIST_PAST) {
+    return (
+      <FlatList
+        style={styles.scroll}
+        contentContainerStyle={styles.page}
+        data={entries}
+        keyExtractor={(entry) => entry.key}
+        renderItem={({ item }) => <>{item.node}</>}
+        initialNumToRender={16}
+        maxToRenderPerBatch={12}
+        windowSize={5}
+      />
+    );
+  }
+
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
+      {entries.map((entry) => (
+        <Fragment key={entry.key}>{entry.node}</Fragment>
+      ))}
+    </ScrollView>
+  );
+}
+
+type OnlinePart = { kind: 'one'; entry: Entry } | { kind: 'opened'; key: string; rows: Entry[] };
+
+/** Rows that open under a toggle ease in when the page is short; in a long, virtualized page they appear as plain rows. */
+function flatten(parts: OnlinePart[], virtualized: boolean): Entry[] {
+  return parts.flatMap((part) => {
+    if (part.kind === 'one') return [part.entry];
+
+    if (virtualized) return part.rows;
+
+    return [
+      {
+        key: part.key,
+        node: (
+          <Animated.View entering={appear} style={styles.opened}>
+            {part.rows.map((row) => (
+              <Fragment key={row.key}>{row.node}</Fragment>
+            ))}
+          </Animated.View>
+        ),
+      },
+    ];
+  });
+}
+
+function onlineEntries({
   lookup,
-  drawn,
+  chosen,
+  versionsOpen,
+  moreOpen,
+  onVersions,
+  onMore,
   onDraw,
+  drawnStatus,
+  caption,
 }: {
   lookup: OnlineLookup;
-  drawn: SubtitleChoice | null;
+  chosen: OnlineSubtitle | null;
+  versionsOpen: boolean;
+  moreOpen: boolean;
+  onVersions: () => void;
+  onMore: () => void;
   onDraw: (choice: SubtitleChoice) => void;
-}) {
-  const [versionsOpen, setVersionsOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
+  drawnStatus: Entry[];
+  caption: (key: string, words: string) => Entry;
+}): OnlinePart[] {
+  const one = (entry: Entry): OnlinePart => ({ kind: 'one', entry });
 
   if (lookup.kind === 'looking') {
-    return (
-      <View style={styles.status}>
-        <ActivityIndicator color={color.soft} size="small" />
-        <Text style={type.caption}>Looking for subtitles online…</Text>
-      </View>
-    );
+    return [
+      one({
+        key: 'online-status',
+        node: <SubtitleStatus status={{ kind: 'loading', message: 'Looking for subtitles online…' }} />,
+      }),
+    ];
   }
 
-  if (lookup.kind !== 'found') {
-    return (
-      <Text style={[type.caption, styles.empty]}>
-        {lookup.kind === 'nothing'
-          ? 'No subtitles were found online for this video.'
-          : 'The online lookup did not answer.'}
-      </Text>
-    );
+  if (lookup.kind === 'failed') {
+    return [
+      one({
+        key: 'online-status',
+        node: (
+          <SubtitleStatus
+            status={{ kind: 'failed', message: 'Couldn’t reach the online subtitle search.', retry: lookup.retry }}
+          />
+        ),
+      }),
+    ];
   }
 
-  const chosen = drawn?.kind === 'online' ? drawn.subtitle : null;
+  if (lookup.kind === 'nothing') return [one(caption('online-none', 'No subtitles were found online for this video.'))];
+
   const byLanguage = new Map<string, OnlineSubtitle[]>();
 
   for (const subtitle of lookup.subtitles) {
-    byLanguage.set(subtitle.language, [...(byLanguage.get(subtitle.language) ?? []), subtitle]);
+    const group = byLanguage.get(subtitle.language);
+
+    if (group) group.push(subtitle);
+    else byLanguage.set(subtitle.language, [subtitle]);
   }
 
   const languages = [...byLanguage.keys()].sort((a, b) => languageLabel(a).localeCompare(languageLabel(b)));
   const wanted = [phoneLanguage(), 'en'];
   const near = languages.filter((tag) => wanted.includes(tag.slice(0, 2).toLowerCase()) || tag === chosen?.language);
   const rest = languages.filter((tag) => !near.includes(tag));
-  const versions = chosen ? (byLanguage.get(chosen.language) ?? []) : [];
 
-  const row = (subtitle: OnlineSubtitle, label: string, detail: string | null) => (
-    <OptionRow
-      key={subtitle.id}
-      label={label}
-      detail={[subtitle.exact ? 'Exact match' : 'Online', detail].filter(Boolean).join(' · ')}
-      selected={chosen?.id === subtitle.id}
-      onPress={() => onDraw({ kind: 'online', subtitle })}
-    />
-  );
+  const otherVersions = chosen
+    ? (byLanguage.get(chosen.language) ?? []).filter((subtitle) => subtitle.id !== chosen.id)
+    : [];
+
+  const row = (subtitle: OnlineSubtitle, label: string, detail: string | null): Entry[] => [
+    {
+      key: `online-${subtitle.id}`,
+      node: (
+        <OptionRow
+          label={label}
+          detail={[subtitle.exact ? 'Exact match' : 'Online', detail].filter(Boolean).join(' · ')}
+          selected={chosen?.id === subtitle.id}
+          onPress={() => onDraw({ kind: 'online', subtitle })}
+        />
+      ),
+    },
+    ...(chosen?.id === subtitle.id ? drawnStatus : []),
+  ];
 
   const best = (tag: string) => {
     const subtitle = chosen?.language === tag ? chosen : byLanguage.get(tag)![0]!;
@@ -331,40 +463,57 @@ function OnlineRows({
     return row(subtitle, languageLabel(tag), subtitle.name);
   };
 
-  return (
-    <>
-      {near.map(best)}
-      {chosen && versions.length > 1 ? (
-        <>
+  const parts: OnlinePart[] = near.flatMap(best).map(one);
+
+  if (chosen && otherVersions.length > 0) {
+    parts.push(
+      one({
+        key: 'online-versions',
+        node: (
           <NavRow
             label={`Other ${languageLabel(chosen.language)} versions`}
-            count={versions.length - 1}
+            count={otherVersions.length}
             expanded={versionsOpen}
-            onPress={() => setVersionsOpen((open) => !open)}
+            onPress={onVersions}
           />
-          {versionsOpen ? (
-            <Animated.View entering={appear}>
-              {versions.map((subtitle) => row(subtitle, subtitle.name ?? subtitle.source, subtitle.source))}
-              <Text style={[type.caption, styles.empty]}>
-                A version made for another release can run early or late. Shift its timing in Settings.
-              </Text>
-            </Animated.View>
-          ) : null}
-        </>
-      ) : null}
-      {rest.length > 0 ? (
-        <>
+        ),
+      }),
+    );
+
+    if (versionsOpen) {
+      parts.push({
+        kind: 'opened',
+        key: 'online-versions-open',
+        rows: [
+          ...otherVersions.flatMap((subtitle) => row(subtitle, subtitle.name ?? subtitle.source, subtitle.source)),
+          caption(
+            'online-versions-note',
+            'A version made for another release can run early or late. Shift its timing in Settings.',
+          ),
+        ],
+      });
+    }
+  }
+
+  if (rest.length > 0) {
+    parts.push(
+      one({
+        key: 'online-more',
+        node: (
           <NavRow
             label={near.length ? 'More languages' : 'Languages'}
             count={rest.length}
             expanded={moreOpen}
-            onPress={() => setMoreOpen((open) => !open)}
+            onPress={onMore}
           />
-          {moreOpen ? <Animated.View entering={appear}>{rest.map(best)}</Animated.View> : null}
-        </>
-      ) : null}
-    </>
-  );
+        ),
+      }),
+    );
+
+    if (moreOpen) parts.push({ kind: 'opened', key: 'online-more-open', rows: rest.flatMap(best) });
+  }
+
+  return parts;
 }
 
 function channels(count: number): string {
@@ -381,11 +530,5 @@ const styles = StyleSheet.create({
   page: { paddingHorizontal: space.xl, gap: space.xs, paddingBottom: space.sm },
   empty: { paddingHorizontal: space.md, paddingVertical: space.sm },
   section: { paddingHorizontal: space.md, marginTop: space.md, marginBottom: space.xs },
-  status: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-  },
+  opened: { gap: space.xs },
 });
