@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeOut,
   LinearTransition,
@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Button as NativeButton, Host, Image as SwiftImage, Menu as NativeMenu } from '@expo/ui/swift-ui';
+import { contentShape, frame, shapes } from '@expo/ui/swift-ui/modifiers';
 import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { Menu } from '../../../modules/glass-menu-android';
@@ -321,8 +322,17 @@ type JobAction = {
   symbol: SFSymbol;
   danger?: boolean;
   confirm?: string;
+  ask?: { title: string; message: string };
   run: () => void | Promise<void>;
 };
+
+function runAsked(action: JobAction) {
+  if (!action.ask) return action.run();
+  Alert.alert(action.ask.title, action.ask.message, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: action.confirm ?? action.label, style: 'destructive', onPress: () => action.run() },
+  ]);
+}
 
 function useJobActions(job: Job): JobAction[] {
   const link = useLink();
@@ -402,6 +412,9 @@ function useJobActions(job: Job): JobAction[] {
     confirm: onPhone
       ? `Delete ${job.progress.verified ? bytes(job.progress.verified) : 'it'} from this phone`
       : 'Remove from the list',
+    ask: onPhone
+      ? { title: 'Delete from this phone?', message: `${name.title} and what it downloaded will be deleted.` }
+      : { title: 'Remove from Downloads?', message: 'The downloaded files stay on the computer.' },
     run: () => send('/api/remove'),
   });
   return actions;
@@ -411,7 +424,6 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   const name = useJobName(job);
   const actions = useJobActions(job);
   const [busy, setBusy] = useState(false);
-  const [confirming, setConfirming] = useState(false);
 
   return (
     <Sheet onClose={onClose}>
@@ -423,11 +435,14 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
           <MenuRow
             key={action.id}
             icon={action.icon}
-            label={action.confirm && confirming ? action.confirm : action.label}
+            label={action.label}
             danger={action.danger}
             disabled={busy}
             onPress={async () => {
-              if (action.confirm && !confirming) return setConfirming(true);
+              if (action.ask) {
+                onClose();
+                return runAsked(action);
+              }
               setBusy(true);
               await action.run();
               setBusy(false);
@@ -440,20 +455,29 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   );
 }
 
-/** A menu is itself the deliberate second tap, so its Remove acts without the sheet's confirm. */
 function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
   const actions = useJobActions(job);
+  const name = useJobName(job);
   if (Platform.OS === 'ios') {
     return (
       <Host matchContents>
-        <NativeMenu label={<SwiftImage systemName="ellipsis" size={18} color={color.pencil} />}>
+        <NativeMenu
+          label={
+            <SwiftImage
+              systemName="ellipsis"
+              size={18}
+              color={color.pencil}
+              modifiers={[frame({ width: 44, height: 44 }), contentShape(shapes.rectangle())]}
+            />
+          }
+        >
           {actions.map((action) => (
             <NativeButton
               key={action.id}
               label={action.confirm ?? action.label}
               systemImage={action.symbol}
               role={action.danger ? 'destructive' : 'default'}
-              onPress={() => action.run()}
+              onPress={() => runAsked(action)}
             />
           ))}
         </NativeMenu>
@@ -462,14 +486,25 @@ function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
   }
   if (Platform.OS !== 'android') {
     return (
-      <Tap shrink={0.85} onPress={onMenu} accessibilityLabel="More" style={styles.more}>
+      <Tap
+        shrink={0.85}
+        onPress={onMenu}
+        accessibilityLabel={`More options for ${name.title}`}
+        style={styles.moreTarget}
+      >
         <Icon name={icons.more} size={20} tint={color.pencil} />
       </Tap>
     );
   }
   return (
-    <Menu colorScheme={scheme} onSelect={({ id }) => actions.find((action) => action.id === id)?.run()}>
-      <Menu.Trigger glass={false} accessibilityLabel="More" style={styles.more}>
+    <Menu
+      colorScheme={scheme}
+      onSelect={({ id }) => {
+        const action = actions.find((candidate) => candidate.id === id);
+        if (action) runAsked(action);
+      }}
+    >
+      <Menu.Trigger glass={false} accessibilityLabel={`More options for ${name.title}`} style={styles.moreTarget}>
         <Icon name={icons.more} size={20} tint={color.pencil} />
       </Menu.Trigger>
       <Menu.Content fontFamily="Inter_500Medium">
@@ -609,9 +644,16 @@ function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
           }
           danger={copy.state === 'saved'}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            remove(job);
-            onClose();
+            const go = () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              remove(job);
+              onClose();
+            };
+            if (copy.state !== 'saved') return go();
+            Alert.alert('Delete the saved copy?', `${copy.label} will be deleted from this phone.`, [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: go },
+            ]);
           }}
         />
       </View>
@@ -670,13 +712,14 @@ const styles = StyleSheet.create({
   more: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginRight: -6 },
   moreSpot: {
     position: 'absolute',
-    top: space.lg - 4,
-    right: space.page - 6,
-    width: 32,
-    height: 32,
+    top: space.lg - 10,
+    right: space.page - 12,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  moreTarget: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   track: { height: 4, borderRadius: 2, backgroundColor: alpha(color.ink, 0.12), overflow: 'hidden' },
   fill: { height: 4, borderRadius: 2, width: '100%', transformOrigin: 'left' },
   empty: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 80 },
