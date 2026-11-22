@@ -9,19 +9,11 @@ import { VolumeManager } from 'react-native-volume-manager';
 import { Icon } from '@/ui/Icon';
 import { color, font, motion, radius, space } from '@/theme';
 
-/** The share of the width at each side whose vertical swipes set brightness (left) and volume (right). */
 const SIDE = 0.4;
-/** A swipe the height of the video takes a level from none to full. */
 const TRAVEL = 1;
 
 type Kind = 'brightness' | 'volume';
 
-/**
- * Swipes on the video as ReVanced's YouTube has them: up and down on the left sets the screen's
- * brightness, on the right the volume, and the middle is left to swipe down to close. A pill shows
- * the level while the finger moves. Brightness is this app's alone and goes back when the player
- * closes.
- */
 export function useSideSwipes({ width, height }: { width: number; height: number }) {
   const [kind, setKind] = useState<Kind>('brightness');
   const level = useSharedValue(0);
@@ -55,7 +47,6 @@ export function useSideSwipes({ width, height }: { width: number; height: number
   const move = (side: Kind, translationY: number) => {
     const next = Math.min(1, Math.max(0, start.current - (translationY / height) * TRAVEL));
     level.value = next;
-    // Only whole percents reach the system, so a slow drag does not flood it.
     const percent = Math.round(next * 100);
     if (percent === written.current) return;
     written.current = percent;
@@ -67,7 +58,6 @@ export function useSideSwipes({ width, height }: { width: number; height: number
     shown.value = withDelay(500, withTiming(0, { duration: motion.standard }));
   };
 
-  // Each side is its own gesture over its own strip, so the middle stays free for swipe-down-to-close.
   const side = (which: Kind) =>
     Gesture.Pan()
       .runOnJS(true)
@@ -82,7 +72,6 @@ export function useSideSwipes({ width, height }: { width: number; height: number
   return { swipe, kind, level, shown, middle: { left: -width * SIDE, right: -width * SIDE } };
 }
 
-/** The level pill on the side being swiped. */
 export function SwipeLevel({
   kind,
   level,
@@ -96,7 +85,6 @@ export function SwipeLevel({
   const fill = useAnimatedStyle(() => ({ height: `${Math.round(level.value * 100)}%` }));
   const pill = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ scale: 0.92 + shown.value * 0.08 }] }));
 
-  // The number follows the bar a few times a second, enough to read without re-rendering each frame.
   useEffect(() => {
     const timer = setInterval(() => setPercent(Math.round(level.value * 100)), 80);
     return () => clearInterval(timer);

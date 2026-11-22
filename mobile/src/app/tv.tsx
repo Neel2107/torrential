@@ -173,7 +173,6 @@ export default function TvScreen() {
   );
 }
 
-/** Two rings spreading from the corner while the engine searches the network. */
 function Radar({ active }: { active: boolean }) {
   return (
     <View style={styles.radar} accessibilityLabel={active ? 'Looking for TVs' : undefined}>

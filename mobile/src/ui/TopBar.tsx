@@ -17,17 +17,11 @@ import { Tap } from './Tap';
 export const BAR_HEIGHT = 52;
 export const TABS_HEIGHT = 48;
 
-/** The room a feed leaves at its top for the bar, and for its tabs when it has them. */
 export function useTopInset(withTabs: boolean): number {
   const insets = useSafeAreaInsets();
   return insets.top + BAR_HEIGHT + (withTabs ? TABS_HEIGHT : 0);
 }
 
-/**
- * The bar over a feed: something on the left, the screen's name or mark in the middle, an action on
- * the right, and optional tabs under it. The top row slides up out of the way as the feed scrolls
- * down, and the tabs stay pinned, as on X.
- */
 export function TopBar({
   left,
   title,
@@ -43,7 +37,6 @@ export function TopBar({
   const { hidden } = useChrome();
   const pull = usePullHeight();
 
-  // A pull to refresh stretches the row, and what it holds stays in its middle.
   const stretch = useAnimatedStyle(() => ({ height: BAR_HEIGHT + pull.value }));
   const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.value * BAR_HEIGHT }] }));
   const fade = useAnimatedStyle(() => ({ opacity: interpolate(hidden.value, [0, 0.6], [1, 0]) }));
@@ -73,7 +66,6 @@ export function TopBar({
 
 export type Action = { icon: LucideIcon; label: string; onPress: () => void };
 
-/** The bar's buttons, grouped on one capsule of glass on iOS 26 as the system's own bars group theirs. */
 export function Actions({ actions }: { actions: Action[] }) {
   return (
     <Glass interactive style={styles.actions} fallback="transparent">

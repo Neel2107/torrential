@@ -160,8 +160,6 @@ function facts(page: Page): string[] {
 
 function Body({ page }: { page: Page }) {
   const target = page.play_target ?? page.next;
-  // Search for sources now, while the page is read: Sources opens filled, and Play finds the
-  // engine's answers already in hand.
   useSources(target?.video ?? null);
   const targetEpisode = target ? findEpisode(page, target.video) : null;
   const watched = useMemo(() => new Map(page.watched.map((w) => [w.video, w])), [page.watched]);
@@ -439,10 +437,6 @@ function EpisodeRow({
   );
 }
 
-/**
- * Where the poster lands when it zooms in from a card. It is drawn from the title's ID alone, before
- * the page loads and without a fade of its own, so the zoom has the same picture to land on.
- */
 function PosterSlot({ id, name }: { id: string; name?: string }) {
   return (
     <View style={styles.posterWrap}>

@@ -3,12 +3,9 @@
 //! is still being written cannot, so `/api/stream` does not play there. The same conversion written
 //! as HLS segments into a folder does.
 //!
-//! `GET /api/hls/index.m3u8?id=&file=&t=&video=&audio=` starts ffmpeg for that file from `t` seconds
-//! (the same parameters as `/api/stream`) and answers with the playlist once its first segment is
-//! written. The playlist names its segments `/api/hls/{session}/{name}`. A session nobody has asked
-//! for in a minute is stopped and its folder removed. A seek starts a new session, but the old one is
-//! not stopped at once: the player's old item may still reload its playlist while the new one starts,
-//! and stopping it would start it again and stop the new one. A file keeps at most three sessions.
+//! A seek starts a new session, but the old one is not stopped at once: the player's old item may
+//! still reload its playlist while the new one starts, and stopping it would start it again and stop
+//! the new one.
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -28,13 +25,9 @@ use super::super::media::ffmpeg::Picture;
 use super::super::media::{self};
 use super::{fail, file_of, number};
 
-/// Seconds of video in each segment.
 const SEGMENT_SECONDS: &str = "4";
-/// How long a session lives after its last request.
 const IDLE: Duration = Duration::from_secs(60);
-/// Sessions one file may keep, the least recently asked for stopped first.
 const PER_FILE: usize = 3;
-/// How long the playlist waits for ffmpeg to write its first segment, which may wait on pieces.
 const FIRST_SEGMENT: Duration = Duration::from_secs(90);
 const POLL: Duration = Duration::from_millis(200);
 const PLAYLIST: &str = "application/vnd.apple.mpegurl";
@@ -48,7 +41,6 @@ struct Session {
 
 static SESSIONS: LazyLock<Mutex<HashMap<String, Session>>> = LazyLock::new(Mutex::default);
 
-/// Answers `GET /api/hls/...`.
 pub async fn answer(conn: &mut Connection<'_>, request: &Request, route: &str) -> io::Result<bool> {
     sweep();
     match route.strip_prefix("hls/") {
@@ -88,7 +80,6 @@ async fn playlist(conn: &mut Connection<'_>, request: &Request) -> io::Result<bo
     }
 }
 
-/// Starts ffmpeg for the request's file and position, or finds the session already writing it.
 async fn start(ctx: &Ctx, request: &Request) -> Result<(String, PathBuf), Error> {
     let (id, index) = file_of(request)?;
     let t = number::<f64>(request, "t")?.unwrap_or(0.0);
@@ -133,8 +124,6 @@ async fn start(ctx: &Ctx, request: &Request) -> Result<(String, PathBuf), Error>
     Ok((key, dir))
 }
 
-/// The conversion `/api/stream` would pipe, written as HLS into `dir` instead. Timestamps start at
-/// zero, so the playlist's clock counts from the requested position.
 fn as_hls(args: Vec<String>, dir: &Path) -> Vec<String> {
     let mut args: Vec<String> = args.into_iter().filter(|arg| arg != "-copyts").collect();
     if let Some(at) = args.iter().position(|arg| arg == "-movflags") {
@@ -172,7 +161,6 @@ fn session_key(file: &(String, u32), t: f64, audio: Option<u32>, picture: Pictur
     format!("{:016x}", hasher.finish())
 }
 
-/// The playlist once ffmpeg has written a segment, or why it never did.
 async fn first_segment(key: &str, dir: &Path) -> Result<String, Error> {
     let deadline = Instant::now() + FIRST_SEGMENT;
     loop {
@@ -208,7 +196,6 @@ async fn complaint(key: &str) -> String {
     String::from_utf8_lossy(&kept[..kept.len().min(4096)]).into_owned()
 }
 
-/// Points the playlist's segment names into the session, relative to `/api/hls/index.m3u8`.
 fn rewrite(text: &str, key: &str) -> String {
     text.lines()
         .map(|line| {
@@ -238,7 +225,6 @@ async fn segment(conn: &mut Connection<'_>, request: &Request, key: &str, name: 
     }
 }
 
-/// Stops sessions nobody has asked for in a while.
 fn sweep() {
     let mut sessions = SESSIONS.lock().expect("no holder panics");
     let idle: Vec<String> = sessions.iter().filter(|(_, s)| s.last.elapsed() > IDLE).map(|(k, _)| k.clone()).collect();

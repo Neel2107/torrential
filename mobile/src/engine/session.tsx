@@ -7,12 +7,9 @@ import type { Me } from '@web/wire';
 import { LocalEngine } from '../../modules/torrential-engine';
 import { get, pair as pairWithCode, PORT, type Link } from './client';
 
-/** Every engine this phone knows, and which one it watches from. */
 const KEY = 'engines';
-/** Where a phone that knew only one engine kept it. */
 const OLD_KEY = 'engine-link';
 
-/** An engine this phone can watch from: a computer it paired with, or the one inside this app. */
 export type Engine = { id: string; name: string; kind: 'computer' | 'phone'; link: Link };
 type Saved = { engines: Engine[]; active: string | null };
 
@@ -21,23 +18,16 @@ type Session = { state: 'loading' } | { state: 'unpaired' } | { state: 'paired';
 type SessionApi = {
   session: Session;
   engines: Engine[];
-  /** Pairs with the engine at `base` using the code the computer shows, and watches from it. */
   pair: (base: string, code: string) => Promise<void>;
-  /** Uses an engine reached over loopback, which trusts the caller without pairing (USB during development). */
   useLoopback: () => Promise<void>;
-  /** Starts the engine inside this app and watches from it. */
   usePhone: () => Promise<void>;
-  /** Watches from another known engine. */
   switchTo: (id: string) => Promise<void>;
-  /** Points the current engine at its new address, keeping its token: it moved networks, not the pairing. */
   relocate: (base: string) => Promise<void>;
-  /** Forgets engine `id`, the current one by default, and watches from the next one, if any. */
   forget: (id?: string) => Promise<void>;
 };
 
 const Context = createContext<SessionApi | null>(null);
 
-/** A computer's name for the list: its host, or USB for the development loopback. */
 function computerName(base: string): string {
   const host = new URL(base).hostname;
   return host === '127.0.0.1' || host === 'localhost' ? 'Computer over USB' : host;
@@ -62,8 +52,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .catch(() => setSaved({ engines: [], active: null }));
   }, []);
 
-  // Every change reads the list as it is now and waits for the one before it, so a switch, a
-  // pairing and an automatic forget that land together cannot write over each other.
   const latest = useRef<Saved | null>(null);
   latest.current = saved;
   const queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -91,8 +79,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return { engines, engine, session };
   }, [saved]);
 
-  // The phone's engine runs in the app's process, so it starts again each time the app does, and
-  // its link follows the port and secret it comes up with.
   useEffect(() => {
     if (engine?.kind !== 'phone' || !LocalEngine) return;
     LocalEngine.start()
@@ -160,18 +146,12 @@ export function useSession(): SessionApi {
   return api;
 }
 
-/** The link of a paired session. Screens under the paired layout can rely on it. */
 export function useLink(): Link {
   const { session } = useSession();
   if (session.state !== 'paired') throw new Error('useLink before pairing');
   return session.link;
 }
 
-/**
- * Reads a pairing link or what a person typed: `http://mac.local:47919/pair#123456`, a bare
- * address such as `192.168.1.20`, or `mac.local:47919`. Returns the engine's base URL and the code
- * when the link carries one.
- */
 export function parsePairing(input: string): { base: string; code: string | null } | null {
   const text = input.trim();
   if (!text) return null;

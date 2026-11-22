@@ -26,10 +26,6 @@ const TABS: Record<string, { icon: LucideIcon; label: string }> = {
   downloads: { icon: icons.downloads, label: 'Downloads' },
 };
 
-/**
- * Icons only, filled when selected, on a bar that slides away while the feed scrolls down. Tapping
- * the selected tab again scrolls its feed to the top.
- */
 export function TabBar({
   state,
   emitter,

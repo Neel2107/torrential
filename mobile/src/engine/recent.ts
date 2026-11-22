@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 const KEY = 'recent-searches';
 const KEEP = 8;
 
-/** What this phone searched for last, newest first, kept on the phone only. */
 export function useRecentSearches() {
   const [recent, setRecent] = useState<string[]>([]);
 

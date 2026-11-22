@@ -37,12 +37,10 @@ const theme = {
   },
 };
 
-/** A link opened from outside, such as a magnet, lands with Home under it, so Back has somewhere to go. */
 export const unstable_settings = { anchor: '(tabs)' };
 
 function Routes() {
   const { session, forget } = useSession();
-  // One cache per engine and pairing: nothing from a removed or different engine survives a new pairing.
   const engineKey = session.state === 'paired' ? `${session.link.base}|${session.link.token ?? ''}` : 'unpaired';
   const client = useMemo(
     () =>
@@ -54,8 +52,6 @@ function Routes() {
           },
         },
       }),
-    // A new engine key is the point: it throws the old cache away.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [engineKey],
   );
 
@@ -63,8 +59,6 @@ function Routes() {
     if (session.state !== 'loading') SplashScreen.hideAsync();
   }, [session.state]);
 
-  // An engine that no longer knows this phone is forgotten: that one, even if the person has
-  // switched since, and only once however many requests it refused.
   const engineId = session.state === 'paired' ? session.engine.id : null;
   useEffect(
     () =>
@@ -81,7 +75,6 @@ function Routes() {
 
   return (
     <QueryClientProvider client={client}>
-      {/* Keyed by engine, so switching never shows the last engine's downloads. */}
       <MaybeJobs key={engineKey} paired={paired}>
         <Stack
           screenOptions={{
@@ -161,7 +154,6 @@ function Routes() {
               }}
             />
           </Stack.Protected>
-          {/* Unpaired, it is the only screen; paired, it adds another computer from the engine sheet. */}
           <Stack.Screen name="pair" />
         </Stack>
         <HeroLayer />
@@ -170,7 +162,6 @@ function Routes() {
   );
 }
 
-/** Every paired screen reads the one downloads stream: the tabs, the player and the title pages. */
 function MaybeJobs({ paired, children }: { paired: boolean; children: ReactNode }) {
   return paired ? <JobsProvider>{children}</JobsProvider> : children;
 }

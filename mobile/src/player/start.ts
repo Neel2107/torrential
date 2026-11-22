@@ -25,7 +25,6 @@ type PlayMessage =
   | { type: 'failed'; error: WireError; tried: Tried[] }
   | { type: 'playing'; video: string; release: Release; play: PlayInfo; resume_at: number | null };
 
-/** What starting a play looks like from the phone, one step at a time. */
 export type Start =
   | { phase: 'finding'; title: TitleCard | null; episode: EpisodeInfo | null }
   | {
@@ -55,10 +54,6 @@ export type Start =
       tried: number;
     };
 
-/**
- * The phone's screen and decoders, so the engine ranks sources for what this phone plays well. Phones
- * this app supports decode H.264 and HEVC in hardware.
- */
 export function useViewer(): Viewer {
   const { width, height } = useWindowDimensions();
   const scale = PixelRatio.get();
@@ -71,14 +66,8 @@ export function useViewer(): Viewer {
   };
 }
 
-/** A source that took over from one that stalled, or why none could. */
 export type Replacement = { play: PlayInfo; release: Release } | { error: WireError };
 
-/**
- * Asks the engine for another source of `video` in place of the download `stalled`, which the
- * engine pauses once the new one plays. Reads the stream to its end, since the engine treats a
- * caller that goes away early as one that no longer wants the source it is trying.
- */
 export async function replaceStalled(
   link: Link,
   request: { video: string; stalled: string; viewer: Viewer },
@@ -99,7 +88,6 @@ export async function replaceStalled(
   return outcome ?? { error: { code: 'interrupted', message: 'The engine stopped answering before a source played.' } };
 }
 
-/** Asks the engine to find and start a source for `video`, following each step it reports. */
 export function useTitlePlay(video: string, attempt: number, source?: string): Start {
   const link = useLink();
   const viewer = useViewer();
@@ -164,7 +152,6 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
       }
     })
       .then(() => {
-        // The engine closed the answer without saying how it ended: it stopped or restarted.
         if (ended || controller.signal.aborted) return;
         setStart({
           phase: 'failed',
@@ -189,18 +176,11 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
       });
 
     return () => controller.abort();
-    // The viewer is read once per attempt; rotating the phone mid-start should not restart it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [link, video, attempt, source]);
 
   return start;
 }
 
-/**
- * Starts a torrent picked by hand: a search result, or a magnet link shared from another app. The
- * engine waits up to a minute for a magnet's file list, then answers with `file`, or the file it
- * would play.
- */
 export function useTorrentPlay(ref: string, attempt: number, file?: number): Start {
   const link = useLink();
   const [start, setStart] = useState<Start>({ phase: 'finding', title: null, episode: null });

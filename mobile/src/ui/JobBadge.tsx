@@ -9,11 +9,6 @@ import { color, motion } from '@/theme';
 import { BandsMark, fill } from './Bands';
 import { Icon, icons } from './Icon';
 
-/**
- * Where a download stands, on its row. While pieces arrive the mark's bands fill with the download,
- * one band a third; when the last piece lands (`landed`, a moment ago, not on opening the app) the
- * check springs in from the full mark.
- */
 export function JobBadge({ job, landed, small }: { job: Job; landed: boolean; small: boolean }) {
   const size = job.progress.size ? job.progress.verified / job.progress.size : 0;
   const filling =

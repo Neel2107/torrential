@@ -12,19 +12,11 @@ import { color, font, motion, radius, space } from '@/theme';
 
 import { replaceStalled, useViewer } from './start';
 
-/** How long the player says it moved to another source. */
 const SWITCHED_MS = 6000;
 const SAMPLE_MS = 1000;
 
-/** A source that took over at `at` seconds, for the player to start again from there. */
 export type Takeover = { play: PlayInfo; release: Release; at: number };
 
-/**
- * Watches a title play for a source that stopped sending video, and finds another, as the web
- * player does with the same reducer: waiting with under a second buffered and no bytes arriving for
- * 45 s, or a download that failed, asks the engine for the next source in place of this one. The
- * current source keeps playing meanwhile, and `onTakeover` hands over the new one at the playhead.
- */
 export function useStallRecovery({
   video,
   play,
@@ -35,13 +27,11 @@ export function useStallRecovery({
   now,
   onTakeover,
 }: {
-  /** Null for a torrent played by hand, which has no other source. */
   video: string | null;
   play: PlayInfo;
   job: Job;
   player: VideoPlayer;
   status: VideoPlayerStatus;
-  /** The viewer paused, so waiting is not a stall. */
   held: { current: boolean };
   now: () => number;
   onTakeover: (takeover: Takeover) => void;
@@ -90,7 +80,6 @@ export function useStallRecovery({
   return { recovery, retry: () => dispatch({ type: 'retry', now: Date.now() }) };
 }
 
-/** What recovery is doing, over the picture: looking for another source, out of them, or just moved. */
 export function RecoveryNotice({
   recovery,
   switched,

@@ -49,7 +49,6 @@ fn main() {
         cmake.define("static_runtime", if static_crt { "ON" } else { "OFF" });
     }
     if target_os == "android" {
-        // The phone app's engine: CMake finds the compilers through the NDK's own toolchain file.
         let ndk = PathBuf::from(required_env("ANDROID_NDK_HOME"));
         let abi = match env::var("CARGO_CFG_TARGET_ARCH").as_deref() {
             Ok("aarch64") => "arm64-v8a",

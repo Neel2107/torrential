@@ -7,10 +7,6 @@ import { color, hitSlop, motion } from '@/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-/**
- * Every tappable thing. It sinks under the finger at once and springs back on release, with a soft
- * highlight instead of a ripple. `shrink` is how far it sinks: less for big cards, so they feel heavy.
- */
 export function Tap({
   children,
   style,
@@ -26,7 +22,6 @@ export function Tap({
   style?: StyleProp<ViewStyle>;
   shrink?: number;
   haptic?: boolean;
-  /** Tints the whole row while pressed, for list rows that should not shrink. */
   highlight?: boolean;
 }) {
   const pressed = useSharedValue(0);

@@ -180,7 +180,6 @@ function Scanner({ onScan, busy }: { onScan: (data: string) => void; busy: boole
   );
 }
 
-/** The frame the code goes in. When a code is read it tightens and turns green: hold on, it has it. */
 function Reticle({ locked }: { locked: boolean }) {
   const lock = useSharedValue(0);
   useEffect(() => {
@@ -217,7 +216,6 @@ function Typed({
         value={address}
         onChangeText={(text) => {
           setAddress(text);
-          // A pasted pairing link carries its code too.
           const pasted = parsePairing(text)?.code;
           if (pasted) setCode(pasted);
         }}

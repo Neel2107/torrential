@@ -63,13 +63,9 @@ export const motion = {
   quick: 180,
   standard: 240,
   stagger: 40,
-  /** Strong ease-out: fast start, so the screen answers the finger at once. */
   out: Easing.bezier(0.23, 1, 0.32, 1),
-  /** For things moving across the screen. */
   inOut: Easing.bezier(0.77, 0, 0.175, 1),
-  /** Settles without wobble: bars, sheets, headers. */
   settle: { damping: 26, stiffness: 320, mass: 0.8 },
-  /** A little life for selections and toggles. */
   pop: { damping: 12, stiffness: 380, mass: 0.6 },
 } as const;
 

@@ -16,7 +16,6 @@ import { color, motion, radius, space } from '@/theme';
 
 import { Portal } from './Portal';
 
-/** What the sheet holds eases up a beat after the sheet itself, so the two read as one motion. */
 const CONTENT_IN = new Keyframe({
   0: { opacity: 0, transform: [{ translateY: 10 }] },
   100: { opacity: 1, transform: [{ translateY: 0 }], easing: motion.out },
@@ -24,11 +23,6 @@ const CONTENT_IN = new Keyframe({
   .duration(260)
   .delay(70);
 
-/**
- * A sheet over the current screen, as X shows its menus: it springs up from the bottom, follows the
- * finger down from its grab strip, and a flick or a drag past a third of its height closes it. Back
- * and the dimmed screen behind close it too. Only the strip drags: the lists inside own their scroll.
- */
 export function Sheet({
   children,
   onClose,
@@ -110,7 +104,6 @@ export function Sheet({
               <View style={styles.grabber} />
             </View>
           </GestureDetector>
-          {/* Shrinks to the sheet's height, so a long list inside scrolls instead of running off the bottom. */}
           <Animated.View entering={CONTENT_IN} style={styles.body}>
             {children}
           </Animated.View>
@@ -130,7 +123,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
   },
-  // A strip the width of the sheet and tall enough for a thumb, above the content.
   handle: { height: 28, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
   body: { flexShrink: 1 },
   grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: color.rule },

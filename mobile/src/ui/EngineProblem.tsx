@@ -10,7 +10,6 @@ import { color, space, type } from '@/theme';
 import { Button } from './Button';
 import { Icon, icons } from './Icon';
 
-/** What went wrong talking to the engine, in words, with the one thing worth trying next. */
 export function EngineProblem({ error, onRetry }: { error: Error; onRetry: () => void }) {
   const { session, usePhone } = useSession();
   const engine = error instanceof EngineError;

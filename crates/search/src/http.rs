@@ -11,8 +11,8 @@ pub(crate) const USER_AGENT: &str = concat!("torrential/", env!("CARGO_PKG_VERSI
 /// the person.
 pub(crate) const BROWSER: &str = "Mozilla/5.0";
 
-/// A client builder that trusts the system's certificates. On Android the engine runs inside the
-/// phone app, where the system's store needs the app's Java context, so it trusts Mozilla's roots.
+/// On Android the system's certificate store needs the app's Java context, so the engine trusts
+/// Mozilla's roots there.
 pub fn client_builder() -> reqwest::ClientBuilder {
     let builder = reqwest::Client::builder();
     #[cfg(target_os = "android")]

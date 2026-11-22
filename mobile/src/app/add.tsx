@@ -63,12 +63,10 @@ export default function Add() {
     } else {
       clearSharedPayloads();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [share.sharedPayloads]);
 
   useEffect(() => {
     if (params.file) readFile(params.file);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.file]);
 
   async function readFile(uri: string) {

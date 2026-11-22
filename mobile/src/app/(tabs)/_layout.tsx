@@ -18,7 +18,6 @@ export default function TabsLayout() {
       <ChromeProvider bar={insets.bottom + TAB_BAR_HEIGHT}>
         <Tabs
           tabBar={(props) => <TabBar {...props} badges={{ downloads: downloading }} />}
-          // Tabs switch at once, as X's do; Back returns to the tab you came from.
           backBehavior="history"
           screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: color.paper }, animation: 'none' }}
         >

@@ -4,19 +4,13 @@ import { Platform } from 'react-native';
 
 import type { ErrorCode, Error as WireError } from '@web/wire';
 
-/**
- * Where the engine is and how this phone proves it was paired. `token` is null when the engine is
- * reached over loopback (`adb reverse` during development), where it trusts the caller as the Mac.
- */
 export type Link = { base: string; token: string | null };
 
 export const PORT = 47919;
 export const COOKIE = 'torrential_device';
 
-/** How long a request may wait for the engine to start answering. A magnet's file list takes up to a minute. */
 const ANSWER_WITHIN_MS = 75_000;
 
-/** Names this phone when it pairs: the engine calls a device after what its User-Agent says it runs on. */
 export const USER_AGENT = `torrential-app (${Platform.OS === 'ios' ? (Device.deviceType === Device.DeviceType.TABLET ? 'iPad' : 'iPhone') : 'Android'}; ${Device.modelName ?? 'phone'})`;
 
 export class EngineError extends Error {
@@ -31,13 +25,11 @@ export class EngineError extends Error {
     this.hint = wire?.hint ?? null;
   }
 
-  /** The engine no longer knows this phone: it was removed on the Mac, or never paired. */
   get unpaired(): boolean {
     return this.code === 'not_paired' || this.status === 303;
   }
 }
 
-/** Headers every request to the engine carries, the video player's included. */
 export function authHeaders(link: Link): Record<string, string> {
   return link.token ? { Cookie: `${COOKIE}=${link.token}` } : {};
 }
@@ -71,8 +63,6 @@ async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; bo
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(init.body ?? {});
   }
-  // A request whose answer never starts would wait on the OS for minutes, so it gets a deadline. Streams
-  // keep going once headers arrive: the timer only covers the wait for them.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ANSWER_WITHIN_MS);
   const cancel = () => controller.abort();
@@ -102,7 +92,6 @@ export async function post<T>(link: Link, path: string, body: unknown, signal?: 
   return (await send(link, path, { method: 'POST', body, signal })).json() as Promise<T>;
 }
 
-/** Reads a streamed body as lines, calling `onLine` for each one as it arrives. */
 async function readLines(response: Response, onLine: (line: string) => void): Promise<void> {
   const reader = response.body?.getReader();
   if (!reader) {
@@ -126,7 +115,6 @@ async function readLines(response: Response, onLine: (line: string) => void): Pr
   if (buffered.trim()) onLine(buffered);
 }
 
-/** An NDJSON answer (search, sources, title play), one message per line, in order. */
 export async function stream<T>(
   link: Link,
   path: string,
@@ -137,7 +125,6 @@ export async function stream<T>(
   await readLines(response, (line) => onMessage(JSON.parse(line) as T));
 }
 
-/** Server-sent events: each `data:` line is one JSON message. Returns when the server closes. */
 export async function events<T>(link: Link, path: string, signal: AbortSignal, onMessage: (message: T) => void) {
   const response = await fetch(`${link.base}${path}`, {
     headers: { ...authHeaders(link), Accept: 'text/event-stream' },
@@ -149,10 +136,6 @@ export async function events<T>(link: Link, path: string, signal: AbortSignal, o
   });
 }
 
-/**
- * Pairs this phone with the code the Mac shows. The engine answers with the device's token only in
- * `Set-Cookie`, so it is read from there and kept by the app, not by a cookie jar.
- */
 export async function pair(base: string, code: string): Promise<string> {
   const response = await fetch(`${base}/api/pair`, {
     method: 'POST',

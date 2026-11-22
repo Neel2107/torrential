@@ -1,7 +1,8 @@
 import * as Haptics from 'expo-haptics';
+import type { LucideIcon } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeOut,
   LinearTransition,
@@ -9,6 +10,8 @@ import Animated, {
   useDerivedValue,
   withTiming,
 } from 'react-native-reanimated';
+
+import { Menu } from '../../../modules/glass-menu-android';
 
 import { ago, bytes, percent, rate, sentence } from '@web/lib/format';
 import type { Job } from '@web/wire';
@@ -128,10 +131,6 @@ export default function Downloads() {
   );
 }
 
-/**
- * Downloads that finished a moment ago, seen live rather than on opening the app: their badge pops
- * from the full mark into the check, and the phone gives one success tap for the lot.
- */
 function useLanded(jobs: Job[]): ReadonlySet<string> {
   const seen = useRef<Map<string, Job['state']> | null>(null);
   const [landed, setLanded] = useState<ReadonlySet<string>>(new Set());
@@ -152,7 +151,6 @@ function useLanded(jobs: Job[]): ReadonlySet<string> {
   return landed;
 }
 
-/** Time left in the unit that matters, so it reads calmly as each second's estimate moves. */
 function roughly(seconds: number): string {
   if (seconds >= 86400) return `about ${Math.round(seconds / 86400)}d`;
   if (seconds >= 5400) return `about ${Math.round(seconds / 3600)}h`;
@@ -163,7 +161,6 @@ function roughly(seconds: number): string {
 function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMenu: () => void; landed: boolean }) {
   const name = useJobName(job);
   const copy = useCopy(job.id);
-  // Two downloads of one film read the same by name; the release's quality tells them apart.
   const tags = job.name ? qualityOf(job.name) : [];
   const size = job.progress.size;
   const fraction = size ? job.progress.verified / size : 0;
@@ -228,15 +225,12 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
           </Text>
           {copy ? <CopyState copy={copy} /> : null}
         </View>
-        <Tap shrink={0.85} onPress={onMenu} accessibilityLabel="More" style={styles.more}>
-          <Icon name={icons.more} size={20} tint={color.pencil} />
-        </Tap>
+        <MoreButton job={job} onMenu={onMenu} />
       </Tap>
     </Animated.View>
   );
 }
 
-/** A bar that eases to each new value instead of jumping, so a live download reads as motion. */
 function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
   const value = useDerivedValue(
     () => withTiming(Math.min(1, Math.max(0, fraction)), { duration: 600, easing: motion.out }),
@@ -250,27 +244,114 @@ function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
   );
 }
 
-function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
+type JobAction = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  /** The Android glass menu draws its own icons from 24-unit SVG paths. */
+  glyph: string;
+  danger?: boolean;
+  confirm?: string;
+  run: () => void | Promise<void>;
+};
+
+const GLYPHS = {
+  play: 'M8 5v14l11-7z',
+  pause: 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z',
+  resume: 'M12 5a7 7 0 1 1-6.6 4.7M5 4v5h5',
+  phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
+  stop: 'M7 7l10 10M17 7L7 17',
+  trash: 'M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13',
+};
+
+function useJobActions(job: Job): JobAction[] {
   const link = useLink();
   const { session } = useSession();
   const name = useJobName(job);
-  const [busy, setBusy] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const copy = useCopy(job.id);
   // On the phone's own engine nothing else can clear the files, so removing deletes them.
   const onPhone = session.state === 'paired' && session.engine.kind === 'phone';
-
-  const act = async (path: '/api/pause' | '/api/resume' | '/api/remove') => {
-    setBusy(true);
+  const running =
+    job.state === 'downloading' || job.state === 'queued' || job.state === 'metadata' || job.state === 'checking';
+  const send = async (path: '/api/pause' | '/api/resume' | '/api/remove') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const body = path === '/api/remove' && onPhone ? { refs: [job.id], delete: true } : { refs: [job.id] };
     await post(link, path, body).catch(() => {});
-    setBusy(false);
-    onClose();
   };
 
-  const copy = useCopy(job.id);
-  const running =
-    job.state === 'downloading' || job.state === 'queued' || job.state === 'metadata' || job.state === 'checking';
+  const actions: JobAction[] = [
+    {
+      id: 'play',
+      label: 'Play',
+      icon: icons.play,
+      glyph: GLYPHS.play,
+      run: () => router.push({ pathname: '/play', params: { ref: job.id } }),
+    },
+  ];
+  if (copy?.state === 'saved') {
+    actions.push({
+      id: 'offline',
+      label: 'Play from this phone',
+      icon: icons.phone,
+      glyph: GLYPHS.phone,
+      run: () => router.push({ pathname: '/offline', params: { job: job.id } }),
+    });
+  } else if (copy?.state === 'saving') {
+    actions.push({
+      id: 'stop-saving',
+      label: 'Stop saving to phone',
+      icon: icons.close,
+      glyph: GLYPHS.stop,
+      run: () => cancel(job.id),
+    });
+  } else if (job.state === 'done' && !onPhone) {
+    actions.push({
+      id: 'save',
+      label: 'Save to phone',
+      icon: icons.phone,
+      glyph: GLYPHS.phone,
+      run: () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        save(link, job.id, name);
+      },
+    });
+  }
+  if (running)
+    actions.push({
+      id: 'pause',
+      label: 'Pause',
+      icon: icons.pause,
+      glyph: GLYPHS.pause,
+      run: () => send('/api/pause'),
+    });
+  if (job.state === 'paused' || job.state === 'error') {
+    actions.push({
+      id: 'resume',
+      label: 'Resume',
+      icon: icons.refresh,
+      glyph: GLYPHS.resume,
+      run: () => send('/api/resume'),
+    });
+  }
+  actions.push({
+    id: 'remove',
+    label: 'Remove',
+    icon: icons.trash,
+    glyph: GLYPHS.trash,
+    danger: true,
+    confirm: onPhone
+      ? `Delete ${job.progress.verified ? bytes(job.progress.verified) : 'it'} from this phone`
+      : 'Remove from the list',
+    run: () => send('/api/remove'),
+  });
+  return actions;
+}
+
+function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
+  const name = useJobName(job);
+  const actions = useJobActions(job);
+  const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <Sheet onClose={onClose}>
@@ -278,66 +359,52 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
         <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
           {name.title}
         </Text>
-        <MenuRow
-          icon={icons.play}
-          label="Play"
-          onPress={() => {
-            onClose();
-            router.push({ pathname: '/play', params: { ref: job.id } });
-          }}
-        />
-        {copy?.state === 'saved' ? (
+        {actions.map((action) => (
           <MenuRow
-            icon={icons.phone}
-            label="Play from this phone"
-            onPress={() => {
-              onClose();
-              router.push({ pathname: '/offline', params: { job: job.id } });
-            }}
-          />
-        ) : copy?.state === 'saving' ? (
-          <MenuRow
-            icon={icons.close}
-            label="Stop saving to phone"
-            onPress={() => {
-              cancel(job.id);
-              onClose();
-            }}
-          />
-        ) : job.state === 'done' && !onPhone ? (
-          <MenuRow
-            icon={icons.phone}
-            label="Save to phone"
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              save(link, job.id, name);
-              onClose();
-            }}
-          />
-        ) : null}
-        {running ? (
-          <MenuRow icon={icons.pause} label="Pause" disabled={busy} onPress={() => act('/api/pause')} />
-        ) : null}
-        {job.state === 'paused' || job.state === 'error' ? (
-          <MenuRow icon={icons.refresh} label="Resume" disabled={busy} onPress={() => act('/api/resume')} />
-        ) : null}
-        {confirming ? (
-          <MenuRow
-            icon={icons.trash}
-            label={
-              onPhone
-                ? `Delete ${job.progress.verified ? bytes(job.progress.verified) : 'it'} from this phone`
-                : 'Remove from the list'
-            }
-            danger
+            key={action.id}
+            icon={action.icon}
+            label={action.confirm && confirming ? action.confirm : action.label}
+            danger={action.danger}
             disabled={busy}
-            onPress={() => act('/api/remove')}
+            onPress={async () => {
+              if (action.confirm && !confirming) return setConfirming(true);
+              setBusy(true);
+              await action.run();
+              setBusy(false);
+              onClose();
+            }}
           />
-        ) : (
-          <MenuRow icon={icons.trash} label="Remove" danger disabled={busy} onPress={() => setConfirming(true)} />
-        )}
+        ))}
       </View>
     </Sheet>
+  );
+}
+
+/** The glass menu is itself the deliberate second tap, so its Remove acts without the sheet's confirm. */
+function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
+  const actions = useJobActions(job);
+  if (Platform.OS !== 'android') {
+    return (
+      <Tap shrink={0.85} onPress={onMenu} accessibilityLabel="More" style={styles.more}>
+        <Icon name={icons.more} size={20} tint={color.pencil} />
+      </Tap>
+    );
+  }
+  return (
+    <Menu colorScheme="dark" onSelect={({ id }) => actions.find((action) => action.id === id)?.run()}>
+      <Menu.Trigger glass={false} accessibilityLabel="More" style={styles.more}>
+        <Icon name={icons.more} size={20} tint={color.pencil} />
+      </Menu.Trigger>
+      <Menu.Content
+        fontFamily="Inter_500Medium"
+        items={actions.map((action) => ({
+          id: action.id,
+          title: action.confirm ?? action.label,
+          iconPath: action.glyph,
+          destructive: action.danger,
+        }))}
+      />
+    </Menu>
   );
 }
 

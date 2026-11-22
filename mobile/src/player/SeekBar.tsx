@@ -16,11 +16,6 @@ import { runsOf, type Downloaded } from './downloaded';
 
 const THUMB_WIDTH = 160;
 
-/**
- * The scrubber. It thickens under the finger, shows the frame at the finger's time when the engine
- * has it, and seeks once on release so a drag never floods the player with seeks. From dim to bright
- * the track shows what has not downloaded, what has, what the player has buffered, and what has played.
- */
 export function SeekBar({
   position,
   duration,

@@ -7,10 +7,8 @@ import type { FilesReply } from '@web/wire';
 
 import { authHeaders, post, url, type Link } from '@/engine/client';
 
-/** What a copy on the phone is called and shows, kept with it so the list reads without the engine. */
 export type Label = { title: string; tags: string; poster: string | null };
 
-/** A finished download's film, copied onto the phone, by the download it came from. */
 export type Copy = { job: string; label: Label; size: number } & (
   | { state: 'saving'; written: number }
   | { state: 'failed'; error: string }
@@ -19,9 +17,7 @@ export type Copy = { job: string; label: Label; size: number } & (
 
 type Saved = Extract<Copy, { state: 'saved' }>;
 
-/** Room left free on the phone after a copy, so saving a film never fills it to the last byte. */
 const KEEP_FREE = 512 * 1024 * 1024;
-/** How often progress reaches the screen while a copy runs. */
 const PROGRESS_MS = 250;
 
 const folder = new Directory(Paths.document, 'offline');
@@ -55,7 +51,6 @@ function keep() {
   } catch {}
 }
 
-/** Reads what earlier runs saved. A copy cut short by the app closing left only a part file, which goes. */
 function load() {
   if (loaded) return;
   loaded = true;
@@ -74,7 +69,6 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-/** Every copy on the phone or on its way, newest first. */
 export function useCopies(): Copy[] {
   const all = useSyncExternalStore(subscribe, () => copies);
   return [...all.values()].sort((a, b) => order(b) - order(a));
@@ -96,10 +90,6 @@ export function freeSpace(): number | null {
   }
 }
 
-/**
- * Copies a finished download's film onto the phone from the engine's file route, which answers
- * Range, under the job's ID. The copy lands as a part file and takes its name only once whole.
- */
 export async function save(link: Link, job: string, label: Label): Promise<void> {
   const before = copies.get(job);
   if (before?.state === 'saving' || before?.state === 'saved') return;
@@ -161,12 +151,10 @@ export async function save(link: Link, job: string, label: Label): Promise<void>
   }
 }
 
-/** Stops a copy on its way and throws away what came. */
 export function cancel(job: string) {
   tasks.get(job)?.cancel();
 }
 
-/** Deletes the copy from the phone, or forgets a failed one. The download on the computer stays. */
 export function remove(job: string) {
   const copy = copies.get(job);
   if (copy?.state === 'saving') return cancel(job);

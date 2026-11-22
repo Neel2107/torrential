@@ -18,13 +18,11 @@ import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
 
-/** The web player's speeds. Its `actions.ts` imports React, which would load a second copy from the web app. */
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 function speedText(speed: number): string {
   return speed === 1 ? 'Normal' : `${speed}×`;
 }
 
-/** The player's settings: the source of a title and the speed. Subtitles are set where they are chosen. */
 export function SettingsSheet({
   source,
   onSources,
@@ -32,7 +30,6 @@ export function SettingsSheet({
   onSpeed,
   onClose,
 }: {
-  /** The release playing, for a title play, whose other sources can take over. */
   source: Release | null;
   onSources: () => void;
   speed: number;
@@ -104,7 +101,6 @@ export function Chip({
   onPress: () => void;
   accessibilityLabel: string;
 }) {
-  // The fill blends to its new colour and the chosen chip gives a small pop, so a choice is felt.
   const on = useSharedValue(selected ? 1 : 0);
   const pop = useSharedValue(1);
   useEffect(() => {

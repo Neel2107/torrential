@@ -14,11 +14,6 @@ import { color, font, radius, space, type } from '@/theme';
 
 import { useSources, type Sources } from './sources';
 
-/**
- * Every release of a film or episode, ranked for this phone's screen and decoders, in the order Play
- * tries them. Picking one plays that release and no other. From the player, `current` is the
- * release playing and `onPick` takes over from it.
- */
 export function SourcesSheet({
   video,
   label,

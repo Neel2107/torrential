@@ -27,10 +27,6 @@ function trackName(
   return label || track.name || languageName(track.language) || `${kind} ${index + 1}`;
 }
 
-/**
- * Subtitles and audio: the video's own tracks, which the phone's player reads and draws, then the
- * torrent's subtitle files and the engine's online finds, which the app draws.
- */
 export function TracksSheet({
   player,
   media,
@@ -44,13 +40,11 @@ export function TracksSheet({
 }: {
   player: VideoPlayer;
   media: MediaInfo | null;
-  /** In stream mode the engine picks the audio track, so the sheet lists the file's own tracks. */
   streamAudio: { tracks: MediaInfo['audio']; selected: number | null; onSelect: (stream: number) => void } | null;
   files: FileChoice[];
   online: OnlineLookup;
   drawn: SubtitleChoice | null;
   onDraw: (choice: SubtitleChoice | null) => void;
-  /** Timing, size and background of drawn subtitles, under the choices. */
   look: ReactNode;
   onClose: () => void;
 }) {
@@ -133,11 +127,6 @@ export function TracksSheet({
   );
 }
 
-/**
- * The online finds, one row per language as the web player lists them: the phone's language and
- * English first, the rest behind More languages, and the other versions of the language showing
- * behind their own row.
- */
 function OnlineRows({
   lookup,
   drawn,

@@ -15,11 +15,6 @@ import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { color, font, radius, space, type } from '@/theme';
 
-/**
- * The engines this phone can watch from, as X lists accounts: tap one to switch, run the engine on
- * this phone, or add a computer. Below, the current one: where it is, whether it answers, and how
- * to leave it.
- */
 export default function Engine() {
   const insets = useSafeAreaInsets();
   const { session, engines, switchTo, usePhone, forget } = useSession();

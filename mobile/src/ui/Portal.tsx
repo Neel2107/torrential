@@ -5,7 +5,6 @@ type Host = { mount: (id: string, node: ReactNode) => void; unmount: (id: string
 
 const Context = createContext<Host | null>(null);
 
-/** Where portals draw: over every screen, the tab bar and the floating button included. */
 export function PortalHost({ children }: { children: ReactNode }) {
   const [nodes, setNodes] = useState<Map<string, ReactNode>>(new Map());
   const [host] = useState<Host>(() => ({
@@ -34,7 +33,6 @@ export function PortalHost({ children }: { children: ReactNode }) {
   );
 }
 
-/** Draws `children` at the root instead of where it sits in the tree. */
 export function Portal({ children }: { children: ReactNode }) {
   const host = use(Context);
   const id = useId();

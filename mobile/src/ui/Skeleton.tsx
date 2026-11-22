@@ -11,7 +11,6 @@ import Animated, {
 
 import { color } from '@/theme';
 
-/** A placeholder in the shape of what is loading, breathing slowly so the wait reads as progress. */
 export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
   const reduced = useReducedMotion();
   const pulse = useSharedValue(0);

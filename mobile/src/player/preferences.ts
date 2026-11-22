@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { SUBTITLE_STYLE, type SubtitleStyle } from '@web/lib/storage';
 
-/** How the player was last set, kept on the phone as the web app keeps it in the browser. */
 export type PlayerPreferences = { speed: number; subtitleStyle: SubtitleStyle };
 
 const KEY = 'player-preferences';

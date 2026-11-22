@@ -218,9 +218,6 @@ pub(super) struct Play {
 
 /// `POST /api/title/play`: a line of JSON for each step of the play, the last being `playing` or
 /// `failed`. Closing the connection stops the play and gives up the source under test.
-/// What the screen asking for a title opens. An engine inside the Android app serves only that app,
-/// whose player opens Matroska and the rest without ffmpeg, which a phone does not have; everywhere
-/// else the asker is the web app or a phone that reaches a computer, which has ffmpeg to convert.
 const SCREEN_PLAYS: Plays = if cfg!(target_os = "android") { Plays::ANY } else { Plays::BROWSER };
 
 pub async fn play(conn: &mut Connection<'_>, request: &Request, asker: &Asker) -> io::Result<bool> {

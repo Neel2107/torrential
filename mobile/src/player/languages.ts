@@ -91,7 +91,6 @@ const NAMES: Record<string, string> = {
   fas: 'Persian',
 };
 
-/** A language tag named with its region, when it has one: `Portuguese (BR)`. */
 export function languageLabel(tag: string): string {
   const [base = tag, region] = tag.toLowerCase().split(/[-_]/);
   const named = languageName(base);
@@ -99,7 +98,6 @@ export function languageLabel(tag: string): string {
   return region ? `${name} (${region.toUpperCase()})` : name;
 }
 
-/** The phone's own language, as a two-letter code, or null where the runtime cannot say. */
 export function phoneLanguage(): string | null {
   try {
     return Intl.DateTimeFormat().resolvedOptions().locale.slice(0, 2).toLowerCase();

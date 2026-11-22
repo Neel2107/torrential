@@ -6,7 +6,6 @@ import { Icon, icons } from './Icon';
 
 const IN = ZoomIn.springify().damping(motion.pop.damping).stiffness(motion.pop.stiffness).mass(motion.pop.mass);
 
-/** The mark of the chosen row. It springs in where the finger chose and fades from the row it leaves. */
 export function Check({ shown, size = 20 }: { shown: boolean; size?: number }) {
   if (!shown) return null;
   return (

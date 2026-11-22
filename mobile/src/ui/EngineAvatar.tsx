@@ -11,7 +11,6 @@ import { Glass, LIQUID_GLASS } from './Glass';
 import { Icon } from './Icon';
 import { Tap } from './Tap';
 
-/** Where X puts your avatar: the engine this phone watches from, a computer or the phone itself, with a dot for whether it answers. */
 export function EngineAvatar() {
   const version = useVersion();
   const { session } = useSession();
@@ -27,7 +26,6 @@ export function EngineAvatar() {
       style={styles.avatar}
     >
       <Glass interactive style={styles.disc}>
-        {/* Keyed by engine, so switching fades one glyph out as the other comes in. */}
         <Animated.View
           key={phone ? 'phone' : 'computer'}
           entering={ZoomIn.duration(motion.standard).easing(motion.out)}

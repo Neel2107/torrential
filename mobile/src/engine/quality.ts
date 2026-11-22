@@ -1,8 +1,3 @@
-/**
- * What a release name says about its picture, for telling two downloads of one film apart: the
- * resolution, Dolby Vision or HDR, the codec, and where it was ripped from. Search results carry
- * this from the engine; a download has only its name.
- */
 export type Tag = { label: string; strong?: boolean };
 
 const RULES: { test: RegExp; tag: Tag }[] = [
@@ -20,7 +15,6 @@ const RULES: { test: RegExp; tag: Tag }[] = [
   { test: /\bweb( ?dl| ?rip)?\b/, tag: { label: 'WEB' } },
 ];
 
-/** One tag per kind: the first resolution, the first of Dolby Vision or HDR, one codec, one source. */
 const KINDS = [
   ['4K', '1080p', '720p', 'SD'],
   ['Dolby Vision', 'HDR'],

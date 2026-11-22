@@ -59,10 +59,8 @@ import { TracksSheet } from './TracksSheet';
 const HIDE_AFTER_MS = 3200;
 const SKIP = 10;
 
-/** The one sheet open over the player, if any. */
 type OpenSheet = 'tracks' | 'settings' | 'sources' | 'files';
 
-/** The aired episode after `video` in playing order, as the web player finds it. */
 function nextEpisode(page: TitlePage | null, video: string | null): { video: string; name: string } | null {
   const here = page && video ? findEpisode(page, video) : null;
   if (!page || !here) return null;
@@ -74,7 +72,6 @@ function nextEpisode(page: TitlePage | null, video: string | null): { video: str
     : null;
 }
 
-/** A random name for this screen, so the engine knows which player owns the saved position. */
 const TAB = Math.random().toString(36).slice(2, 10);
 
 export function Player({
@@ -93,9 +90,7 @@ export function Player({
   resumeAt: number | null;
   title: TitleCard | null;
   episode: EpisodeInfo | null;
-  /** This source took over from one that stalled. */
   switched?: boolean;
-  /** Plays a source that takes over from this one when it stalls. A torrent played by hand has none. */
   onTakeover?: (takeover: Takeover) => void;
 }) {
   const link = useLink();
@@ -143,13 +138,11 @@ export function Player({
     resumeAt: resumeAt && resumeAt > 5 ? resumeAt : 0,
   });
   const duration = timeline.duration;
-  // Read on each time update, so it follows the stream's start until its clock is known.
   const position = time.currentTime >= 0 ? timeline.now() : 0;
   const [visible, setVisible] = useState(true);
   const [scrubbing, setScrubbing] = useState(false);
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
   const [preferences, setPreferences] = usePlayerPreferences();
-  // Each time this screen starts or resumes playback it claims the saved place, as the web player does.
   const resumed = useRef(true);
   const held = useRef(false);
   const { recovery, retry } = useStallRecovery({
@@ -166,7 +159,6 @@ export function Player({
   const [drawn, setDrawn] = useState<SubtitleChoice | null>(null);
   const cues = useSubtitleCues(play, drawn);
   const online = useOnlineSubtitles(play.id, play.video.index);
-  /** Seconds each drawn subtitle shows later than written, by track, for this screen. */
   const [offsets, setOffsets] = useState<Record<string, number>>({});
   const drawnKey = drawn ? choiceKey(drawn) : null;
   const offset = drawnKey ? (offsets[drawnKey] ?? 0) : null;
@@ -175,7 +167,6 @@ export function Player({
     index: file.index,
     name: file.path.split('/').pop() ?? file.path,
   }));
-  // A title plays one film or episode; only a torrent played by hand offers its other videos, as on the web.
   const videos = useMemo(() => (video ? [] : videosOf(play)), [video, play]);
 
   const [ended, setEnded] = useState(false);
@@ -200,8 +191,6 @@ export function Player({
     return () => controller.abort();
   }, [link, play.id, play.video.index]);
 
-  // The timeline is a new object each render but its clock is stable; depending on the clock alone
-  // keeps `save` the same function, so the effects below run when they mean to, not on every tick.
   const now = timeline.now;
   const save = useCallback(() => {
     const at = now();
@@ -323,7 +312,6 @@ export function Player({
       : release.name;
 
   return (
-    // The player is a modal above the app's root, so its sheets need a portal host of their own.
     <PortalHost>
       <View style={styles.backdrop}>
         <Animated.View style={[styles.screen, dropStyle]} onLayout={(event) => setSize(event.nativeEvent.layout)}>
@@ -561,7 +549,6 @@ export function Player({
                 setSheet(null);
                 player.pause();
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                // The next screen starts at once from `at`; the save finishes on its own.
                 save().catch(() => {});
                 router.replace({ pathname: '/play', params: { video, source: source.id, at } });
               }}

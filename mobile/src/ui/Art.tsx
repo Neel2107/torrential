@@ -8,10 +8,6 @@ import { color, font } from '@/theme';
 
 export type ArtKind = 'poster' | 'background' | 'logo' | 'thumbnail';
 
-/**
- * Artwork the engine fetched for a title, with the title's name behind it so a missing poster still
- * reads as something. The image fades in over the placeholder instead of popping.
- */
 export function Art({
   id,
   kind,
@@ -32,9 +28,7 @@ export function Art({
   fit?: ImageContentFit;
   style?: StyleProp<ViewStyle>;
   placeholder?: boolean;
-  /** Fade the image in over the placeholder. Off where a transition carries the same picture in. */
   fade?: boolean;
-  /** The picture is on screen. */
   onDisplay?: () => void;
 }) {
   const link = useLink();

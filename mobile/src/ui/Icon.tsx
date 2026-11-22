@@ -80,10 +80,6 @@ export const icons = {
   phone: Smartphone,
 } satisfies Record<string, LucideIcon>;
 
-/**
- * One line icon set on every platform, as X does. `filled` paints the shape for a selected state,
- * and a heavier stroke carries the selection for icons that have no inside to fill.
- */
 export function Icon({
   name: Glyph,
   size = 22,

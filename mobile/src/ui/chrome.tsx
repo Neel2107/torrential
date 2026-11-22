@@ -3,25 +3,17 @@ import { useAnimatedScrollHandler, useSharedValue, withSpring, type SharedValue 
 
 import { motion } from '@/theme';
 
-/** How far a finger scrolls, in points, to hide the bars all the way. */
 const TRAVEL = 72;
 
 type Chrome = {
   hidden: SharedValue<number>;
-  /** How much of the bottom the cast bar covers, in points. */
   docked: number;
   setDocked: (height: number) => void;
-  /** The room a feed leaves at its bottom, and the floating button keeps above: the bars and the cast bar. */
   bottom: number;
 };
 
 const Context = createContext<Chrome | null>(null);
 
-/**
- * The bars around a feed: 0 is fully shown, 1 fully hidden. `bar` is the room the tab bar takes at
- * the bottom, which each feed leaves. Scrolling moves them with the finger,
- * as X does, and they settle open or shut when the finger lets go.
- */
 export function ChromeProvider({ bar, children }: { bar: number; children: ReactNode }) {
   const hidden = useSharedValue(0);
   const [docked, setDocked] = useState(0);
@@ -35,14 +27,12 @@ export function useChrome(): Chrome {
   return chrome;
 }
 
-/** What a feed that pulls to refresh hears from its scroll: where it is, and its bounce past the top. */
 type PullHooks = {
   offset: SharedValue<number>;
   fromBounce: (y: number) => void;
   endBounce: () => void;
 };
 
-/** A scroll handler that drives the bars. Each screen that owns a feed passes it to its list. */
 export function useChromeScroll(pull?: PullHooks) {
   const { hidden } = useChrome();
 

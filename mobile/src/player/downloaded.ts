@@ -7,16 +7,13 @@ import { get } from '@/engine/client';
 import { useJobs } from '@/engine/jobs';
 import { useLink } from '@/engine/session';
 
-/** How much of each equal run of the playing file is on disk, from 0 to 1, in file order. */
 export type Downloaded = number[];
 
-/** A stretch of the file with the same share on disk, as fractions of its length. */
 export type Run = { from: number; to: number; share: number };
 
 const POLL_MS = 3000;
 const WHOLE: Downloaded = Array.from({ length: PIECE_RUNS }, () => 1);
 
-/** The torrent-wide map read for this file: coarse for a small file in a large torrent, but always there. */
 function fromTorrentMap(job: Job, file: StreamedFile, totalSize: number): Downloaded {
   const runs = arrived(job, file, totalSize);
   return Array.from({ length: PIECE_RUNS }, (_, i) => {
@@ -25,17 +22,11 @@ function fromTorrentMap(job: Job, file: StreamedFile, totalSize: number): Downlo
   });
 }
 
-/** The download as it is now, from the app's live list, else as it was when the play started. */
 export function usePlayingJob(job: Job): Job {
   const { jobs } = useJobs();
   return jobs.find((candidate) => candidate.id === job.id) ?? job;
 }
 
-/**
- * Which parts of the playing file have downloaded, as the web player reads them: the file's own
- * piece map every few seconds while the download runs, and the torrent-wide map while the engine
- * does not answer.
- */
 export function useDownloaded(job: Job, file: StreamedFile, totalSize: number): Downloaded {
   const link = useLink();
   const [own, setOwn] = useState<Downloaded | null>(null);
@@ -67,7 +58,6 @@ export function useDownloaded(job: Job, file: StreamedFile, totalSize: number): 
   return done ? WHOLE : (own ?? coarse ?? WHOLE);
 }
 
-/** Neighbouring runs with the same share joined, and nothing where nothing has arrived. */
 export function runsOf(downloaded: Downloaded): Run[] {
   const runs: Run[] = [];
   const step = 1 / downloaded.length;

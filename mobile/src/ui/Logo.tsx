@@ -6,7 +6,6 @@ import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
 import { color, font } from '@/theme';
 
-/** A title's logo art over its picture, or its name set in type when it has no logo. */
 export function Logo({ id, name, style }: { id: string; name: string; style?: StyleProp<ViewStyle> }) {
   const link = useLink();
   // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.

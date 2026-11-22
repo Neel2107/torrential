@@ -9,14 +9,9 @@ import { authHeaders, get, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
 import { font } from '@/theme';
 
-/**
- * A subtitle the app draws over the picture itself: a file of the torrent, which the engine converts
- * to WebVTT as a whole, or one the engine found on a subtitle site for the playing file.
- */
 export type SubtitleChoice =
   { kind: 'file'; index: number; name: string } | { kind: 'online'; subtitle: OnlineSubtitle };
 
-/** Stable for one video file. Names the track in the timing memory. */
 export function choiceKey(choice: SubtitleChoice): string {
   return choice.kind === 'file' ? `file:${choice.index}` : `online:${choice.subtitle.id}`;
 }
@@ -47,22 +42,11 @@ export function useSubtitleCues(play: PlayInfo, choice: SubtitleChoice | null): 
   return cues;
 }
 
-/** How long to wait before asking again while the engine has searched without the file's hash. */
 const LOOK_AGAIN_MS = 10_000;
 
-/** What the engine's online lookup has found so far. */
 export type OnlineLookup =
-  | { kind: 'looking' }
-  /** Exact matches first, otherwise in the engine's order. */
-  | { kind: 'found'; subtitles: OnlineSubtitle[] }
-  | { kind: 'nothing' }
-  | { kind: 'failed' };
+  { kind: 'looking' } | { kind: 'found'; subtitles: OnlineSubtitle[] } | { kind: 'nothing' } | { kind: 'failed' };
 
-/**
- * The engine's online subtitles for the playing file, looked up beside playback. Until the engine
- * has searched with the file's hash, which it can once both ends of the file are on disk, it is
- * asked again now and then, as the web player does, for subtitles timed for this exact file.
- */
 export function useOnlineSubtitles(id: string, file: number): OnlineLookup {
   const link = useLink();
   const [lookup, setLookup] = useState<OnlineLookup>({ kind: 'looking' });
@@ -92,10 +76,6 @@ export function useOnlineSubtitles(id: string, file: number): OnlineLookup {
 
 const BASE_SIZE = 20;
 
-/**
- * The cues showing at `time`, drawn over the picture the way a TV draws them: white, set off from
- * the picture by a soft shadow, a tight outline, or a box, at the size the viewer chose.
- */
 export function SubtitleOverlay({
   cues,
   time,

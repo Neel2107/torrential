@@ -286,7 +286,6 @@ impl Ffmpeg {
     }
 
     pub fn found(&self) -> Found {
-        // Inside a phone app there is no ffmpeg to run, and none to fetch: phones play files as they are.
         if cfg!(any(target_os = "android", target_os = "ios")) {
             return Found::Missing(Fetch::Unavailable);
         }

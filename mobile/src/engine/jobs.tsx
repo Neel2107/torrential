@@ -9,18 +9,12 @@ import { events } from './client';
 import { useTitle } from './queries';
 import { useLink } from './session';
 
-/** The engine sends a heartbeat after 15 s of quiet; a stream silent for longer than this is dead. */
 const SILENT_MS = 35_000;
 
 type Jobs = { jobs: Job[]; live: boolean };
 
 const Context = createContext<Jobs | null>(null);
 
-/**
- * Every download, live, on one stream for the whole app. The engine sends a snapshot and then each
- * change. The stream is held only in the foreground, reopens with backoff when it drops, and is torn
- * down and reopened when it goes silent, which a half-open connection after a network change does.
- */
 export function JobsProvider({ children }: { children: ReactNode }) {
   const link = useLink();
   const [state, setState] = useState<{ jobs: Map<string, Job>; live: boolean }>({ jobs: new Map(), live: false });
@@ -108,7 +102,6 @@ export const STATE: Record<Job['state'], string> = {
   error: 'Failed',
 };
 
-/** A download the engine tied to a film or show reads as that title, with its poster. */
 export function useJobName(job: Job): { title: string; tags: string; poster: string | null } {
   const page = useTitle(job.title?.title ?? '', Boolean(job.title));
   const fromName = readable(job.name ?? job.id);
@@ -120,7 +113,6 @@ export function useJobName(job: Job): { title: string; tags: string; poster: str
   return { ...fromName, poster: null };
 }
 
-/** A download tied to a title opens the title's page; any other plays. */
 export function openJob(job: Job) {
   if (job.title) router.push({ pathname: '/title/[id]', params: { id: job.title.title } });
   else router.push({ pathname: '/play', params: { ref: job.id } });

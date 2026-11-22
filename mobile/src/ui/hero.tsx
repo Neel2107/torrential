@@ -1,4 +1,4 @@
-import { useIsFocused, useNavigation, usePreventRemove, type NativeStackNavigationProp } from 'expo-router';
+import { useIsFocused, usePreventRemove } from 'expo-router';
 import {
   createContext,
   use,
@@ -26,19 +26,11 @@ import { radius } from '@/theme';
 import { Art } from './Art';
 import { posterRect } from './titleGeometry';
 
-/**
- * A poster that carries across from a card to its title page, as a view transition carries a named
- * element: one picture moves from its place in the list to its place on the page while the page
- * fades in around it on the same clock, and both run backwards on the way out. iOS does this
- * natively with Apple's zoom transition (Link.AppleZoom); this is the Android one, and the title
- * route there has no animation of its own.
- */
 export const HERO = Platform.OS === 'android';
 
 type Rect = { x: number; y: number; width: number; height: number };
 type Measurable = React.ComponentRef<typeof View>;
 
-/** `opening` and `closing` are in the air; `open` has landed and remembers the way home. */
 type Phase = 'opening' | 'open' | 'closing';
 type Flight = {
   token: number;
@@ -46,26 +38,20 @@ type Flight = {
   from: Rect;
   to: Rect;
   phase: Phase;
-  /** The copy has drawn, so the page's poster may hide under it. */
   shown: boolean;
-  /** Measures the card again, for the way home. Null once the card is gone. */
   source: () => Promise<Rect | null>;
 };
 
 const OPEN = { duration: 340, easing: Easing.bezier(0.2, 0, 0, 1) };
 const CLOSE = { duration: 280, easing: Easing.bezier(0.3, 0, 0, 1) };
 const FADE = { duration: 200, easing: Easing.out(Easing.quad) };
-/** How long the copy may take to draw before it moves anyway. */
 const DRAW_WITHIN = 80;
-/** Where on the clock the page fades in. */
 const PAGE: [number, number] = [0.05, 0.7];
 
-/** The one clock: 0 on the card, 1 on the page. The copy and the page's opacity both read it. */
 const progress = makeMutable(0);
 
 let flight: Flight | null = null;
 let tokens = 0;
-/** What to do when the copy lands home: let the page go. */
 let afterClose: (() => void) | null = null;
 const listeners = new Set<() => void>();
 
@@ -74,7 +60,6 @@ function set(next: Flight | null) {
   for (const listener of listeners) listener();
 }
 
-/** Changes the flight only if it is still the one `token` names, so a stale callback cannot touch a newer flight. */
 function update(token: number, change: Partial<Flight> | null) {
   if (flight?.token !== token) return;
   set(change ? { ...flight, ...change } : null);
@@ -101,13 +86,11 @@ function onScreen(rect: Rect | null): rect is Rect {
   return !!rect && rect.y + rect.height > 0 && rect.y < height;
 }
 
-/** A card's poster. `open` measures it, starts the flight toward the page's poster, and navigates. */
 export function useHeroSource(id: string) {
   const ref = useRef<Measurable>(null);
 
   const open = async (navigate: () => void) => {
     if (!HERO) return navigate();
-    // One flight at a time: a second tap while one is in the air does nothing.
     if (flight && flight.phase !== 'open') return;
     const source = () => measure(ref.current);
     const from = await source();
@@ -127,33 +110,25 @@ export function useHeroSource(id: string) {
 
 const Slot = createContext<RefObject<Measurable | null> | null>(null);
 
-/**
- * The title page's side: its opacity, on the flight's clock when it was flown to and its own fade
- * when it was not, and the way back, which flies the poster home before the page goes.
- */
 export function useHeroPage(id: string) {
-  const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
   const slot = useRef<Measurable>(null);
   const flown = useSharedValue(HERO && flight?.id === id ? 1 : 0);
   const own = useSharedValue(HERO && flight?.id !== id ? 0 : 1);
   const leaving = useRef(false);
-  // The removal held back while the page leaves, sent again once the guard below is off: sent while
-  // it is on, the guard would catch it again and the invisible page would stay over everything.
-  const [release, setRelease] = useState<Parameters<typeof navigation.dispatch>[0] | null>(null);
-  useEffect(() => {
-    if (release) navigation.dispatch(release);
-  }, [navigation, release]);
+  const [gone, setGone] = useState(false);
 
   useEffect(() => {
     if (HERO && !flown.value) own.value = withTiming(1, FADE);
   }, [flown, own]);
 
-  // Only while this page is in front: a Back from the player above it is the player's to take.
   const focused = useIsFocused();
-  usePreventRemove(HERO && focused && !release, ({ data }) => {
+  usePreventRemove(HERO && focused && !gone, ({ repeat }) => {
     if (leaving.current) return;
     leaving.current = true;
-    const go = () => setRelease(data.action);
+    const go = () => {
+      setGone(true);
+      repeat();
+    };
     const current = flight;
     const fade = () => {
       if (current?.id === id) update(current.token, null);
@@ -178,7 +153,6 @@ export function useHeroPage(id: string) {
   return { style, Provider: Slot.Provider, slot };
 }
 
-/** The page's poster slot: hidden under the copy on the way in, and on the way out once the copy draws. */
 export function HeroTarget({ id, children }: { id: string; children: ReactNode }) {
   const slot = use(Slot);
   const current = useFlight();
@@ -191,7 +165,6 @@ export function HeroTarget({ id, children }: { id: string; children: ReactNode }
   );
 }
 
-/** The copy in flight, drawn over everything. Mounted once at the root. */
 export function HeroLayer() {
   const current = useFlight();
   if (!HERO || !current || current.phase === 'open') return null;
@@ -203,7 +176,6 @@ function Flying({ flight: { token, id, from, to, phase } }: { flight: Flight }) 
   const visible = useSharedValue(0);
   const started = useRef(false);
 
-  // Moves once the copy has drawn, or after DRAW_WITHIN at the latest, so nothing moves blank.
   const start = () => {
     if (started.current) return;
     started.current = true;

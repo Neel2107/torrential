@@ -27,7 +27,6 @@ export default function Play() {
     ref?: string;
     file?: string;
     source?: string;
-    /** Seconds to start at, when another source takes over mid-play. */
     at?: string;
     stream?: string;
   }>();
@@ -85,7 +84,6 @@ function ByTitle({
   retry: () => void;
 }) {
   const start = useTitlePlay(video, attempt, source);
-  // Kept with the start it took over from, so a new start drops it without an effect.
   const [takeover, setTakeover] = useState<{ from: Start; to: Takeover } | null>(null);
   if (start.phase === 'ready') {
     const shown = takeover?.from === start ? takeover.to : null;
@@ -201,7 +199,6 @@ function Starting({
   );
 }
 
-/** An indeterminate bar: a short highlight that sweeps across while the engine works. */
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#0a0907' },
   top: { position: 'absolute', top: 0, left: 0, zIndex: 2 },

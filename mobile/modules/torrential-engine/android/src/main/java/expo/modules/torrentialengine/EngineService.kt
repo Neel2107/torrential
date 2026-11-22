@@ -11,10 +11,6 @@ import android.os.Build
 import android.os.IBinder
 import java.io.File
 
-/**
- * Keeps the engine's process alive while the app is in the background, so downloads continue with
- * the screen off. Android requires a notification for that.
- */
 class EngineService : Service() {
   override fun onCreate() {
     super.onCreate()
@@ -24,15 +20,12 @@ class EngineService : Service() {
     } else {
       startForeground(NOTIFICATION, notification)
     }
-    // Starting waits for the engine to answer, which is too long for the main thread.
     Thread({ Engine.start(home(this).path, Engine.PORT) }, "torrential-engine-start").start()
   }
 
-  // Android does not bring the service back without the app: the app starts it when it opens.
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
 
-  // Android 15 allows a data sync service six hours a day. The engine runs on in the app's process
-  // while the app is open; only the promise to keep it alive in the background ends here.
+  // Android 15 allows a data sync service six hours a day.
   override fun onTimeout(startId: Int, fgsType: Int) {
     stopSelf()
   }
@@ -65,7 +58,6 @@ class EngineService : Service() {
     private const val CHANNEL = "engine"
     private const val NOTIFICATION = 47929
 
-    /** The engine's folder inside the app's private storage. */
     fun home(context: Context): File = File(context.filesDir, "engine")
 
     fun start(context: Context) {

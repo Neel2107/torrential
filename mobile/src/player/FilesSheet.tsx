@@ -11,14 +11,12 @@ import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { color, font, space, type } from '@/theme';
 
-/** The torrent's videos in playing order: by path, with numbers compared as numbers. */
 export function videosOf(play: PlayInfo): TorrentFile[] {
   return play.files
     .filter((file) => isVideoFile(file.path))
     .sort((a, b) => a.path.localeCompare(b.path, 'en', { numeric: true }));
 }
 
-/** The words every name starts with, such as the show's title before each episode's number. */
 function sharedStart(names: string[]): string {
   const words = names.map((name) => name.split(' '));
   let shared = 0;
@@ -31,7 +29,6 @@ function spaced(path: string): string {
   return `${name.title} ${name.tags}`.trim();
 }
 
-/** The other videos of a torrent, such as the episodes of a season, as the web player's files panel lists them. */
 export function FilesSheet({
   videos,
   current,

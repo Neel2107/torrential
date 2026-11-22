@@ -16,10 +16,6 @@ import { color, font, motion, space, type } from '@/theme';
 
 const UP_NEXT_SECONDS = 10;
 
-/**
- * The end of a video. A season goes on to its next episode after a countdown that can be cancelled,
- * as the web player does; a film offers to play again.
- */
 export function Ended({
   next,
   onNext,
@@ -40,8 +36,6 @@ export function Ended({
     go.current = onNext;
   }, [onNext]);
 
-  // One deadline for the next episode, so the count and the bar agree however often the player
-  // around it renders.
   useEffect(() => {
     if (!next || cancelled) return;
     const deadline = Date.now() + UP_NEXT_SECONDS * 1000;

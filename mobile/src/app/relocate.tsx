@@ -10,7 +10,6 @@ import { parsePairing, useSession } from '@/engine/session';
 import { Button } from '@/ui/Button';
 import { color, font, radius, space, type } from '@/theme';
 
-/** The engine answers somewhere new: a different network, or a new address on the same one. */
 export default function Relocate() {
   const insets = useSafeAreaInsets();
   const { session, relocate } = useSession();

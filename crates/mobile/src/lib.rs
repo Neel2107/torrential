@@ -1,8 +1,3 @@
-//! torrential's engine inside the phone app. The app calls `torrential_start` with a folder of its
-//! own; the engine keeps everything under it and serves the same HTTP API as on a computer, on
-//! loopback. Other apps on the phone reach loopback too, so the engine lets in only callers with the
-//! secret it keeps in `app-secret` in that folder, which the app reads and sends as its cookie.
-
 use std::ffi::{CStr, c_char};
 use std::net::{SocketAddr, TcpStream};
 use std::path::Path;
@@ -12,22 +7,15 @@ use std::time::{Duration, Instant};
 
 use torrential_daemon::env::Env;
 
-/// The engine's thread. A finished one, after a failed start, can be started again.
 static ENGINE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 
-/// What the phone's engine is told before it first starts: never update itself, and keep the plays
-/// it streams within what a phone can spare.
 const CONFIG: &str = "updates: off\nplays:\n  max: 8GiB\n";
-/// How long a start waits for the engine to answer.
 const READY_WITHIN: Duration = Duration::from_secs(20);
 
-/// Why a start failed, as the negative numbers the app sees.
 const HOME_UNUSABLE: i32 = -1;
 const ENGINE_STOPPED: i32 = -2;
 const NOT_READY: i32 = -3;
 
-/// Starts the engine with `home` as its folder, asking for `port`, and waits until it answers.
-/// Returns the port it serves on, or a negative error. A running engine is left as it is.
 fn start(home: &Path, port: u16) -> i32 {
     let Ok(secret) = prepare(home) else { return HOME_UNUSABLE };
     torrential_daemon::daemon::require_loopback_secret(secret);
@@ -48,7 +36,6 @@ fn start(home: &Path, port: u16) -> i32 {
     ready(home)
 }
 
-/// The config and the secret, made once and replaced whole so a crash never leaves half a file.
 fn prepare(home: &Path) -> std::io::Result<String> {
     std::fs::create_dir_all(home.join("config"))?;
     let config = home.join("config/config.yaml");
@@ -74,7 +61,6 @@ fn write_whole(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     std::fs::rename(partial, path)
 }
 
-/// Waits for the engine to answer on the port it wrote, and returns that port.
 fn ready(home: &Path) -> i32 {
     let deadline = Instant::now() + READY_WITHIN;
     while Instant::now() < deadline {

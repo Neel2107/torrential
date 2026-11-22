@@ -14,10 +14,6 @@ const DOTS = 7;
 
 export type BurstHandle = { fire: () => void };
 
-/**
- * The flourish X plays on a like: a ring that opens and a spray of dots, around whatever sits in the
- * middle. Absolutely placed and centered on its parent; it never takes touches.
- */
 export const Burst = forwardRef<BurstHandle, { size?: number; tint?: string }>(function Burst(
   { size = 44, tint = color.action },
   ref,

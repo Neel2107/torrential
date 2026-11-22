@@ -13,16 +13,10 @@ import Svg, { ClipPath, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-
 
 import { TRIANGLE } from './Mark';
 
-/**
- * torrential's mark drawn as three layers, one band each, so each band's brightness can move on its
- * own: pieces filling in, or light running down the mark while something loads. Animated SVG props
- * do not reach the drawing on Android, so the layers, not the shapes, carry the opacity.
- */
+/** Animated SVG props do not reach the drawing on Android, so the layers, not the shapes, carry the opacity. */
 
-/** One pass of light down the three bands. */
 export const PASS = 1200;
 
-/** How lit band `index` is at `phase` of a pass: one bright band at a time, top to bottom. */
 export const band = (phase: number, index: number): number => {
   'worklet';
   const t = (((phase - index / 3) % 1) + 1) % 1;
@@ -30,7 +24,6 @@ export const band = (phase: number, index: number): number => {
   return 0.12 + 0.88 * peak;
 };
 
-/** How lit band `index` is at `progress` toward complete: each fills in its own third. */
 export const fill = (progress: number, index: number): number => {
   'worklet';
   return 0.15 + 0.85 * Math.min(1, Math.max(0, progress * 3 - index));
@@ -44,7 +37,6 @@ const BANDS: [y: number, height: number][] = [
 
 type Opacity = AnimatedStyle<ViewStyle>;
 
-/** The mark with each band's layer styled by the caller. Ids are per size, so marks can share a screen. */
 export function BandsMark({
   size,
   bands,
@@ -80,7 +72,6 @@ export function BandsMark({
   );
 }
 
-/** The mark with light running down its bands, for as long as something loads. */
 export function LoadingMark({ size, label = 'Loading' }: { size: number; label?: string }) {
   const reduced = useReducedMotion();
   const phase = useSharedValue(0);

@@ -49,7 +49,6 @@ import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { color, font, motion, radius, space, type } from '@/theme';
 
 const TABS = ['Films & shows', 'Torrents'] as const;
-/** How many of each kind of thing to pick up again the search page lists before a search. */
 const SHOWN = 3;
 const CATEGORIES: Record<Category, string> = {
   video: 'Video',
@@ -70,7 +69,6 @@ function useDebounced<T>(value: T, ms: number): T {
   return settled;
 }
 
-/** True once `busy` has lasted `ms`, so an answer that comes quickly never flashes a spinner. */
 function useLingering(busy: boolean, ms: number): boolean {
   const [shown, setShown] = useState(false);
   useEffect(() => {
@@ -142,7 +140,6 @@ function SearchHeader({
   tab: number;
   setTab: (tab: number) => void;
   onSubmit: () => void;
-  /** A search is on its way, shown where the magnifying glass sits. */
   searching: boolean;
 }) {
   const insets = useSafeAreaInsets();
@@ -153,8 +150,6 @@ function SearchHeader({
     empty.current = text.length === 0;
   }, [text]);
 
-  // Arriving at an empty search means typing comes next, so the keyboard opens with it; coming back
-  // to results keeps them in view. Leaving puts the keyboard away before the next screen shows.
   useFocusEffect(
     useCallback(() => {
       const timer = empty.current ? setTimeout(() => input.current?.focus(), 120) : undefined;
@@ -273,7 +268,6 @@ function Titles({
   const result = useTitleSearch(query);
   const titles = result.data?.titles ?? [];
   const fetching = result.isFetching && query.length > 0;
-  // The last answer stays while the next is on its way, dimmed so it reads as the old one.
   const stale = useAnimatedStyle(() => ({
     opacity: withTiming(result.isPlaceholderData ? 0.5 : 1, { duration: motion.quick }),
   }));
@@ -357,7 +351,6 @@ function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; o
   );
 }
 
-/** The shape of the first answer while it is on its way. */
 function RowsLoading() {
   return (
     <View accessibilityLabel="Searching" accessibilityRole="progressbar">
@@ -384,7 +377,6 @@ function Torrents({
   onBusy,
 }: {
   query: string;
-  /** Search every category, not only video. */
   everything: boolean;
   onScope: (everything: boolean) => void;
   top: number;
@@ -491,7 +483,6 @@ function Torrents({
   );
 }
 
-/** Video only, as Play needs, or every category the sources know. */
 function Scope({
   everything,
   onChange,
@@ -499,7 +490,6 @@ function Scope({
 }: {
   everything: boolean;
   onChange: (everything: boolean) => void;
-  /** What the search is doing, beside the choice, where it moves nothing as it comes and goes. */
   status: string | null;
 }) {
   return (
@@ -535,11 +525,6 @@ function Scope({
   );
 }
 
-/**
- * What a result that is not a video offers. The engine's only add route for a phone starts a play,
- * which refuses a torrent with no video file, so the honest offer is the computer's own download
- * command, as the web app copies it, or the magnet for another app on the phone.
- */
 function NotVideo({ release, onClose }: { release: Release; onClose: () => void }) {
   const command = `torrential get ${release.id.slice(0, SHORT_ID)}`;
   const [copied, setCopied] = useState(false);
@@ -634,10 +619,6 @@ function ReleaseRow({
   );
 }
 
-/**
- * What there is to pick up again before a search, as the web's search page shows it: unfinished
- * videos first, then the latest downloads not already among them.
- */
 function usePickup(): { unfinished: Continue[]; downloads: Job[]; more: boolean } {
   const home = useHome();
   const { jobs } = useJobs();

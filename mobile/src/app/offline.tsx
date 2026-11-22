@@ -9,10 +9,6 @@ import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { color, font, space, type } from '@/theme';
 
-/**
- * Plays a film saved on this phone, with the platform's own controls. It needs no engine, so it
- * works on a plane; the engine's player, with its sources and subtitles, stays on /play.
- */
 export default function Offline() {
   const { job } = useLocalSearchParams<{ job: string }>();
   const copy = useCopy(job ?? '');

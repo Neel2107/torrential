@@ -19,20 +19,17 @@ const BACKINGS: [label: string, backing: SubtitleBacking][] = [
 ];
 const SHIFTS = [-0.5, -0.1, 0.1, 0.5];
 
-/** `0.3 s later`, `2.5 s earlier`, or `In sync`, as the web player words it. */
 function offsetText(seconds: number): string {
   if (seconds === 0) return 'In sync';
   return `${Math.abs(seconds).toFixed(1)} s ${seconds > 0 ? 'later' : 'earlier'}`;
 }
 
-/** Timing, size and background of the subtitles the app draws, beside where they are chosen. */
 export function SubtitleLook({
   offset,
   onShift,
   style,
   onStyle,
 }: {
-  /** Seconds the drawn subtitles show later than written, or null when none are drawn. */
   offset: number | null;
   onShift: (seconds: number) => void;
   style: SubtitleStyle;

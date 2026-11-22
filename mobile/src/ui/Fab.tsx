@@ -12,10 +12,8 @@ import { Tap } from './Tap';
 /** The system tab bar on iOS keeps Search in the corner the floating button takes, so there it sits in the top bar. */
 export const ADD_IN_TOP_BAR = Platform.OS === 'ios';
 
-/** The room a feed with the floating button leaves past its last row, so the button never covers it. */
 export const FAB_ROOM = ADD_IN_TOP_BAR ? space.xl : 96;
 
-/** The floating button in the corner. It turns see-through while the feed scrolls, as X's does. */
 export function Fab({ icon, label, onPress }: { icon: LucideIcon; label: string; onPress: () => void }) {
   const { hidden, bottom } = useChrome();
   const fade = useAnimatedStyle(() => ({

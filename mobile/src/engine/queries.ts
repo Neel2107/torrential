@@ -33,10 +33,6 @@ export function useTitle(id: string, enabled = true) {
   });
 }
 
-/**
- * Starts loading a title page and its backdrop before it opens, from the moment a finger lands on
- * its card, so the page arrives with them.
- */
 export function usePrefetchTitle() {
   const link = useLink();
   const client = useQueryClient();
@@ -80,7 +76,6 @@ export function useVersion() {
   });
 }
 
-/** Saves or unsaves a title at once on screen, and puts it back if the engine refuses. */
 export function useSaveTitle(id: string) {
   const link = useLink();
   const client = useQueryClient();
@@ -116,7 +111,6 @@ export function findTvs(link: Link, fresh: boolean) {
   return post<TvList>(link, '/api/tvs', { fresh });
 }
 
-/** The TVs and their casts, asked for every second while one plays and every five seconds otherwise. */
 export function useCasts() {
   const link = useLink();
   return useQuery({
@@ -126,7 +120,6 @@ export function useCasts() {
   });
 }
 
-/** Sends a remote action to a TV and takes the cast the engine answers with over the last poll. */
 export function useCastControl() {
   const link = useLink();
   const client = useQueryClient();

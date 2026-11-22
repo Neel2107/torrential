@@ -26,10 +26,7 @@ const PROBES_KEPT: usize = 256;
 /// ffmpeg prints its version at once. One that has not in this long converts unpaced this time
 /// and is asked again the next.
 const VERSION_WITHIN: std::time::Duration = std::time::Duration::from_secs(2);
-/// How far before `t` a seek through a file's index may land. Keyframes come seconds apart, so a
-/// seek a minute short has met an index that breaks off.
 const SHORT_SEEK: f64 = 60.0;
-/// How long to wait for ffprobe to say where a seek lands before seeking the usual way.
 const LANDING_WITHIN: std::time::Duration = std::time::Duration::from_secs(20);
 /// A subtitle file is text. Anything larger is something else with a subtitle's name.
 const LARGEST_SUBTITLE_FILE: u64 = 16 * 1024 * 1024;
@@ -211,15 +208,13 @@ pub async fn subtitles(ctx: &Ctx, id: TorrentId, index: u32, stream: Option<u32>
     Ok((program, ffmpeg::embedded_subtitles(&url, stream, t, paced), None))
 }
 
-/// Where a conversion of the file at `url` starts so that it starts at `t`. A Matroska file whose
-/// index breaks off partway sends every seek past the break back to the last keyframe the index
-/// names, minutes early; past such a break ffmpeg seeks to the packet at `t` instead.
+/// A Matroska file whose index breaks off partway sends every seek past the break back to the last
+/// keyframe the index names, minutes early.
 async fn start(ctx: &Ctx, url: &str, t: f64) -> Start {
     let past_index = t > SHORT_SEEK && lands(ctx, url, t).await.is_some_and(|at| at < t - SHORT_SEEK);
     Start { t, past_index }
 }
 
-/// Where the seek ffmpeg makes to `t` in the file at `url` lands, as ffprobe finds it.
 async fn lands(ctx: &Ctx, url: &str, t: f64) -> Option<f64> {
     let (Found::Installed(programs) | Found::Fetched(programs)) = ctx.media.ffmpeg.found() else { return None };
     let probe = tokio::process::Command::new(&programs.ffprobe)

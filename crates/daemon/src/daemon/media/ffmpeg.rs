@@ -30,13 +30,11 @@ pub enum Picture {
     H264,
 }
 
-/// Where a conversion starts in the file.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Start {
     pub t: f64,
     /// Seek to the packet at `t` instead of through the file's index to the keyframe before it. A
-    /// copied picture then starts at the first keyframe after `t`, seconds late, so this is only for
-    /// a file whose index breaks off before `t`.
+    /// copied picture then starts at the first keyframe after `t`, seconds late.
     pub past_index: bool,
 }
 
@@ -58,7 +56,6 @@ pub fn probe(url: &str) -> Vec<String> {
     strings(&["-v", "error", "-print_format", "json", "-show_format", "-show_streams", "-show_chapters", url])
 }
 
-/// ffprobe arguments that print the time of the first video packet a seek to `t` reaches.
 pub fn landing(url: &str, t: f64) -> Vec<String> {
     let interval = format!("{}%+#1", seconds(t));
     strings(&["-v", "quiet", "-read_intervals", &interval, "-select_streams", "v:0"])

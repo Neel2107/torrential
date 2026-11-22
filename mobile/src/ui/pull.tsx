@@ -17,29 +17,17 @@ import {
 
 import { motion } from '@/theme';
 
-import { band, BandsMark, fill, PASS } from './Bands';
+import { BandsMark, fill } from './Bands';
 
-/**
- * Pull to refresh as X has it: the header stretches with the finger and the mark grows in it; let
- * go past the line and the header snaps back while the mark breathes until the feed is fresh. No
- * spinner and no gap above the feed.
- *
- * Android lists cannot be pulled past their top, so a pan beside the list's own scrolling does the
- * pulling there. iOS lists bounce, and the bounce is the pull.
- */
-
-/** How far a pull goes, at most, after resistance. */
+// Android lists cannot be pulled past their top, so a pan beside the scroll does the pulling there.
+// iOS lists bounce, and the bounce is the pull.
 const MOST = 130;
-/** Past this a release refreshes. */
 const LINE = 70;
+const FLIP = 650;
 type Pull = {
-  /** Points pulled, after resistance. */
   pull: SharedValue<number>;
-  /** How far into a breath the mark is while the feed refreshes, 0 to 1. */
   spin: SharedValue<number>;
-  /** 1 while refreshing, easing to 0 after, so the bands return to rest smoothly. */
   busy: SharedValue<number>;
-  /** 1 while a finger is pulling: the bands fill with the pull then, as X's logo fills in. */
   holding: SharedValue<number>;
 };
 
@@ -60,17 +48,11 @@ function usePull(): Pull {
   return value;
 }
 
-/** Resistance: the further the finger goes, the less the header follows. */
 function resist(distance: number): number {
   'worklet';
   return MOST * (1 - Math.exp(-Math.max(0, distance) / (MOST * 1.6)));
 }
 
-/**
- * Pull to refresh for one feed. `offset` is the feed's scroll position, which its scroll handler
- * keeps. Gives the gesture to wrap the list in (Android), what to do with the scroll's negative
- * offset (iOS), and the feed's style, which moves it down with the pull on Android.
- */
 export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => Promise<unknown>) {
   const { pull, spin, busy: lit, holding } = usePull();
   const bounced = useSharedValue(false);
@@ -82,22 +64,24 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
     busy.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     spin.value = 0;
-    spin.value = withRepeat(withTiming(1, { duration: PASS, easing: Easing.linear }), -1, false);
-    lit.value = withTiming(1, { duration: 160 });
+    spin.value = withRepeat(withTiming(1, { duration: FLIP, easing: Easing.inOut(Easing.cubic) }), -1, false);
+    lit.value = 1;
     const started = Date.now();
     await onRefresh().catch(() => {});
-    // Whole passes only, at least one: the light reaches the last band before the mark settles,
-    // however quickly the feed came back. The last band's light ends a little after its pass.
-    const passes = Math.max(1, Math.ceil((Date.now() - started) / PASS));
-    const end = started + passes * PASS + PASS * 0.15;
-    await new Promise((done) => setTimeout(done, Math.max(0, end - Date.now())));
-    lit.value = withTiming(0, { duration: 300 }, () => cancelAnimation(spin));
+    // Whole turns, so the mark lands face on however quickly the feed came back.
+    const turns = Math.max(1, Math.ceil((Date.now() - started) / FLIP));
+    await new Promise((done) => setTimeout(done, Math.max(0, started + turns * FLIP - Date.now())));
+    const left = 1 - spin.value;
+    cancelAnimation(spin);
+    spin.value = withTiming(1, { duration: Math.max(0, left * FLIP), easing: Easing.out(Easing.cubic) }, () => {
+      spin.value = 0;
+      lit.value = 0;
+    });
     busy.current = false;
   }, [onRefresh, spin, lit]);
 
   const tick = useCallback(() => Haptics.selectionAsync(), []);
 
-  // One light tap as the pull crosses the line, the way X answers the finger.
   useAnimatedReaction(
     () => pull.value >= LINE,
     (over, was) => {
@@ -136,10 +120,8 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
         if (pull.value > 0 && pull.value < LINE) pull.value = withSpring(0, motion.settle);
       });
     return Gesture.Simultaneous(Gesture.Native(), pan);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offset, pull, refresh, holding]);
 
-  /** For the scroll handler on iOS: the bounce past the top is the pull. */
   const fromBounce = (y: number) => {
     'worklet';
     if (Platform.OS !== 'ios') return;
@@ -160,33 +142,28 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
   return { gesture, fromBounce, endBounce, feed };
 }
 
-/** The header's growth with the pull, for the bar's row. */
 export function usePullHeight() {
   const { pull } = usePull();
   return pull;
 }
 
-/**
- * The mark in the bar. It grows with the pull, dim until the pull would refresh, as X's does; while
- * the feed refreshes its three bands light top to bottom, like pieces of a torrent landing.
- */
 export function PullMark({ size = 30 }: { size?: number }) {
   const { pull, spin, busy, holding } = usePull();
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (pull.value / MOST) * 0.6 }] }));
-  // At rest all three bands are alike, so the fill and the pass read clearly against them; the app
-  // icon keeps its faint last band.
-  // The maths sits inside each style: a helper closure here is rewritten by the React Compiler and
-  // never reaches the UI thread.
-  // While pulling, as X's logo fills in stroke by stroke, the bands fill in turn: all three are lit
-  // exactly at the line, so the mark shows when letting go will refresh.
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 600 },
+      { scale: 1 + (pull.value / MOST) * 0.6 },
+      { rotateY: `${spin.value * 360 * busy.value}deg` },
+    ],
+  }));
   const top = useAnimatedStyle(() => ({
-    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 0) : 1 + (band(spin.value, 0) - 1) * busy.value,
+    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 0) : 1,
   }));
   const middle = useAnimatedStyle(() => ({
-    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 1) : 1 + (band(spin.value, 1) - 1) * busy.value,
+    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 1) : 1,
   }));
   const last = useAnimatedStyle(() => ({
-    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 2) : 1 + (band(spin.value, 2) - 1) * busy.value,
+    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 2) : 1,
   }));
   return <BandsMark size={size} bands={[top, middle, last]} style={style} />;
 }

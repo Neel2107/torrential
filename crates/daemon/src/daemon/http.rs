@@ -981,10 +981,9 @@ enum Refusal {
 }
 
 /// Inside a phone app every other app on the phone reaches loopback too, so there a loopback
-/// caller is the owner only with the app's secret in its cookie. Set once, before the engine starts.
+/// caller is the owner only with the app's secret in its cookie.
 static LOOPBACK_SECRET: std::sync::OnceLock<String> = std::sync::OnceLock::new();
 
-/// Makes loopback callers show `secret`, for an engine embedded in a phone app.
 pub fn require_loopback_secret(secret: String) {
     let _ = LOOPBACK_SECRET.set(secret);
 }

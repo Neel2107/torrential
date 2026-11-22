@@ -12,10 +12,6 @@ import { color } from '@/theme';
  */
 const SYSTEM_TAB_BAR = 50;
 
-/**
- * The system tab bar, in Liquid Glass on iOS 26 and later, with Search apart at its end. Android
- * keeps the X-style bar in `_layout.tsx`.
- */
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { jobs } = useJobs();

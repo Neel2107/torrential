@@ -33,7 +33,6 @@ function key(cast: Cast): string {
   return `${cast.tv}:${cast.started_at}`;
 }
 
-// Dismissed failures are kept for the whole app, so one dismissed on the title page stays gone on the tabs.
 let dismissed: ReadonlySet<string> = new Set();
 const listeners = new Set<() => void>();
 
@@ -52,11 +51,6 @@ function useDismissed(): ReadonlySet<string> {
   );
 }
 
-/**
- * What plays on a TV, docked above the bottom of the screen as X docks its mini player. A tap opens
- * the remote. It drops by `travel` as `hidden` goes to 1, following the tab bar out of the way, and a
- * cast that failed stays until it is dismissed.
- */
 export function CastBar({
   bottom,
   hidden,
@@ -66,7 +60,6 @@ export function CastBar({
   bottom: number;
   hidden?: SharedValue<number>;
   travel?: number;
-  /** The room the bar takes, or 0 when it shows nothing. */
   onHeight: (height: number) => void;
 }) {
   const casts = useCasts();
@@ -193,7 +186,6 @@ function Thumb({ cast }: { cast: Cast }) {
   );
 }
 
-/** The TV's place in the video along the card's foot. The engine answers each second, so it glides between answers. */
 function Line({ fraction }: { fraction: number }) {
   const value = useDerivedValue(
     () => withTiming(Math.min(1, Math.max(0, fraction)), { duration: 1000, easing: Easing.linear }),

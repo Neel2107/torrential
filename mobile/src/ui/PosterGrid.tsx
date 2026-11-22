@@ -12,7 +12,6 @@ import { HERO, useHeroSource } from './hero';
 import { Icon, icons } from './Icon';
 import { Tap } from './Tap';
 
-/** Posters in columns that fit the screen: three on a phone, more on a tablet or held sideways. */
 export function PosterGrid({ titles }: { titles: TitleCard[] }) {
   const { width } = useWindowDimensions();
   const columns = Math.max(3, Math.floor((width - space.page * 2) / 150));
@@ -29,10 +28,6 @@ export function PosterGrid({ titles }: { titles: TitleCard[] }) {
   );
 }
 
-/**
- * A poster that opens its title page, carrying the poster across: Apple's zoom on iOS, which also
- * shrinks back on a swipe down, and the hero flight on Android.
- */
 export function Poster({ title, width }: { title: TitleCard; width: number }) {
   const { ref, open } = useHeroSource(title.id);
   const prefetch = usePrefetchTitle();

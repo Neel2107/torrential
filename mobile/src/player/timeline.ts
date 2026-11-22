@@ -9,23 +9,14 @@ import { authHeaders, stream, url, type Link } from '@/engine/client';
 
 type Reason = 'audio' | 'container' | 'failed';
 
-/**
- * Where the picture comes from. `pending` is nothing yet, while iOS waits to learn whether it can
- * read the file. `direct` is the original file, read by the player with Range requests. `stream` is
- * the engine's fragmented MP4 from second `from`: the picture copied or re-encoded to H.264, the
- * audio converted to AAC. It cannot seek, so a seek asks for a new stream.
- */
 export type Mode =
   | { kind: 'pending' }
   | { kind: 'direct' }
   | { kind: 'stream'; video: 'copy' | 'h264'; from: number; audio: number | null; reason: Reason };
 
-/** Development only: play every video through the engine's stream, to exercise that path on any file. */
 export const FORCE_STREAM = { value: false };
 
-/** Audio most phones cannot decode: the player would show the picture in silence. */
 const SILENT = /^(dts|truehd|mlp)/i;
-/** What AVPlayer opens. ExoPlayer on Android also reads Matroska, AVI and the rest. */
 const APPLE_CONTAINER = /mp4|mov|m4v/i;
 
 export function needsAudioConversion(media: MediaInfo, audio: number | null): boolean {
@@ -36,7 +27,6 @@ export function needsAudioConversion(media: MediaInfo, audio: number | null): bo
   return Boolean(track && SILENT.test(track.codec));
 }
 
-/** Why the original file cannot play here, or null when it can. */
 function obstacle(media: MediaInfo): Reason | null {
   if (__DEV__ && FORCE_STREAM.value) return 'audio';
   if (Platform.OS === 'ios' && !APPLE_CONTAINER.test(media.container)) return 'container';
@@ -44,7 +34,6 @@ function obstacle(media: MediaInfo): Reason | null {
   return null;
 }
 
-/** iOS needs the engine's HLS, which its own build of the engine serves at /api/hls. */
 const USES_HLS = Platform.OS === 'ios';
 
 /** iOS cannot try the file and fall back cheaply, so it waits for the engine's description first. */
@@ -67,7 +56,6 @@ export function sourceFor(link: Link, play: PlayInfo, mode: Mode, metadata: Vide
     : { uri: url(link, '/api/stream', query), headers: authHeaders(link), metadata, contentType: 'progressive' };
 }
 
-/** Fetches ffmpeg on the engine's computer when it is missing, which the stream needs. */
 async function readyFfmpeg(link: Link, media: MediaInfo): Promise<boolean> {
   if (media.ffmpeg === 'ready') return true;
   let ready = false;
@@ -77,15 +65,6 @@ async function readyFfmpeg(link: Link, media: MediaInfo): Promise<boolean> {
   return ready;
 }
 
-/**
- * One clock for the player whatever the source: `now` and `duration` in the film's own seconds, and
- * `seek` that moves within the file or asks the engine for a stream from there.
- *
- * The original file plays when this phone can read it. When the engine's description says it
- * cannot (Matroska on iOS, DTS or TrueHD audio), or the player fails on it, playback moves down a
- * ladder: the file again (a read that timed out while pieces arrived), then the stream with the
- * picture copied, then re-encoded.
- */
 export function useTimeline({
   player,
   link,
@@ -103,9 +82,7 @@ export function useTimeline({
 }) {
   const [mode, setMode] = useState<Mode>(STARTS_DIRECT ? { kind: 'direct' } : { kind: 'pending' });
   const [loadedDuration, setLoadedDuration] = useState(0);
-  /** Why nothing can play, when no source will. */
   const [problem, setProblem] = useState<string | null>(null);
-  // A stream's timestamps are the file's own, but a player may count from zero; `base` is what to add.
   const base = useRef(0);
   const baseKnown = useRef(false);
   const startedAt = useRef<number | null>(null);
@@ -122,10 +99,8 @@ export function useTimeline({
   }, [player]);
 
   const switchTo = useCallback(
-    // `resume` is whether to play once the new source loads: a seek while paused stays paused.
     async (next: Mode, at: number, resume = true) => {
       if (next.kind === 'stream' && media && !(await readyFfmpeg(link, media))) {
-        // An engine inside a phone app has no ffmpeg, so a file the player cannot read stays unplayable here.
         setProblem(
           media.ffmpeg === 'missing'
             ? `This ${next.reason === 'audio' ? 'audio' : 'file'} needs converting, which the engine on a phone cannot do. Play it from a computer's engine.`
@@ -175,7 +150,6 @@ export function useTimeline({
   useEventListener(player, 'statusChange', ({ status }) => {
     if (status !== 'error') return;
     const current = modeRef.current;
-    // A source that failed before it loaded has a clock at zero; it was meant to start at `from`.
     const at = current.kind === 'stream' ? Math.max(now(), current.from) : now();
     if (current.kind === 'direct' && !directRetried.current) {
       directRetried.current = true;

@@ -1,11 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { File } from 'expo-file-system';
 
-/**
- * The engine takes magnets, infohashes and .torrent URLs, but no .torrent bytes. A .torrent file
- * opened on the phone becomes a magnet here: its infohash is the SHA-1 of the bencoded `info`
- * dictionary, exactly as stored in the file.
- */
+/** A .torrent file's infohash is the SHA-1 of its bencoded `info` dictionary, exactly as stored in the file. */
 export async function magnetFromTorrentFile(uri: string): Promise<string> {
   const bytes = await new File(uri).bytes();
   const { info, name, trackers } = scan(bytes);
@@ -96,7 +92,6 @@ function scan(data: Uint8Array): Scan {
   return { info, name, trackers: [...new Set(trackers)] };
 }
 
-/** A magnet, an infohash, or a link to a .torrent file, found anywhere in a piece of text. */
 export function findTorrent(text: string): string | null {
   const magnet = /magnet:\?[^\s"'<>]+/i.exec(text)?.[0];
   if (magnet) return magnet;
