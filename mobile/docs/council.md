@@ -65,3 +65,27 @@ off with the commit that does.
 
 - iOS ClipboardPasteButton in Add; Saved bookmark bounce; Downloads badge with a count.
 - Carousel dots follow the finger; skip flash says −10 s / +10 s; TV start confirmation.
+
+## Overnight, 2026-11-22
+
+Done, each verified on the iOS simulator or the F6 unless marked:
+
+- Speed: the Android poster flight starts from the title page's layout (tap to flight 36–94 ms,
+  median 44 ms, release build on the F6); sections skip entrances while it flies; episodes,
+  synopsis, cast and the sources warmup wait for landing; jobs are a store that tab bars and
+  Search read through selectors; the swipe pill and idle cast polling stopped re-rendering.
+- Download to this phone (a play with `keep`), episode download status, New episodes, Popular
+  films and shows (engine `GET /api/titles/popular`), Settings with theme, data saver and about.
+- Player: error recovery, sleep timer, lock, chapter marks, subtitle and audio memory per show,
+  Up next artwork, next episode prepared on Wi-Fi near the end (untested on a device).
+- Phone-first pairing, offline copies without an engine (with resume and subtitles; subtitles
+  untested), unsent watch positions kept and resent, TV errors and handoff.
+
+Open:
+
+- [ ] Virtualize Home's Saved grid and long seasons (measure first; keep the poster measurable).
+- [ ] Smaller artwork for backdrops (976 KB at 1920 px; needs an image library in the engine).
+- [ ] Find the "Reading from value during render" warnings (needs Metro and a stack).
+- [ ] Remember a torrent subtitle file's language; move Lock controls into player Settings.
+- [ ] Settings entry: a gear instead of the engine avatar? (Avatar kept for now, X-style.)
+- [ ] Cast bar growing into the remote with a finger-following swipe (cut for now).
