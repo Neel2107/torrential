@@ -1,16 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bytes, sentence } from '@web/lib/format';
@@ -24,6 +16,7 @@ import { FORCE_STREAM } from '@/player/timeline';
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
+import { LoadingMark } from '@/ui/Bands';
 import { Logo } from '@/ui/Logo';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
@@ -173,16 +166,18 @@ function Starting({
           </Animated.View>
         ) : (
           <View style={styles.progress}>
-            <Animated.Text
-              key={stepOf(start)}
-              entering={FadeIn.duration(motion.quick)}
-              exiting={FadeOut.duration(120)}
-              layout={LinearTransition}
-              style={styles.step}
-            >
-              {stepOf(start)}
-            </Animated.Text>
-            <Sweep />
+            <View style={styles.stepLine}>
+              <LoadingMark size={22} label="Starting" />
+              <Animated.Text
+                key={stepOf(start)}
+                entering={FadeIn.duration(motion.quick)}
+                exiting={FadeOut.duration(120)}
+                layout={LinearTransition}
+                style={styles.step}
+              >
+                {stepOf(start)}
+              </Animated.Text>
+            </View>
             {start.phase === 'trying' ? (
               <Animated.Text
                 key={start.release.id}
@@ -207,20 +202,6 @@ function Starting({
 }
 
 /** An indeterminate bar: a short highlight that sweeps across while the engine works. */
-function Sweep() {
-  const [width, setWidth] = useState(0);
-  const x = useSharedValue(0);
-  useEffect(() => {
-    x.value = withRepeat(withTiming(1, { duration: 1100, easing: motion.inOut }), -1, false);
-  }, [x]);
-  const style = useAnimatedStyle(() => ({ transform: [{ translateX: -width * 0.35 + x.value * width * 1.35 }] }));
-  return (
-    <View style={styles.sweep} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-      <Animated.View style={[styles.sweepBar, { width: width * 0.35 }, style]} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#0a0907' },
   top: { position: 'absolute', top: 0, left: 0, zIndex: 2 },
@@ -236,9 +217,8 @@ const styles = StyleSheet.create({
   logo: { height: 72, width: '70%' },
   detail: { fontFamily: font.medium, fontSize: 16, color: color.soft },
   progress: { gap: space.md, marginTop: space.lg, maxWidth: 420 },
-  step: { fontFamily: font.semibold, fontSize: 17, color: color.ink },
-  sweep: { height: 3, borderRadius: 2, backgroundColor: 'rgba(240,233,220,0.14)', overflow: 'hidden' },
-  sweepBar: { height: 3, borderRadius: 2, backgroundColor: color.action },
+  step: { flex: 1, fontFamily: font.semibold, fontSize: 17, color: color.ink },
+  stepLine: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   release: { ...type.numeric, color: color.pencil },
   failed: { gap: space.md, marginTop: space.lg, maxWidth: 520 },
   failedLine: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },

@@ -1,8 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { createContext, use, useCallback, useMemo, useRef, type ReactNode } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
-import Animated, {
+import {
   cancelAnimation,
   Easing,
   runOnJS,
@@ -17,9 +17,7 @@ import Animated, {
 
 import { motion } from '@/theme';
 
-import Svg, { ClipPath, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
-
-import { TRIANGLE } from './Mark';
+import { band, BandsMark, fill, PASS } from './Bands';
 
 /**
  * Pull to refresh as X has it: the header stretches with the finger and the mark grows in it; let
@@ -34,25 +32,6 @@ import { TRIANGLE } from './Mark';
 const MOST = 130;
 /** Past this a release refreshes. */
 const LINE = 70;
-/** One pass of light down the three bands. */
-const CYCLE = 1200;
-
-/** How lit band `index` is at `phase` of a pass: each band peaks in turn, top to bottom. */
-const band = (phase: number, index: number): number => {
-  'worklet';
-  // Each band takes its turn in a third of the pass: it lights fully, then falls back to almost
-  // nothing, so the eye follows one bright band down the mark.
-  const t = (((phase - index / 3) % 1) + 1) % 1;
-  const peak = t < 0.15 ? t / 0.15 : t < 0.33 ? 1 : t < 0.48 ? 1 - (t - 0.33) / 0.15 : 0;
-  return 0.12 + 0.88 * peak;
-};
-
-/** How lit band `index` is at `progress` of the way to the line: each fills in its own third. */
-const fill = (progress: number, index: number): number => {
-  'worklet';
-  return 0.15 + 0.85 * Math.min(1, Math.max(0, progress * 3 - index));
-};
-
 type Pull = {
   /** Points pulled, after resistance. */
   pull: SharedValue<number>;
@@ -103,14 +82,14 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
     busy.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     spin.value = 0;
-    spin.value = withRepeat(withTiming(1, { duration: CYCLE, easing: Easing.linear }), -1, false);
+    spin.value = withRepeat(withTiming(1, { duration: PASS, easing: Easing.linear }), -1, false);
     lit.value = withTiming(1, { duration: 160 });
     const started = Date.now();
     await onRefresh().catch(() => {});
     // Whole passes only, at least one: the light reaches the last band before the mark settles,
     // however quickly the feed came back. The last band's light ends a little after its pass.
-    const passes = Math.max(1, Math.ceil((Date.now() - started) / CYCLE));
-    const end = started + passes * CYCLE + CYCLE * 0.15;
+    const passes = Math.max(1, Math.ceil((Date.now() - started) / PASS));
+    const end = started + passes * PASS + PASS * 0.15;
     await new Promise((done) => setTimeout(done, Math.max(0, end - Date.now())));
     lit.value = withTiming(0, { duration: 300 }, () => cancelAnimation(spin));
     busy.current = false;
@@ -195,7 +174,7 @@ export function PullMark({ size = 30 }: { size?: number }) {
   const { pull, spin, busy, holding } = usePull();
   const style = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (pull.value / MOST) * 0.6 }] }));
   // At rest all three bands are alike, so the fill and the pass read clearly against them; the app
-  // icon keeps its faint last band. Each band is its own layer: animated SVG props do not reach the drawing on Android.
+  // icon keeps its faint last band.
   // The maths sits inside each style: a helper closure here is rewritten by the React Compiler and
   // never reaches the UI thread.
   // While pulling, as X's logo fills in stroke by stroke, the bands fill in turn: all three are lit
@@ -207,34 +186,7 @@ export function PullMark({ size = 30 }: { size?: number }) {
     opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 1) : 1 + (band(spin.value, 1) - 1) * busy.value,
   }));
   const last = useAnimatedStyle(() => ({
-    opacity:
-      holding.value && pull.value > 0 ? fill(pull.value / LINE, 2) : 1 + (band(spin.value, 2) - 1) * busy.value,
+    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 2) : 1 + (band(spin.value, 2) - 1) * busy.value,
   }));
-  const layers: [number, number, typeof top][] = [
-    [300, 118, top],
-    [446, 132, middle],
-    [606, 160, last],
-  ];
-  return (
-    <Animated.View style={[{ width: size, height: size }, style]} accessibilityLabel="torrential">
-      {layers.map(([y, height, opacity]) => (
-        <Animated.View key={y} style={[StyleSheet.absoluteFill, opacity]}>
-          <Svg width={size} height={size} viewBox="308 300 440 440">
-            <Defs>
-              <LinearGradient id={`pull-${y}`} x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor="#c3dbb8" />
-                <Stop offset="1" stopColor="#8fb683" />
-              </LinearGradient>
-              <ClipPath id={`pull-clip-${y}`}>
-                <Path d={TRIANGLE} transform="translate(-40 42)" />
-              </ClipPath>
-            </Defs>
-            <G clipPath={`url(#pull-clip-${y})`}>
-              <Rect x="300" y={y} width="520" height={height} fill={`url(#pull-${y})`} />
-            </G>
-          </Svg>
-        </Animated.View>
-      ))}
-    </Animated.View>
-  );
+  return <BandsMark size={size} bands={[top, middle, last]} style={style} />;
 }
