@@ -324,11 +324,14 @@ export function Player({
     };
   }, [save, client, video]);
 
+  const [touched, setTouched] = useState(0);
+  const poke = () => setTouched((n) => n + 1);
+
   useEffect(() => {
     if (!visible || !isPlaying || scrubbing || sheet) return;
     const timer = setTimeout(() => setVisible(false), HIDE_AFTER_MS);
     return () => clearTimeout(timer);
-  }, [visible, isPlaying, scrubbing, sheet]);
+  }, [visible, isPlaying, scrubbing, sheet, touched]);
 
   useEffect(() => {
     player.playbackRate = preferences.speed;
@@ -355,6 +358,7 @@ export function Player({
   }, [unlockShown]);
 
   const toggle = () => {
+    poke();
     held.current = player.playing;
     if (player.playing) player.pause();
     else player.play();
@@ -367,6 +371,7 @@ export function Player({
     value.value = withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 520, easing: motion.out }));
   };
   const skip = (seconds: number) => {
+    poke();
     timeline.seek(Math.min(duration || Infinity, timeline.now() + seconds));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     flash(seconds < 0 ? 'left' : 'right');
