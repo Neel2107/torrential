@@ -26,7 +26,7 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
-import { alpha, color, font, motion, radius, space, type } from '@/theme';
+import { alpha, color, font, radius, space, type } from '@/theme';
 
 const CONTAINERS: Record<string, string> = {
   mkv: 'MKV',
@@ -59,11 +59,22 @@ export default function TvScreen() {
   const [problem, setProblem] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
 
+  const [scanFailed, setScanFailed] = useState<string | null>(null);
+  const scan = (alive: () => boolean = () => true) => {
+    setScanning(true);
+    setScanFailed(null);
+    findTvs(link, true)
+      .then((list) => alive() && client.setQueryData([...keys.tvs, link.base], list))
+      .catch((error: unknown) => {
+        if (!alive()) return;
+        setScanFailed(error instanceof EngineError ? sentence(error.message) : 'The engine did not answer.');
+      })
+      .finally(() => alive() && setScanning(false));
+  };
+
   useEffect(() => {
     let cancelled = false;
-    findTvs(link, true)
-      .then((list) => !cancelled && client.setQueryData([...keys.tvs, link.base], list))
-      .finally(() => !cancelled && setScanning(false));
+    scan(() => !cancelled);
     return () => {
       cancelled = true;
     };
@@ -145,23 +156,18 @@ export default function TvScreen() {
                 </Tap>
               </Animated.View>
             ))}
-            {!scanning && (tvs.data?.tvs.length ?? 0) === 0 ? (
+            {!scanning && (scanFailed || (tvs.data?.tvs.length ?? 0) === 0) ? (
               <Animated.View entering={FadeIn} style={styles.none}>
-                <Text style={type.headline}>No TVs found</Text>
+                <Text style={type.headline}>{scanFailed ? "Couldn't look for TVs" : 'No TVs found'}</Text>
                 <Text style={type.label}>
-                  The TV has to be on, on the same network as the computer running torrential, with DLNA or screen
-                  sharing turned on.
+                  {scanFailed ??
+                    'The TV has to be on, on the same network as the engine, with DLNA or screen sharing turned on.'}
                 </Text>
                 <Button
-                  label="Look again"
+                  label={scanFailed ? 'Try again' : 'Look again'}
                   kind="secondary"
                   icon={icons.refresh}
-                  onPress={() => {
-                    setScanning(true);
-                    findTvs(link, true)
-                      .then((list) => client.setQueryData([...keys.tvs, link.base], list))
-                      .finally(() => setScanning(false));
-                  }}
+                  onPress={() => scan()}
                   style={{ alignSelf: 'flex-start', marginTop: space.sm }}
                 />
               </Animated.View>
@@ -207,10 +213,17 @@ function Remote({ cast }: { cast: Cast }) {
   const duration = cast.duration ?? 0;
   const playing = cast.state === 'playing';
 
-  const control = async (action: CastAction) => {
+  const [unreached, setUnreached] = useState(false);
+  const control = async (action: CastAction): Promise<boolean> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await post(link, '/api/cast/control', { tv: cast.tv, ...action }).catch(() => {});
+    const reached = await post(link, '/api/cast/control', { tv: cast.tv, ...action }).then(
+      () => true,
+      () => false,
+    );
+    setUnreached(!reached);
+    if (!reached) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     client.invalidateQueries({ queryKey: keys.tvs });
+    return reached;
   };
 
   return (
@@ -234,6 +247,26 @@ function Remote({ cast }: { cast: Cast }) {
       <Text style={type.title} numberOfLines={2}>
         {cast.name}
       </Text>
+      {unreached ? (
+        <View style={styles.problem}>
+          <Icon name={icons.warning} size={18} tint={color.error} />
+          <Text style={[type.label, { color: color.error, flex: 1 }]}>Couldn't reach {cast.tv_name}. Try again.</Text>
+        </View>
+      ) : null}
+      {cast.video ? (
+        <Button
+          label="Watch on this phone"
+          kind="quiet"
+          icon={icons.phone}
+          onPress={async () => {
+            const at = String(Math.floor(position));
+            if (await control({ action: 'stop' })) {
+              router.replace({ pathname: '/play', params: { video: cast.video!, at } });
+            }
+          }}
+          style={{ alignSelf: 'flex-start' }}
+        />
+      ) : null}
 
       <View style={{ gap: space.sm }}>
         <Scrub
@@ -304,8 +337,7 @@ function Remote({ cast }: { cast: Cast }) {
           kind="secondary"
           icon={icons.stop}
           onPress={async () => {
-            await control({ action: 'stop' });
-            router.back();
+            if (await control({ action: 'stop' })) router.back();
           }}
         />
       </View>
