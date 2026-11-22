@@ -8,11 +8,11 @@ import { ago, bytes, percent, rate, sentence } from '@web/lib/format';
 import type { Job } from '@web/wire';
 
 import { post } from '@/engine/client';
-import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
+import { openJob, STATE, useJob, useJobName, useJobs } from '@/engine/jobs';
 import { qualityOf } from '@/engine/quality';
 import { Art } from '@/ui/Art';
 import { useLink, useSession } from '@/engine/session';
-import { cancel, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
+import { cancel, copyOf, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
@@ -409,7 +409,8 @@ function JobMore({ job }: { job: Job }) {
   return <MoreMenu actions={actions} label={`More options for ${name.title}`} />;
 }
 
-function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
+function JobMenu({ job: opened, onClose }: { job: Job; onClose: () => void }) {
+  const job = useJob(opened.id) ?? opened;
   const name = useJobName(job);
   const actions = useJobActions(job);
 
@@ -507,13 +508,14 @@ function CopyRow({ copy, onMenu }: { copy: Copy; onMenu: () => void }) {
 function useCopyActions(copy: Copy): RowAction[] {
   const link = useLink();
 
-  const drop = () => {
+  const when = (state: Copy['state']) => () => {
+    if (copyOf(copy.job)?.state !== state) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     remove(copy.job);
   };
 
   if (copy.state === 'saving')
-    return [{ id: 'stop', label: 'Stop saving', icon: icons.close, symbol: 'xmark', run: drop }];
+    return [{ id: 'stop', label: 'Stop saving', icon: icons.close, symbol: 'xmark', run: () => cancel(copy.job) }];
 
   if (copy.state === 'failed')
     return [
@@ -524,7 +526,7 @@ function useCopyActions(copy: Copy): RowAction[] {
         symbol: 'arrow.clockwise',
         run: () => save(link, copy.job, copy.label),
       },
-      { id: 'dismiss', label: 'Dismiss', icon: icons.close, symbol: 'xmark', run: drop },
+      { id: 'dismiss', label: 'Dismiss', icon: icons.close, symbol: 'xmark', run: when('failed') },
     ];
 
   return [
@@ -548,7 +550,7 @@ function useCopyActions(copy: Copy): RowAction[] {
         danger: true,
         icon: icons.trash,
       },
-      run: drop,
+      run: when('saved'),
     },
   ];
 }

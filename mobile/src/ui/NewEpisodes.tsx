@@ -12,7 +12,7 @@ import type { EpisodeInfo, TitleCard, TitlePage } from '@web/wire';
 import { get } from '@/engine/client';
 import { keys } from '@/engine/queries';
 import { useLink } from '@/engine/session';
-import { color, radius, space, type } from '@/theme';
+import { color, radius, space, type, stage } from '@/theme';
 
 import { Art } from './Art';
 import { rise } from './rise';
@@ -129,5 +129,5 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: 'rgba(10, 9, 7, 0.72)',
   },
-  badgeText: { ...type.label, color: color.ink },
+  badgeText: { ...type.label, color: stage.ink },
 });

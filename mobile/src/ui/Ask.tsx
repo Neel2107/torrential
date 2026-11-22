@@ -11,7 +11,9 @@ import { Panel, PanelHeading, PanelRow, PanelRule, surface } from './Panel';
 
 export type Question = { title: string; message: string; confirm: string; danger?: boolean; icon?: LucideIcon };
 
-type Asking = Question & { answer: (yes: boolean) => void };
+type Asking = Question & { id: number; answer: (yes: boolean) => void };
+
+let asked = 0;
 
 let asking: Asking | null = null;
 const listeners = new Set<() => void>();
@@ -50,14 +52,15 @@ export function ask(question: Question): Promise<boolean> {
     }
 
     asking?.answer(false);
-    show({ ...question, answer: resolve });
+    asked += 1;
+    show({ ...question, id: asked, answer: resolve });
   });
 }
 
 export function AskHost() {
   const current = useSyncExternalStore(subscribe, () => asking);
 
-  return current ? <Dialog key={current.title + current.message} asking={current} /> : null;
+  return current ? <Dialog key={current.id} asking={current} /> : null;
 }
 
 function Dialog({ asking: question }: { asking: Asking }) {

@@ -37,6 +37,7 @@ import { EngineProblem } from '@/ui/EngineProblem';
 import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
 import { ActionRow } from '@/ui/Row';
+import { runAction } from '@/ui/RowMenu';
 import { Meter } from '@/ui/Meter';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
@@ -735,39 +736,56 @@ function UnfinishedRow({ item }: { item: Continue }) {
   const progress = progressOf(item);
   const subtitle = subtitleOf(item);
 
-  const forget = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await post(link, '/api/watched/forget', { video: item.video }).catch(() => {});
-    client.invalidateQueries({ queryKey: keys.home });
-  };
+  const forget = () =>
+    runAction({
+      id: 'forget',
+      label: 'Forget where it stopped',
+      icon: icons.close,
+      symbol: 'xmark',
+      ask: {
+        title: `Forget where ${item.title.name} stopped?`,
+        message: 'It plays from the start next time.',
+        confirm: 'Forget',
+        danger: true,
+        icon: icons.close,
+      },
+      run: async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        await post(link, '/api/watched/forget', { video: item.video }).catch(() => {});
+        client.invalidateQueries({ queryKey: keys.home });
+      },
+    });
 
   return (
-    <Tap
-      shrink={1}
-      highlight
-      onPress={() => resume(item)}
-      accessibilityLabel={[item.title.name, subtitle, remainingOf(item)].filter(Boolean).join(', ')}
-      style={styles.pickRow}
-    >
-      <Art id={item.title.id} kind="poster" name={item.title.name} style={styles.pickPoster} />
-      <View style={{ flex: 1, gap: 6 }}>
-        <Text style={type.callout} numberOfLines={1}>
-          {item.title.name} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{subtitle}</Text>
-        </Text>
-        {progress !== null ? <Meter fraction={progress} /> : null}
-        <Text style={type.numeric}>{remainingOf(item)}</Text>
-      </View>
+    <View>
+      <Tap
+        shrink={1}
+        highlight
+        onPress={() => resume(item)}
+        accessibilityLabel={[item.title.name, subtitle, remainingOf(item)].filter(Boolean).join(', ')}
+        style={styles.pickRow}
+      >
+        <Art id={item.title.id} kind="poster" name={item.title.name} style={styles.pickPoster} />
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={type.callout} numberOfLines={1}>
+            {item.title.name} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{subtitle}</Text>
+          </Text>
+          {progress !== null ? <Meter fraction={progress} /> : null}
+          <Text style={type.numeric}>{remainingOf(item)}</Text>
+        </View>
+        {item.resume_at !== null ? <View style={styles.recentRemove} /> : null}
+      </Tap>
       {item.resume_at !== null ? (
         <Tap
           shrink={0.85}
           onPress={forget}
           accessibilityLabel={`Forget where ${item.title.name} stopped`}
-          style={styles.recentRemove}
+          style={[styles.recentRemove, styles.trailing]}
         >
           <Icon name={icons.close} size={16} tint={color.pencil} />
         </Tap>
       ) : null}
-    </Tap>
+    </View>
   );
 }
 
@@ -909,6 +927,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   recentRemove: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  trailing: { position: 'absolute', right: space.page - 6, top: '50%', marginTop: -16 },
   pickRow: {
     flexDirection: 'row',
     alignItems: 'center',
