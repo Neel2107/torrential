@@ -13,6 +13,7 @@ Numbers come from the release build ("torrential preview", package `dev.torrenti
 2. Find the phone: `adb devices`. At home it's on wireless debugging. Away from home use Tailscale: `adb connect <f6 tailnet ip>:5555`.
 3. Don't use the phone while its owner is on it, and keep media volume at 0 at night.
 4. Run each measurement at least 5 times and report the median, plus the spread. One run is not a number.
+5. Tap only through `mobile/scripts/f6-tap.sh x y`. It refuses unless torrential is in front and the keyboard is closed. A loop of raw `input tap` calls once left the app on a Back press and went on tapping the launcher's dock, where Phone and Camera sit. Search opens the keyboard, which covers the tab bar; close it with Back before tapping tabs, and never press Back on a screen that has nothing to close.
 
 ## Frames for one interaction
 
