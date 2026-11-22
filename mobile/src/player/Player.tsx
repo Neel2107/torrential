@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
+import { AppState, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -36,6 +36,7 @@ import { titleOf, videoOf } from '@web/lib/video';
 import { get, post } from '@/engine/client';
 import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
+import { LoadingMark } from '@/ui/Bands';
 import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
 import { PortalHost } from '@/ui/Portal';
@@ -344,7 +345,11 @@ export function Player({
             </View>
           </GestureDetector>
 
-          {buffering && !visible ? <ActivityIndicator style={styles.center} size="large" color={color.ink} /> : null}
+          {buffering && !visible ? (
+            <View style={styles.center} pointerEvents="none">
+              <LoadingMark size={40} label="Loading" />
+            </View>
+          ) : null}
 
           {status === 'error' || timeline.problem ? (
             <View style={[styles.center, styles.errorBox]}>
@@ -591,7 +596,7 @@ function PlayButton({ playing, buffering, onPress }: { playing: boolean; bufferi
     <Tap shrink={0.9} onPress={onPress} accessibilityLabel={playing ? 'Pause' : 'Play'} style={styles.playButton}>
       <Glass interactive fallback="rgba(20, 18, 15, 0.5)" style={styles.disc}>
         {buffering ? (
-          <ActivityIndicator size="large" color={color.ink} />
+          <LoadingMark size={34} label="Loading" />
         ) : (
           <Animated.View style={style}>
             <Icon name={playing ? icons.pause : icons.play} size={38} tint={color.ink} filled />
