@@ -42,11 +42,15 @@ export function Button({
     >
       <View style={styles.row}>
         {busy ? (
-          <ActivityIndicator size="small" color={ink} />
+          <View style={styles.lead}>
+            <ActivityIndicator size="small" color={ink} />
+          </View>
         ) : icon ? (
-          <Icon name={icon} size={20} tint={ink} filled={icon === icons.play} />
+          <View style={styles.lead}>
+            <Icon name={icon} size={20} tint={ink} filled={icon === icons.play} />
+          </View>
         ) : null}
-        <Text style={[styles.label, { color: ink }]} numberOfLines={1}>
+        <Text style={[styles.label, { color: ink }]} numberOfLines={2}>
           {label}
         </Text>
       </View>
@@ -59,7 +63,9 @@ const sheet = (c: Palette) =>
     base: {
       minHeight: 48,
       borderRadius: radius.pill,
+      flexShrink: 1,
       paddingHorizontal: space.xl,
+      paddingVertical: space.sm,
       justifyContent: 'center',
       overflow: 'hidden',
     },
@@ -69,7 +75,8 @@ const sheet = (c: Palette) =>
     quiet: { backgroundColor: 'transparent', paddingHorizontal: space.md },
     dimmed: { opacity: 0.5 },
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
-    label: { fontFamily: font.semibold, fontSize: 16, letterSpacing: -0.1 },
+    lead: { flexShrink: 0 },
+    label: { flexShrink: 1, fontFamily: font.semibold, fontSize: 16, letterSpacing: -0.1, textAlign: 'center' },
   });
 
 const themed = sheet(color);

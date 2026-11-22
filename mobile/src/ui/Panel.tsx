@@ -78,7 +78,9 @@ export function PanelRow({
 
   return (
     <Tap shrink={1} highlight haptic onPress={onPress} accessibilityLabel={label} style={styles.row}>
-      <Icon name={icon} size={20} tint={tint} />
+      <View style={styles.icon}>
+        <Icon name={icon} size={20} tint={tint} />
+      </View>
       <Text style={[styles.label, { color: tint }]}>{label}</Text>
     </Tap>
   );
@@ -106,10 +108,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 48,
     marginHorizontal: 8,
+    paddingVertical: 12,
     paddingLeft: 22,
     paddingRight: 16,
     gap: 16,
     borderRadius: 16,
   },
-  label: { fontFamily: font.medium, fontSize: 17, color: surface.ink },
+  icon: { flexShrink: 0 },
+  label: { flexShrink: 1, fontFamily: font.medium, fontSize: 17, color: surface.ink },
 });

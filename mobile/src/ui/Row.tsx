@@ -45,7 +45,9 @@ export function OptionRow({
         <Text style={[styles.label, selected && styles.picked]}>{label}</Text>
         {detail ? <Text style={type.caption}>{detail}</Text> : null}
       </View>
-      <Check shown={selected} />
+      <View style={styles.checkSlot}>
+        <Check shown={selected} />
+      </View>
     </Tap>
   );
 }
@@ -81,18 +83,20 @@ export function NavRow({
       <View style={styles.text}>
         <Text style={[styles.label, styles.lead]}>{label}</Text>
         {detail ? (
-          <Text style={type.caption} numberOfLines={1}>
+          <Text style={type.caption} numberOfLines={2}>
             {detail}
           </Text>
         ) : null}
       </View>
-      {value ? <Text style={type.label}>{value}</Text> : null}
-      {count !== undefined ? <Text style={type.numeric}>{count}</Text> : null}
-      {expanded === undefined ? (
-        <Icon name={icons.chevron} size={18} tint={tone.pencil} />
-      ) : (
-        <Turn open={expanded} tint={tone.pencil} />
-      )}
+      {value ? <Text style={[type.label, styles.fixed]}>{value}</Text> : null}
+      {count !== undefined ? <Text style={[type.numeric, styles.fixed]}>{count}</Text> : null}
+      <View style={styles.fixed}>
+        {expanded === undefined ? (
+          <Icon name={icons.chevron} size={18} tint={tone.pencil} />
+        ) : (
+          <Turn open={expanded} tint={tone.pencil} />
+        )}
+      </View>
     </Tap>
   );
 }
@@ -121,7 +125,9 @@ export function ActionRow({
       accessibilityState={{ disabled }}
       style={[styles.row, styles.action]}
     >
-      <Icon name={icon} size={22} tint={tint} />
+      <View style={styles.fixed}>
+        <Icon name={icon} size={22} tint={tint} />
+      </View>
       <Text style={[styles.actionLabel, { color: tint }]}>{label}</Text>
     </Tap>
   );
@@ -153,12 +159,14 @@ const sheet = (c: Palette) =>
       paddingVertical: space.sm,
       borderRadius: radius.md,
     },
-    text: { flex: 1, gap: 2 },
+    text: { flex: 1, flexShrink: 1, minWidth: 0, gap: 2 },
+    fixed: { flexShrink: 0 },
+    checkSlot: { width: 20, height: 20, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
     label: { fontFamily: font.medium, fontSize: 16, lineHeight: 21, color: c.soft },
     picked: { color: c.ink, fontFamily: font.semibold },
     lead: { color: c.ink },
     action: { gap: space.lg, minHeight: 56 },
-    actionLabel: { fontFamily: font.semibold, fontSize: 17 },
+    actionLabel: { flexShrink: 1, fontFamily: font.semibold, fontSize: 17 },
   });
 
 const themed = sheet(color);

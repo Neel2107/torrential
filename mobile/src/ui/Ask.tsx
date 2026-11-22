@@ -1,7 +1,8 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Alert, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { motion, space } from '@/theme';
@@ -67,6 +68,9 @@ function Dialog({ asking: question }: { asking: Asking }) {
   const shown = useSharedValue(0);
   const answered = useRef(false);
   const [leaving, setLeaving] = useState(false);
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const tallest = height - insets.top - insets.bottom - space.xl * 2;
 
   const finish = (yes: boolean) => {
     if (asking === question) show(null);
@@ -104,9 +108,14 @@ function Dialog({ asking: question }: { asking: Asking }) {
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdrop]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => close(false)} accessibilityLabel="Cancel" />
         </Animated.View>
-        <View style={styles.center} pointerEvents="box-none">
-          <Panel style={[styles.card, card]} accessibilityRole="alert">
-            <PanelHeading title={question.title} message={question.message} />
+        <View
+          style={[styles.center, { paddingTop: insets.top + space.xl, paddingBottom: insets.bottom + space.xl }]}
+          pointerEvents="box-none"
+        >
+          <Panel style={[styles.card, { maxHeight: tallest }, card]} accessibilityRole="alert">
+            <ScrollView style={styles.words} alwaysBounceVertical={false} overScrollMode="never">
+              <PanelHeading title={question.title} message={question.message} />
+            </ScrollView>
             <PanelRule />
             <PanelRow
               icon={question.icon ?? icons.check}
@@ -126,4 +135,5 @@ const styles = StyleSheet.create({
   backdrop: { backgroundColor: surface.backdrop },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl },
   card: { width: '100%', maxWidth: 320 },
+  words: { flexGrow: 0, flexShrink: 1 },
 });
