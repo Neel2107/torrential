@@ -24,6 +24,11 @@ function fromTorrentMap(job: Job, file: StreamedFile, totalSize: number): Downlo
   });
 }
 
+/** How much of each stretch of a file has arrived, from the engine's piece map: `0` to `8` eighths per stretch, and `-` for one with nothing to arrive, which counts as nothing. */
+export function fromPieces(pieces: string): Downloaded {
+  return [...pieces].map((eighths) => (Number(eighths) || 0) / 8);
+}
+
 export function usePlayingJob(job: Job): Job {
   const { jobs } = useJobs();
 
@@ -43,7 +48,7 @@ export function useDownloaded(job: Job, file: StreamedFile, totalSize: number): 
 
     const poll = () =>
       get<FilePieces>(link, `/api/pieces?id=${id}&file=${file.index}`, stop.signal)
-        .then((map) => setOwn([...map.pieces].map((eighths) => (Number(eighths) || 0) / 8)))
+        .then((map) => setOwn(fromPieces(map.pieces)))
         .catch(() => !stop.signal.aborted && setOwn(null))
         .finally(() => {
           if (!stop.signal.aborted) timer = setTimeout(poll, POLL_MS);
