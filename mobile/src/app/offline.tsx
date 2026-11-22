@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { StyleSheet, Text, View } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import { useEffect } from 'react';
+import { AppState, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCopy, type Copy } from '@/offline/saved';
@@ -9,6 +11,9 @@ import { Icon, icons } from '@/ui/Icon';
 import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
 import { stage as color, font, space, stageType as type } from '@/theme';
+
+const KEEP_EVERY_MS = 5000;
+const ENDING_SECONDS = 60;
 
 export default function OfflineScreen() {
   return (
@@ -38,6 +43,30 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
     p.keepScreenOnWhilePlaying = true;
     p.play();
   });
+
+  useEffect(() => {
+    const key = `offline-at-${copy.job}`;
+    let stopped = false;
+    SecureStore.getItemAsync(key)
+      .then((saved) => {
+        const at = Number(saved);
+        if (!stopped && at > 5) player.currentTime = at;
+      })
+      .catch(() => {});
+    const keep = () => {
+      const at = player.currentTime;
+      const near = player.duration > 0 && player.duration - at < ENDING_SECONDS;
+      SecureStore.setItemAsync(key, near ? '0' : String(Math.floor(at))).catch(() => {});
+    };
+    const timer = setInterval(keep, KEEP_EVERY_MS);
+    const subscription = AppState.addEventListener('change', (next) => next !== 'active' && keep());
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      subscription.remove();
+      keep();
+    };
+  }, [copy.job, player]);
 
   return (
     <View style={styles.screen}>

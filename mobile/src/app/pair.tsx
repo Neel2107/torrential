@@ -20,6 +20,7 @@ import { CAN_RUN_LOCALLY } from '../../modules/torrential-engine';
 
 import { EngineError } from '@/engine/client';
 import { parsePairing, useSession } from '@/engine/session';
+import { useCopies } from '@/offline/saved';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { Mark } from '@/ui/Mark';
@@ -46,7 +47,25 @@ export default function Pair() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [phoneProblem, setPhoneProblem] = useState(false);
+  const saved = useCopies().filter((copy) => copy.state === 'saved').length;
   const scanned = useRef(false);
+
+  const startPhone = async () => {
+    setStarting(true);
+    setPhoneProblem(false);
+    try {
+      await usePhone();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/');
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setPhoneProblem(true);
+    } finally {
+      setStarting(false);
+    }
+  };
 
   const attempt = async (base: string, pairingCode: string) => {
     setBusy(true);
@@ -105,7 +124,40 @@ export default function Pair() {
           <Mark size={40} />
           <Text style={styles.wordmark}>torrential</Text>
         </View>
-        <Text style={type.display}>Connect to your computer</Text>
+        {CAN_RUN_LOCALLY ? (
+          <View style={styles.phone}>
+            <View style={styles.phoneHead}>
+              <View style={styles.phoneIcon}>
+                <Icon name={icons.phone} size={20} tint={color.action} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={type.headline}>Watch on this phone</Text>
+                <Text style={type.label}>Downloads and plays right here. No computer needed.</Text>
+              </View>
+            </View>
+            <Button
+              label={starting ? 'Starting on this phone…' : 'Use this phone'}
+              busy={starting}
+              onPress={startPhone}
+            />
+            {phoneProblem ? (
+              <Text style={[type.label, { color: color.error }]} accessibilityLiveRegion="assertive">
+                Couldn't start on this phone. Try again.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+        {saved > 0 ? (
+          <Button
+            kind="secondary"
+            icon={icons.play}
+            label={`Watch saved videos (${saved})`}
+            onPress={() => router.push('/saved')}
+          />
+        ) : null}
+        <Text style={CAN_RUN_LOCALLY ? type.title : type.display}>
+          {CAN_RUN_LOCALLY ? 'Or connect your computer' : 'Connect to your computer'}
+        </Text>
         <Text style={type.body}>
           On the computer running torrential, open <Text style={styles.strong}>Devices</Text> and choose{' '}
           <Text style={styles.strong}>Add a device</Text>, or run{' '}
@@ -133,16 +185,6 @@ export default function Pair() {
             setMode(mode === 'scan' ? 'type' : 'scan');
           }}
         />
-        {CAN_RUN_LOCALLY ? (
-          <Button
-            kind="quiet"
-            label="Download on this phone instead"
-            onPress={async () => {
-              await usePhone();
-              router.replace('/');
-            }}
-          />
-        ) : null}
         {__DEV__ ? <Button kind="quiet" label="Use the USB connection (development)" onPress={useLoopback} /> : null}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -158,7 +200,7 @@ function Scanner({ onScan, busy }: { onScan: (data: string) => void; busy: boole
       <View style={[styles.viewfinder, styles.center]}>
         <Icon name={icons.qr} size={40} tint={color.soft} />
         <Text style={[type.body, { textAlign: 'center' }]}>The camera reads the code on your computer's screen.</Text>
-        <Button label="Allow the camera" onPress={request} />
+        <Button label="Allow the camera" kind={CAN_RUN_LOCALLY ? 'secondary' : 'primary'} onPress={request} />
       </View>
     );
   }
@@ -252,6 +294,16 @@ function Typed({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.paper },
   content: { paddingHorizontal: space.page, gap: space.lg },
+  phone: { gap: space.md, padding: space.lg, borderRadius: radius.lg, backgroundColor: color.raised },
+  phoneHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  phoneIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: color.lifted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   brand: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.lg },
   wordmark: { ...type.title, letterSpacing: -0.6 },
   strong: { fontFamily: font.semibold, color: color.ink },

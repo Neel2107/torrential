@@ -114,17 +114,6 @@ function Routes() {
               }}
             />
             <Stack.Screen
-              name="offline"
-              options={{
-                presentation: 'fullScreenModal',
-                animation: 'fade',
-                orientation: 'landscape',
-                contentStyle: { backgroundColor: stage.paper },
-                statusBarHidden: true,
-                navigationBarHidden: true,
-              }}
-            />
-            <Stack.Screen
               name="tv"
               options={{
                 presentation: 'formSheet',
@@ -162,6 +151,18 @@ function Routes() {
             />
           </Stack.Protected>
           <Stack.Screen name="pair" />
+          <Stack.Screen
+            name="offline"
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'fade',
+              orientation: 'landscape',
+              contentStyle: { backgroundColor: stage.paper },
+              statusBarHidden: true,
+              navigationBarHidden: true,
+            }}
+          />
+          <Stack.Screen name="saved" options={{ animation: 'slide_from_right' }} />
         </Stack>
         <HeroLayer />
       </MaybeJobs>
