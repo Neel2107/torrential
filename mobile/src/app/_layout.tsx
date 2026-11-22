@@ -101,6 +101,7 @@ function Routes() {
                   : { animation: 'slide_from_right' }
               }
             />
+            <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen
               name="play"
               options={{

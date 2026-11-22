@@ -13,7 +13,6 @@ import { Button } from '@/ui/Button';
 import { Check } from '@/ui/Check';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
-import { ThemePicker } from '@/ui/ThemePicker';
 import { color, font, radius, space, type } from '@/theme';
 
 export default function Engine() {
@@ -130,8 +129,6 @@ export default function Engine() {
         />
       </View>
       {version.data?.notice ? <Text style={type.label}>{version.data.notice}</Text> : null}
-      <Text style={type.title}>Theme</Text>
-      <ThemePicker />
       <Text style={type.caption}>
         {current?.kind === 'phone'
           ? 'Removing it stops watching from this phone’s engine. What it downloaded stays until the app is removed.'

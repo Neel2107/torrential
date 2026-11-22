@@ -21,8 +21,8 @@ export function EngineAvatar() {
     <Tap
       haptic
       shrink={0.9}
-      onPress={() => router.push('/engine')}
-      accessibilityLabel={`${phone ? "This phone's engine" : 'Engine'}, ${state}`}
+      onPress={() => router.push('/settings')}
+      accessibilityLabel={`Settings. ${phone ? "This phone's engine" : 'Engine'}, ${state}`}
       style={styles.avatar}
     >
       <Glass interactive style={styles.disc}>

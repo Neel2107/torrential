@@ -1,0 +1,136 @@
+import * as Application from 'expo-application';
+import { router } from 'expo-router';
+import { HardDrive } from 'lucide-react-native';
+import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useVersion } from '@/engine/queries';
+import { useSession } from '@/engine/session';
+import { Icon, icons } from '@/ui/Icon';
+import { rise } from '@/ui/rise';
+import { Tap } from '@/ui/Tap';
+import { ThemePicker } from '@/ui/ThemePicker';
+import { color, font, radius, space, type } from '@/theme';
+
+export default function Settings() {
+  const insets = useSafeAreaInsets();
+  const { session } = useSession();
+  const version = useVersion();
+  const engine = session.state === 'paired' ? session.engine : null;
+  const status = version.isSuccess ? 'Online' : version.isError ? 'Not answering' : 'Checking…';
+  const tint = version.isSuccess ? color.action : version.isError ? color.error : color.pencil;
+
+  return (
+    <View style={styles.screen}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <Tap haptic shrink={0.9} onPress={() => router.back()} accessibilityLabel="Back" style={styles.back}>
+          <Icon name={icons.back} size={22} tint={color.ink} />
+        </Tap>
+        <Text style={styles.title} accessibilityRole="header">
+          Settings
+        </Text>
+      </View>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space.xxl }]}>
+        <Group title="Engine" index={0}>
+          <Tap
+            highlight
+            shrink={1}
+            haptic
+            onPress={() => router.push('/engine')}
+            accessibilityLabel={`${engine?.name ?? 'Engine'}, ${status}. Switch or add an engine.`}
+            style={styles.row}
+          >
+            <View style={styles.badge}>
+              <Icon name={engine?.kind === 'phone' ? icons.phone : HardDrive} size={18} tint={color.soft} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.value}>{engine?.name ?? 'No engine'}</Text>
+              <View style={styles.status}>
+                <View style={[styles.dot, { backgroundColor: tint }]} />
+                <Text style={type.caption}>{status}</Text>
+              </View>
+            </View>
+            <Icon name={icons.chevron} size={18} tint={color.pencil} />
+          </Tap>
+        </Group>
+        <Group title="Theme" index={1} bare>
+          <ThemePicker />
+        </Group>
+        <Group title="About" index={2}>
+          <Line
+            label="App"
+            value={`${Application.nativeApplicationVersion ?? ''} (${Application.nativeBuildVersion ?? ''})`}
+          />
+          <Line label="Engine" value={version.data ? `torrential ${version.data.version}` : '—'} last />
+        </Group>
+      </ScrollView>
+    </View>
+  );
+}
+
+function Group({
+  title,
+  index,
+  bare = false,
+  children,
+}: {
+  title: string;
+  index: number;
+  bare?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Animated.View entering={rise(index)} style={styles.group}>
+      <Text style={styles.groupTitle} accessibilityRole="header">
+        {title}
+      </Text>
+      {bare ? children : <View style={styles.card}>{children}</View>}
+    </Animated.View>
+  );
+}
+
+function Line({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[styles.line, !last && styles.rule]}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.lineValue} selectable>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.paper },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: font.bold, fontSize: 20, color: color.ink },
+  content: { padding: space.page, gap: space.xl },
+  group: { gap: space.sm },
+  groupTitle: { ...type.label, color: color.pencil, paddingHorizontal: space.xs },
+  card: { borderRadius: radius.lg, backgroundColor: color.raised, overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
+  badge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: color.lifted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  value: { fontFamily: font.medium, fontSize: 16, color: color.ink },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dot: { width: 7, height: 7, borderRadius: 3.5 },
+  line: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: space.lg,
+    paddingVertical: 14,
+  },
+  rule: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.rule },
+  label: { fontFamily: font.medium, fontSize: 15, color: color.soft },
+  lineValue: { fontFamily: font.medium, fontSize: 15, color: color.ink, fontVariant: ['tabular-nums'] },
+});
