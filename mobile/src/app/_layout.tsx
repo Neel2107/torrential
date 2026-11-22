@@ -81,31 +81,81 @@ function Routes() {
   return (
     <QueryClientProvider client={client}>
       <MaybeJobs key={engineKey} paired={paired}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            statusBarStyle: scheme === 'dark' ? 'light' : 'dark',
-            orientation: 'portrait_up',
-            contentStyle: { backgroundColor: color.paper },
-          }}
-        >
-          <Stack.Protected guard={paired}>
-            <Stack.Screen name="(tabs)" />
+        <PortalHost>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              statusBarStyle: scheme === 'dark' ? 'light' : 'dark',
+              orientation: 'portrait_up',
+              contentStyle: { backgroundColor: color.paper },
+            }}
+          >
+            <Stack.Protected guard={paired}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen
+                name="title/[id]"
+                options={
+                  HERO
+                    ? {
+                        presentation: 'transparentModal',
+                        animation: 'none',
+                        contentStyle: { backgroundColor: 'transparent' },
+                      }
+                    : { animation: 'slide_from_right' }
+                }
+              />
+              <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen
+                name="play"
+                options={{
+                  presentation: 'fullScreenModal',
+                  animation: 'fade',
+                  orientation: 'landscape',
+                  contentStyle: { backgroundColor: stage.paper },
+                  statusBarHidden: true,
+                  navigationBarHidden: true,
+                }}
+              />
+              <Stack.Screen
+                name="tv"
+                options={{
+                  presentation: 'formSheet',
+                  sheetGrabberVisible: true,
+                  sheetAllowedDetents: [0.92],
+                  sheetCornerRadius: 28,
+                }}
+              />
+              <Stack.Screen
+                name="add"
+                options={{
+                  presentation: 'formSheet',
+                  sheetGrabberVisible: true,
+                  sheetAllowedDetents: 'fitToContents',
+                  sheetCornerRadius: 28,
+                }}
+              />
+              <Stack.Screen
+                name="engine"
+                options={{
+                  presentation: 'formSheet',
+                  sheetGrabberVisible: true,
+                  sheetAllowedDetents: 'fitToContents',
+                  sheetCornerRadius: 28,
+                }}
+              />
+              <Stack.Screen
+                name="relocate"
+                options={{
+                  presentation: 'formSheet',
+                  sheetGrabberVisible: true,
+                  sheetAllowedDetents: 'fitToContents',
+                  sheetCornerRadius: 28,
+                }}
+              />
+            </Stack.Protected>
+            <Stack.Screen name="pair" />
             <Stack.Screen
-              name="title/[id]"
-              options={
-                HERO
-                  ? {
-                      presentation: 'transparentModal',
-                      animation: 'none',
-                      contentStyle: { backgroundColor: 'transparent' },
-                    }
-                  : { animation: 'slide_from_right' }
-              }
-            />
-            <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen
-              name="play"
+              name="offline"
               options={{
                 presentation: 'fullScreenModal',
                 animation: 'fade',
@@ -115,58 +165,11 @@ function Routes() {
                 navigationBarHidden: true,
               }}
             />
-            <Stack.Screen
-              name="tv"
-              options={{
-                presentation: 'formSheet',
-                sheetGrabberVisible: true,
-                sheetAllowedDetents: [0.92],
-                sheetCornerRadius: 28,
-              }}
-            />
-            <Stack.Screen
-              name="add"
-              options={{
-                presentation: 'formSheet',
-                sheetGrabberVisible: true,
-                sheetAllowedDetents: 'fitToContents',
-                sheetCornerRadius: 28,
-              }}
-            />
-            <Stack.Screen
-              name="engine"
-              options={{
-                presentation: 'formSheet',
-                sheetGrabberVisible: true,
-                sheetAllowedDetents: 'fitToContents',
-                sheetCornerRadius: 28,
-              }}
-            />
-            <Stack.Screen
-              name="relocate"
-              options={{
-                presentation: 'formSheet',
-                sheetGrabberVisible: true,
-                sheetAllowedDetents: 'fitToContents',
-                sheetCornerRadius: 28,
-              }}
-            />
-          </Stack.Protected>
-          <Stack.Screen name="pair" />
-          <Stack.Screen
-            name="offline"
-            options={{
-              presentation: 'fullScreenModal',
-              animation: 'fade',
-              orientation: 'landscape',
-              contentStyle: { backgroundColor: stage.paper },
-              statusBarHidden: true,
-              navigationBarHidden: true,
-            }}
-          />
-          <Stack.Screen name="saved" options={{ animation: 'slide_from_right' }} />
-        </Stack>
-        <HeroLayer />
+            <Stack.Screen name="saved" options={{ animation: 'slide_from_right' }} />
+          </Stack>
+          <HeroLayer />
+          <AskHost />
+        </PortalHost>
       </MaybeJobs>
     </QueryClientProvider>
   );
@@ -186,10 +189,7 @@ export default function RootLayout() {
       <ThemeProvider value={theme}>
         <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         <SessionProvider>
-          <PortalHost>
-            <Routes />
-            <AskHost />
-          </PortalHost>
+          <Routes />
         </SessionProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
