@@ -2,12 +2,19 @@ import type { ReactNode } from 'react';
 import { useEvent } from 'expo';
 import type { AudioTrack, SubtitleTrack, VideoPlayer } from 'expo-video';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  Keyframe,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import type { MediaInfo, OnlineSubtitle } from '@web/wire';
 
-import { languageLabel, languageName, phoneLanguage } from './languages';
+import { languageLabel, languageName, phoneLanguage, sameLanguage } from './languages';
 import type { OnlineLookup, SubtitleChoice } from './Subtitles';
 
 import { Icon, icons } from '@/ui/Icon';
@@ -26,6 +33,39 @@ function trackName(
 ): string {
   const label = track.label && track.label !== 'und' ? track.label : null;
   return label || track.name || languageName(track.language) || `${kind} ${index + 1}`;
+}
+
+type Page = 'menu' | 'subtitles' | 'audio' | 'style';
+
+const PAGE_IN = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: 6 }, { scale: 0.98 }] },
+  100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: motion.out },
+})
+  .duration(220)
+  .delay(60);
+const PAGE_OUT = FadeOut.duration(120).easing(motion.out);
+const MENU_AUDIO = 3;
+
+/** Names for a list of tracks where two would read the same: the second English becomes English 2. */
+function namesOf(
+  tracks: { label?: string | null; language?: string | null; name?: string | null }[],
+  kind: string,
+): string[] {
+  const names = tracks.map((track, index) => trackName(track, index, kind));
+  const total = new Map<string, number>();
+  for (const name of names) total.set(name, (total.get(name) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  return names.map((name) => {
+    if (total.get(name) === 1) return name;
+    const nth = (seen.get(name) ?? 0) + 1;
+    seen.set(name, nth);
+    return nth === 1 ? name : `${name} ${nth}`;
+  });
+}
+
+function languageDetail(language: string | null | undefined, label: string): string | null {
+  const name = languageName(language);
+  return name && name.length > 3 && name.toLowerCase() !== label.toLowerCase() ? name : null;
 }
 
 export function TracksSheet({
@@ -53,87 +93,202 @@ export function TracksSheet({
   look: ReactNode;
   onClose: () => void;
 }) {
+  const [page, setPage] = useState<Page>('menu');
+  const window = useWindowDimensions();
+  const wide = window.width > window.height;
   const { subtitleTrack } = useEvent(player, 'subtitleTrackChange', { subtitleTrack: player.subtitleTrack });
   const { audioTrack } = useEvent(player, 'audioTrackChange', { audioTrack: player.audioTrack });
   const subtitles = player.availableSubtitleTracks;
   const audio = player.availableAudioTracks;
+  const subtitleNames = namesOf(subtitles, 'Subtitles');
 
-  return (
-    <Sheet onClose={onClose}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: space.xl, gap: space.xs }}>
-        <Text style={[type.title, styles.heading]}>Subtitles</Text>
+  const off = (
+    <Row
+      label="Off"
+      selected={!subtitleTrack && !drawn}
+      onPress={() => {
+        chooseSubtitles(player, null);
+        onDraw(null);
+        onLanguage(null);
+      }}
+    />
+  );
+  const embedded = (track: SubtitleTrack, index: number) => (
+    <Row
+      key={`${track.id ?? index}`}
+      label={subtitleNames[index]!}
+      detail={languageDetail(track.language, subtitleNames[index]!)}
+      selected={!drawn && subtitleTrack?.id === track.id && subtitleTrack?.label === track.label}
+      onPress={() => {
+        onDraw(null);
+        chooseSubtitles(player, track);
+        if (track.language) onLanguage(track.language);
+      }}
+    />
+  );
+  const file = (candidate: FileChoice) => (
+    <Row
+      key={`file-${candidate.index}`}
+      label={candidate.name.replace(/\.(srt|vtt|ass|ssa|sub)$/i, '')}
+      detail="Subtitle file in the torrent"
+      selected={drawn?.kind === 'file' && drawn.index === candidate.index}
+      onPress={() => onDraw(candidate)}
+    />
+  );
+
+  const audioRows = streamAudio
+    ? streamAudio.tracks.map((track, index) => (
         <Row
-          label="Off"
-          selected={!subtitleTrack && !drawn}
-          onPress={() => {
-            chooseSubtitles(player, null);
-            onDraw(null);
-            onLanguage(null);
-          }}
+          key={`stream-${track.stream}`}
+          label={track.title || languageName(track.language) || `Audio ${index + 1}`}
+          detail={`${track.codec.toUpperCase()} · ${channels(track.channels)} · converted by the engine`}
+          selected={
+            track.stream ===
+            (streamAudio.selected ?? (streamAudio.tracks.find((t) => t.default) ?? streamAudio.tracks[0])?.stream)
+          }
+          onPress={() => streamAudio.onSelect(track.stream)}
         />
-        {subtitles.map((track: SubtitleTrack, index) => (
+      ))
+    : audio.map((track: AudioTrack, index) => {
+        const fromEngine = media?.audio[index];
+        return (
           <Row
             key={`${track.id ?? index}`}
-            label={trackName(track, index, 'Subtitles')}
-            detail={languageName(track.language)}
-            selected={!drawn && subtitleTrack?.id === track.id && subtitleTrack?.label === track.label}
+            label={audio.length === 1 && !languageName(track.language) ? 'Original' : namesOf(audio, 'Audio')[index]!}
+            detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${channels(fromEngine.channels)}` : null}
+            selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
             onPress={() => {
-              onDraw(null);
-              chooseSubtitles(player, track);
-              if (track.language) onLanguage(track.language);
+              chooseAudio(player, track);
+              if (track.language) onAudioLanguage(track.language);
             }}
           />
-        ))}
-        {files.map((candidate) => (
-          <Row
-            key={`file-${candidate.index}`}
-            label={candidate.name.replace(/\.(srt|vtt|ass|ssa|sub)$/i, '')}
-            detail="Subtitle file in the torrent"
-            selected={drawn?.kind === 'file' && drawn.index === candidate.index}
-            onPress={() => onDraw(candidate)}
-          />
-        ))}
-        {subtitles.length === 0 && files.length === 0 ? (
-          <Text style={[type.caption, styles.empty]}>This video has no subtitles of its own.</Text>
-        ) : null}
+        );
+      });
 
-        <Text style={[type.section, styles.section]}>Found online</Text>
-        <OnlineRows lookup={online} drawn={drawn} onDraw={onDraw} />
-        {look}
+  const wanted = [phoneLanguage(), 'en'];
+  const current = subtitles.findIndex(
+    (track) => !drawn && subtitleTrack?.id === track.id && subtitleTrack?.label === track.label,
+  );
+  const suggested = subtitles
+    .map((track, index) => ({ track, index }))
+    .filter(({ track, index }) => index !== current && wanted.some((tag) => sameLanguage(track.language, tag)))
+    .slice(0, current >= 0 || drawn ? 1 : 2);
+  const found = online.kind === 'found' ? online.subtitles.length : 0;
+  const allSubtitles = subtitles.length + files.length + found;
+  const audioCount = streamAudio ? streamAudio.tracks.length : audio.length;
+  const audioSelected = audioRows.findIndex((row) => row.props.selected);
 
-        <Text style={[type.title, styles.heading, { marginTop: space.lg }]}>Audio</Text>
-        {streamAudio
-          ? streamAudio.tracks.map((track, index) => (
-              <Row
-                key={`stream-${track.stream}`}
-                label={track.title || languageName(track.language) || `Audio ${index + 1}`}
-                detail={`${track.codec.toUpperCase()} · ${channels(track.channels)} · converted by the engine`}
-                selected={
-                  track.stream ===
-                  (streamAudio.selected ?? (streamAudio.tracks.find((t) => t.default) ?? streamAudio.tracks[0])?.stream)
-                }
-                onPress={() => streamAudio.onSelect(track.stream)}
-              />
-            ))
-          : audio.map((track: AudioTrack, index) => {
-              const fromEngine = media?.audio[index];
-              return (
-                <Row
-                  key={`${track.id ?? index}`}
-                  label={
-                    audio.length === 1 && !languageName(track.language) ? 'Original' : trackName(track, index, 'Audio')
-                  }
-                  detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${channels(fromEngine.channels)}` : null}
-                  selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
-                  onPress={() => {
-                    chooseAudio(player, track);
-                    if (track.language) onAudioLanguage(track.language);
-                  }}
-                />
-              );
-            })}
-      </ScrollView>
+  const subtitleColumn = (
+    <View style={styles.column}>
+      <Text style={[type.title, styles.heading]}>Subtitles</Text>
+      {off}
+      {current >= 0 ? embedded(subtitles[current]!, current) : null}
+      {drawn?.kind === 'file' ? file(drawn) : null}
+      {drawn?.kind === 'online' ? (
+        <Row
+          label={languageLabel(drawn.subtitle.language)}
+          detail={[drawn.subtitle.exact ? 'Exact match' : 'Online', drawn.subtitle.name].filter(Boolean).join(' · ')}
+          selected
+          onPress={() => {}}
+        />
+      ) : null}
+      {suggested.map(({ track, index }) => embedded(track, index))}
+      <Next label="All subtitles" count={allSubtitles} onPress={() => setPage('subtitles')} />
+    </View>
+  );
+  const audioColumn = (
+    <View style={styles.column}>
+      {audioCount > 0 ? <Text style={[type.title, styles.heading]}>Audio</Text> : null}
+      {audioCount <= MENU_AUDIO ? audioRows : null}
+      {audioCount > MENU_AUDIO ? (
+        <>
+          {audioSelected >= 0 ? audioRows[audioSelected] : null}
+          <Next label="All audio" count={audioCount} onPress={() => setPage('audio')} />
+        </>
+      ) : null}
+
+      <View style={styles.gap} />
+      <Next label="Timing and style" onPress={() => setPage('style')} />
+    </View>
+  );
+  const menu = (
+    <ScrollView style={styles.scroll} contentContainerStyle={[styles.page, wide && styles.wide]}>
+      {subtitleColumn}
+      {!wide ? <View style={styles.gap} /> : null}
+      {audioColumn}
+    </ScrollView>
+  );
+
+  const pages: Record<Exclude<Page, 'menu'>, { title: string; body: ReactNode }> = {
+    subtitles: {
+      title: 'Subtitles',
+      body: (
+        <>
+          {off}
+          {subtitles.length > 0 ? <Text style={[type.section, styles.section]}>In the video</Text> : null}
+          {subtitles.map(embedded)}
+          {files.length > 0 ? <Text style={[type.section, styles.section]}>In the torrent</Text> : null}
+          {files.map(file)}
+          {subtitles.length === 0 && files.length === 0 ? (
+            <Text style={[type.caption, styles.empty]}>This video has no subtitles of its own.</Text>
+          ) : null}
+          <Text style={[type.section, styles.section]}>Found online</Text>
+          <OnlineRows lookup={online} drawn={drawn} onDraw={onDraw} />
+        </>
+      ),
+    },
+    audio: { title: 'Audio', body: audioRows },
+    style: { title: 'Timing and style', body: look },
+  };
+
+  return (
+    <Sheet
+      morph
+      maxWidth={wide ? 760 : 560}
+      onClose={onClose}
+      onBack={() => {
+        if (page === 'menu') return false;
+        setPage('menu');
+        return true;
+      }}
+    >
+      <Animated.View key={page} entering={PAGE_IN} exiting={PAGE_OUT} style={styles.shrink}>
+        {page === 'menu' ? (
+          menu
+        ) : (
+          <>
+            <Tap
+              shrink={0.97}
+              onPress={() => setPage('menu')}
+              accessibilityLabel={`Back to subtitles and audio`}
+              style={styles.back}
+            >
+              <Icon name={icons.back} size={20} tint={color.ink} />
+              <Text style={type.title}>{pages[page].title}</Text>
+            </Tap>
+            <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
+              {pages[page].body}
+            </ScrollView>
+          </>
+        )}
+      </Animated.View>
     </Sheet>
+  );
+}
+
+function Next({ label, count, onPress }: { label: string; count?: number; onPress: () => void }) {
+  return (
+    <Tap
+      shrink={1}
+      highlight
+      onPress={onPress}
+      accessibilityLabel={count === undefined ? label : `${label}, ${count}`}
+      style={styles.row}
+    >
+      <Text style={[styles.label, { flex: 1 }]}>{label}</Text>
+      {count !== undefined ? <Text style={type.numeric}>{count}</Text> : null}
+      <Icon name={icons.chevron} size={18} tint={color.pencil} />
+    </Tap>
   );
 }
 
@@ -300,6 +455,20 @@ function Row({
 
 const styles = StyleSheet.create({
   heading: { marginBottom: space.xs },
+  gap: { marginTop: space.lg },
+  shrink: { flexShrink: 1 },
+  column: { flex: 1, gap: space.xs },
+  wide: { flexDirection: 'row', gap: space.xl },
+  scroll: { flexGrow: 0, flexShrink: 1 },
+  page: { paddingHorizontal: space.xl, gap: space.xs, paddingBottom: space.sm },
+  back: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.xl,
+    paddingBottom: space.sm,
+    minHeight: 44,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

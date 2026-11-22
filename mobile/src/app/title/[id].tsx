@@ -374,10 +374,7 @@ function DownloadButton({
           video={video}
           label={sheetLabel}
           heading="Download a source"
-          onPick={(release) => {
-            setChoosing(false);
-            start(release.id);
-          }}
+          onPick={(release) => start(release.id)}
           onClose={() => setChoosing(false)}
         />
       ) : null}

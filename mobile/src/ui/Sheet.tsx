@@ -1,9 +1,10 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  cancelAnimation,
   interpolate,
-  Keyframe,
+  LinearTransition,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -17,20 +18,22 @@ import { color, motion, radius, space, stage, type Palette } from '@/theme';
 import { Portal } from './Portal';
 import { STAGE_DIFFERS, useStaged } from './stage';
 
-const CONTENT_IN = new Keyframe({
-  0: { opacity: 0, transform: [{ translateY: 10 }] },
-  100: { opacity: 1, transform: [{ translateY: 0 }], easing: motion.out },
-})
-  .duration(260)
-  .delay(70);
+type Close = (after?: () => void) => void;
 
+const MORPH = LinearTransition.duration(260).easing(motion.inOut);
+
+/** A sheet from the bottom. Its content gets `close`, which slides it away before running what was picked, once. `onBack` takes the back button first, for a sheet with pages of its own. `morph` eases the sheet to each new height when its content changes. */
 export function Sheet({
   children,
   onClose,
+  onBack,
+  morph = false,
   maxWidth = 560,
 }: {
-  children: ReactNode;
+  children: ReactNode | ((close: Close) => ReactNode);
   onClose: () => void;
+  onBack?: () => boolean;
+  morph?: boolean;
   maxWidth?: number;
 }) {
   const styles = useStaged(themed, staged);
@@ -39,16 +42,26 @@ export function Sheet({
   const width = Math.min(screenWidth, maxWidth);
   const offset = useSharedValue(screen);
   const height = useSharedValue(screen);
+  const start = useSharedValue(0);
+  const leaving = useRef(false);
+  const [closing, setClosing] = useState(false);
 
-  const close = () => {
+  const finish = (after?: () => void) => {
+    after?.();
+    onClose();
+  };
+  const close: Close = (after) => {
+    if (leaving.current) return;
+    leaving.current = true;
+    setClosing(true);
     offset.set(
-      withTiming(height.get(), { duration: 200, easing: motion.out }, (done) => done && scheduleOnRN(onClose)),
+      withTiming(height.get(), { duration: 200, easing: motion.out }, (done) => done && scheduleOnRN(finish, after)),
     );
   };
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      close();
+      if (!onBack?.()) close();
       return true;
     });
     return () => subscription.remove();
@@ -56,14 +69,17 @@ export function Sheet({
 
   const drag = Gesture.Pan()
     .activeOffsetY([-6, 6])
+    .onStart(() => {
+      cancelAnimation(offset);
+      start.set(offset.get());
+    })
     .onUpdate((event) => {
-      offset.set(event.translationY > 0 ? event.translationY : event.translationY * 0.15);
+      const next = start.get() + event.translationY;
+      offset.set(next > 0 ? next : next * 0.15);
     })
     .onEnd((event) => {
-      if (event.translationY > height.get() / 3 || event.velocityY > 900) {
-        offset.set(
-          withTiming(height.get(), { duration: 180, easing: motion.out }, (done) => done && scheduleOnRN(onClose)),
-        );
+      if (offset.get() + event.velocityY * 0.2 > height.get() * 0.4) {
+        scheduleOnRN(close);
       } else {
         offset.set(withSpring(0, { ...motion.settle, velocity: event.velocityY }));
       }
@@ -78,11 +94,12 @@ export function Sheet({
 
   return (
     <Portal>
-      <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
+      <View style={StyleSheet.absoluteFill} accessibilityViewIsModal pointerEvents={closing ? 'none' : 'auto'}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdrop]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} accessibilityLabel="Close" />
         </Animated.View>
         <Animated.View
+          layout={morph ? MORPH : undefined}
           onLayout={(event) => {
             height.set(event.nativeEvent.layout.height);
             if (offset.get() >= screen) offset.set(withSpring(0, motion.settle));
@@ -102,9 +119,7 @@ export function Sheet({
               <View style={styles.grabber} />
             </View>
           </GestureDetector>
-          <Animated.View entering={CONTENT_IN} style={styles.body}>
-            {children}
-          </Animated.View>
+          <View style={styles.body}>{typeof children === 'function' ? children(close) : children}</View>
         </Animated.View>
       </View>
     </Portal>
