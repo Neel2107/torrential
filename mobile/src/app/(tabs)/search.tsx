@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
+import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Keyboard, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
@@ -37,6 +37,7 @@ import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Glass } from '@/ui/Glass';
+import { HERO, useHeroSource } from '@/ui/hero';
 import { Icon, icons } from '@/ui/Icon';
 import { MenuRow } from '@/ui/MenuRow';
 import { Meter } from '@/ui/Meter';
@@ -315,38 +316,59 @@ function Titles({
 
 function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; onOpen: () => void }) {
   const prefetch = usePrefetchTitle();
+  const { ref, open } = useHeroSource(title.id);
+  const href = { pathname: '/title/[id]', params: { id: title.id } } as const;
+  const leave = () => {
+    onOpen();
+    Keyboard.dismiss();
+  };
+  const row = (
+    <Tap
+      shrink={1}
+      highlight
+      onPressIn={() => prefetch(title.id)}
+      onPress={
+        HERO
+          ? () => {
+              leave();
+              open(() => router.navigate(href));
+            }
+          : undefined
+      }
+      accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
+      style={styles.row}
+    >
+      <Link.AppleZoom>
+        <View ref={ref} collapsable={false}>
+          <Art id={title.id} kind="poster" name={title.name} style={styles.thumb} />
+        </View>
+      </Link.AppleZoom>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={type.headline} numberOfLines={2}>
+          {title.name}
+        </Text>
+        <View style={styles.facts}>
+          {title.rating ? (
+            <>
+              <Icon name={icons.star} size={12} tint={color.action} filled />
+              <Text style={[type.numeric, { color: color.ink }]}>{title.rating.toFixed(1)}</Text>
+            </>
+          ) : null}
+          <Text style={type.label}>{cardFacts(title)}</Text>
+        </View>
+      </View>
+      <Icon name={icons.chevron} size={18} tint={color.pencil} />
+    </Tap>
+  );
   return (
     <Animated.View entering={rise(index)}>
-      <Tap
-        shrink={1}
-        highlight
-        onPressIn={() => prefetch(title.id)}
-        onPress={() => {
-          onOpen();
-          Keyboard.dismiss();
-          // navigate, not push: a quick second tap reuses the page instead of stacking another.
-          router.navigate({ pathname: '/title/[id]', params: { id: title.id } });
-        }}
-        accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
-        style={styles.row}
-      >
-        <Art id={title.id} kind="poster" name={title.name} style={styles.thumb} />
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={type.headline} numberOfLines={2}>
-            {title.name}
-          </Text>
-          <View style={styles.facts}>
-            {title.rating ? (
-              <>
-                <Icon name={icons.star} size={12} tint={color.action} filled />
-                <Text style={[type.numeric, { color: color.ink }]}>{title.rating.toFixed(1)}</Text>
-              </>
-            ) : null}
-            <Text style={type.label}>{cardFacts(title)}</Text>
-          </View>
-        </View>
-        <Icon name={icons.chevron} size={18} tint={color.pencil} />
-      </Tap>
+      {HERO ? (
+        row
+      ) : (
+        <Link href={href} onPress={leave} asChild>
+          {row}
+        </Link>
+      )}
     </Animated.View>
   );
 }
