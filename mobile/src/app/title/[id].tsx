@@ -167,7 +167,7 @@ function facts(page: Page): string[] {
 function Body({ page }: { page: Page }) {
   const landed = useLanded(page.id);
   const target = page.play_target ?? page.next;
-  useSources(target?.video ?? null);
+  useSources(landed ? (target?.video ?? null) : null);
   const targetEpisode = target ? findEpisode(page, target.video) : null;
   const watched = useMemo(() => new Map(page.watched.map((w) => [w.video, w])), [page.watched]);
   const resume = target?.resume_at ?? null;
@@ -244,13 +244,13 @@ function Body({ page }: { page: Page }) {
         </Animated.View>
       ) : null}
 
-      {page.synopsis ? (
+      {page.synopsis && landed ? (
         <Animated.View entering={rise(3)}>
           <Synopsis text={page.synopsis} />
         </Animated.View>
       ) : null}
 
-      {page.cast.length > 0 ? (
+      {page.cast.length > 0 && landed ? (
         <Animated.Text entering={rise(4)} style={[type.caption, styles.block]} numberOfLines={2}>
           <Text style={{ color: color.soft, fontFamily: font.medium }}>Starring </Text>
           {page.cast.slice(0, 5).join(', ')}
@@ -352,7 +352,7 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
   const last = seasons.length - 1;
 
   useEffect(() => {
-    const near = [seasons[at - 1], seasons[at + 1]].flatMap((s) => s?.episodes ?? []);
+    const near = [seasons[at - 1], seasons[at + 1]].flatMap((s) => s?.episodes.slice(0, NEAR_STILLS) ?? []);
     const stills = near
       .filter((episode) => episode.thumbnail)
       .map((episode) =>
@@ -435,6 +435,7 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
 }
 
 const GLIDE = { duration: 260, easing: motion.out };
+const NEAR_STILLS = 6;
 
 function EpisodeRow({
   page,

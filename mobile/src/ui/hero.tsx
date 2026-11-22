@@ -215,7 +215,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
     }
     const timer = setTimeout(start, ready ? DRAW_WITHIN : MOUNT_WITHIN);
     return () => clearTimeout(timer);
-  });
+  }, [ready, drawn]);
 
   const style = useAnimatedStyle(() => {
     const p = progress.value;

@@ -29,6 +29,7 @@ import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
+import { TitleTap } from '@/ui/TitleTap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { Button } from '@/ui/Button';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
@@ -186,12 +187,7 @@ function ContinueCard({ item, width, index }: { item: Continue; width: number; i
           ) : null}
         </View>
       </Tap>
-      <Tap
-        shrink={1}
-        onPress={() => router.push({ pathname: '/title/[id]', params: { id: item.title.id } })}
-        accessibilityLabel={`Open ${item.title.name}`}
-        style={styles.cardText}
-      >
+      <TitleTap id={item.title.id} shrink={1} accessibilityLabel={`Open ${item.title.name}`} style={styles.cardText}>
         <View style={{ flex: 1 }}>
           <Text style={type.headline} numberOfLines={1}>
             {item.title.name}
@@ -201,7 +197,7 @@ function ContinueCard({ item, width, index }: { item: Continue; width: number; i
           </Text>
         </View>
         <Text style={[type.numeric, { color: color.pencil }]}>{remainingOf(item)}</Text>
-      </Tap>
+      </TitleTap>
     </Animated.View>
   );
 }
