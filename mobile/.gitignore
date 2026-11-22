@@ -52,3 +52,4 @@ modules/torrential-engine/android/src/main/jniLibs/
 modules/torrential-engine/ios/TorrentialMobile.xcframework/
 modules/torrential-engine/android/build/
 modules/glass-menu-android/android/build/
+/build
