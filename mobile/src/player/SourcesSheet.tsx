@@ -51,6 +51,7 @@ export function SourcesSheet({
             key={release.id}
             release={release}
             index={index}
+            why={index === 0 ? whyFirst(release, state.releases) : null}
             playing={release.id === current}
             onPress={() => {
               if (onPick) return onPick(release);
@@ -77,14 +78,34 @@ export function SourcesSheet({
   );
 }
 
+function whyFirst(first: Release, all: Release[]): string {
+  if (first.flags.includes('official') || first.flags.includes('trusted')) return 'Best · trusted';
+  if (first.sources.includes('archive.org')) return 'Best · Internet Archive';
+  const seeds = (release: Release) => release.seeders ?? -1;
+  if (all.length > 1 && all.every((other) => other === first || seeds(other) < seeds(first)))
+    return 'Best · most seeds';
+  const peers = all.filter((other) => other.quality.resolution === first.quality.resolution && other.size);
+  if (
+    first.size &&
+    first.quality.resolution &&
+    peers.length > 1 &&
+    peers.every((other) => other === first || (other.size ?? 0) > first.size!)
+  ) {
+    return 'Best · smallest';
+  }
+  return 'Best';
+}
+
 function SourceRow({
   release,
   index,
+  why,
   playing,
   onPress,
 }: {
   release: Release;
   index: number;
+  why: string | null;
   playing: boolean;
   onPress: () => void;
 }) {
@@ -106,7 +127,7 @@ function SourceRow({
         accessibilityState={{ selected: playing }}
         onPress={onPress}
         accessibilityLabel={[
-          index === 0 ? 'Best match' : null,
+          why ? why.replace('Best', 'Best match').replace(' · ', ', ') : null,
           ...tags.map((tag) => tag.label),
           release.size ? bytes(release.size) : null,
           seeds !== null ? `${seeds} seeds` : null,
@@ -118,7 +139,7 @@ function SourceRow({
       >
         <View style={styles.body}>
           <View style={styles.tags}>
-            {index === 0 && !playing ? <Text style={[styles.tag, styles.best]}>Best</Text> : null}
+            {why && !playing ? <Text style={[styles.tag, styles.best]}>{why}</Text> : null}
             {playing ? <Text style={[styles.tag, styles.best]}>Playing</Text> : null}
             {tags.map((tag) => (
               <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
