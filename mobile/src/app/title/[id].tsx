@@ -37,8 +37,8 @@ import { Burst, type BurstHandle } from '@/ui/Burst';
 import { Button } from '@/ui/Button';
 import { CastBar } from '@/ui/CastBar';
 import { EngineProblem } from '@/ui/EngineProblem';
-import { HeroTarget, useHeroPage, useLanded } from '@/ui/hero';
-import { bannerHeight as bannerHeightOf, OVERLAP, POSTER, RING, RISE } from '@/ui/titleGeometry';
+import { HeroTarget, useHeroHidden, useHeroPage, useLanded } from '@/ui/hero';
+import { bannerHeight as bannerHeightOf, OVERLAP, POSTER, posterRing, RISE } from '@/ui/titleGeometry';
 import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
 import { lap } from '@/perf';
@@ -680,8 +680,10 @@ function episodeFacts(
 }
 
 function PosterSlot({ id, name }: { id: string; name?: string }) {
+  const flying = useHeroHidden(id);
+
   return (
-    <View style={styles.posterWrap}>
+    <View style={[posterRing, flying && styles.flying]}>
       <Link.AppleZoomTarget>
         <HeroTarget id={id}>
           <Art id={id} kind="poster" name={name} style={styles.poster} fade={false} />
@@ -735,16 +737,7 @@ const styles = StyleSheet.create({
   },
   sheet: { backgroundColor: color.paper, paddingHorizontal: space.page, minHeight: 600 },
   identity: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: -RISE },
-  posterWrap: {
-    borderRadius: radius.md + 3,
-    borderWidth: RING,
-    borderColor: color.paper,
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
-  },
+  flying: { opacity: 0 },
   poster: { ...POSTER, borderRadius: radius.md },
   save: {
     flexDirection: 'row',

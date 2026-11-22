@@ -25,7 +25,7 @@ import { lap } from '@/perf';
 import { radius } from '@/theme';
 
 import { Art } from './Art';
-import { posterRect } from './titleGeometry';
+import { posterRect, posterRing, RING } from './titleGeometry';
 
 export const HERO = Platform.OS === 'android';
 
@@ -52,6 +52,9 @@ const FADE = { duration: 200, easing: Easing.out(Easing.quad) };
 const DRAW_WITHIN = 80;
 const MOUNT_WITHIN = 300;
 const PAGE: [number, number] = [0.05, 0.7];
+
+/** The part of the flight over which the poster's ring fades in: none while it leaves the grid, all of it as it lands. */
+const RING_IN: [number, number] = [0.6, 1];
 
 const progress = makeMutable(0);
 
@@ -184,12 +187,16 @@ export function useLanded(id: string): boolean {
   return landed || now;
 }
 
-export function HeroTarget({ id, children }: { id: string; children: ReactNode }) {
-  const slot = use(Slot);
+/** Whether the poster for `id` is in flight, so its place on the page stays empty until it lands. */
+export function useHeroHidden(id: string): boolean {
   const current = useFlight();
 
-  const hidden =
-    HERO && current?.id === id && (current.phase === 'opening' || (current.phase === 'closing' && current.shown));
+  return HERO && current?.id === id && (current.phase === 'opening' || (current.phase === 'closing' && current.shown));
+}
+
+export function HeroTarget({ id, children }: { id: string; children: ReactNode }) {
+  const slot = use(Slot);
+  const hidden = useHeroHidden(id);
 
   return (
     <View
@@ -268,11 +275,16 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
     };
   });
 
+  const ring = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.get(), RING_IN, [0, 1], Extrapolation.CLAMP),
+  }));
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Animated.View
         style={[{ position: 'absolute', left: to.x, top: to.y, width: to.width, height: to.height }, style]}
       >
+        <Animated.View style={[styles.ring, ring]} />
         <Art
           id={id}
           kind="poster"
@@ -299,5 +311,6 @@ function land(token: number, back: boolean) {
 
 const styles = StyleSheet.create({
   hidden: { opacity: 0 },
+  ring: { ...posterRing, position: 'absolute', top: -RING, left: -RING, right: -RING, bottom: -RING },
   poster: { flex: 1, borderRadius: radius.md, overflow: 'hidden' },
 });
