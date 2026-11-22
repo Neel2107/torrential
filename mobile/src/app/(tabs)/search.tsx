@@ -29,6 +29,7 @@ import {
 import { post, stream } from '@/engine/client';
 import { openJob, STATE, useJob, useJobName, useJobsSelect } from '@/engine/jobs';
 import { keys, useHome, useTitleSearch } from '@/engine/queries';
+import { mark, since } from '@/perf';
 import { useRecentSearches } from '@/engine/recent';
 import { useLink } from '@/engine/session';
 import { Art } from '@/ui/Art';
@@ -217,7 +218,10 @@ function SearchHeader({
             <TextInput
               ref={input}
               value={text}
-              onChangeText={setText}
+              onChangeText={(next) => {
+                mark('typed');
+                setText(next);
+              }}
               placeholder="Search films, shows, torrents"
               placeholderTextColor={color.pencil}
               style={styles.input}
@@ -278,6 +282,11 @@ function Titles({
   }));
 
   useEffect(() => onBusy(fetching), [fetching, onBusy]);
+
+  const answered = query.length > 0 && result.data !== undefined && !result.isPlaceholderData;
+  useEffect(() => {
+    if (answered) since('typed', 'search results');
+  }, [answered, query]);
 
   return (
     <Animated.FlatList

@@ -9,6 +9,7 @@
 #   mobile/scripts/perf-f6.sh tabs [runs]     Home to Downloads and back; frames
 #   mobile/scripts/perf-f6.sh net [runs]      engine requests and characters received in the 8 s after launch
 #   mobile/scripts/perf-f6.sh browse [runs]   open a title, stay STAY seconds (default 1.2), go back; requests and characters
+#   mobile/scripts/perf-f6.sh search [passes] type each of a few public-domain titles; last keystroke to results, per pass
 #
 # Taps go through f6-tap.sh, so nothing lands outside the app. Media volume is set to 0 first. Targets are found
 # before the frame counter resets: a uiautomator dump makes the app build its accessibility tree, which costs frames.
@@ -150,6 +151,25 @@ case $scenario in
       sleep 1
     done
     frames
+    ;;
+  search)
+    home >/dev/null
+    tab=$(find_node 'content-desc="Search[^"]*"')
+    [ -n "$tab" ] || { echo "no Search tab found" >&2; exit 1; }
+    "$here/f6-tap.sh" $tab
+    sleep 1.5
+    for pass in $(seq "$runs"); do
+      took=()
+      for query in sintel big%sbuck%sbunny tears%sof%ssteel nosferatu night%sof%sthe%sliving%sdead; do
+        $A logcat -c
+        $A shell input text "$query"
+        line=$(perf_line "search results" 10)
+        took+=("$(sed -n 's/.*search results \([0-9]*\) ms.*/\1/p' <<<"$line")")
+        for _ in $(seq 30); do $A shell input keyevent KEYCODE_DEL; done
+        sleep 0.6
+      done
+      stats "search pass $pass ms" "${took[@]}"
+    done
     ;;
   browse)
     home >/dev/null
