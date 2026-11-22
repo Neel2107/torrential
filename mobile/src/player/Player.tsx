@@ -1,6 +1,7 @@
 import { useEvent, useEventListener } from 'expo';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
+import * as Network from 'expo-network';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
@@ -37,6 +38,8 @@ import { get } from '@/engine/client';
 import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { LoadingMark } from '@/ui/Bands';
+import { startDownload } from '@/engine/download';
+import { useViewer } from '@/player/start';
 import { report, resend } from '@/engine/watched';
 import { since } from '@/perf';
 import { Button } from '@/ui/Button';
@@ -85,6 +88,7 @@ function nextEpisode(page: TitlePage | null, video: string | null): UpNext | nul
 }
 
 const UNLOCK_SHOWN_MS = 3000;
+const PREPARE_AT = 0.85;
 
 let carriedSleep: Sleep = null;
 
@@ -247,6 +251,19 @@ export function Player({
   const [ended, setEnded] = useState(false);
   const page = useTitle(video ? titleOf(video) : '', Boolean(video && episode));
   const next = nextEpisode(page.data ?? null, video);
+  const viewer = useViewer();
+  const prepared = useRef<string | null>(null);
+  const nearEnd = duration > 0 && position / duration > PREPARE_AT;
+
+  useEffect(() => {
+    if (!next || !nearEnd || prepared.current === next.video) return;
+    prepared.current = next.video;
+    Network.getNetworkStateAsync()
+      .then((network) => {
+        if (network.type === Network.NetworkStateType.WIFI) return startDownload(link, viewer, next.video);
+      })
+      .catch(() => {});
+  }, [next, nearEnd, link, viewer]);
   useEventListener(player, 'playToEnd', () => {
     setEnded(true);
     setVisible(false);
