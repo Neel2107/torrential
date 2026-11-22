@@ -17,6 +17,7 @@ import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { LoadingMark } from '@/ui/Bands';
+import { PlaybackProblem } from '@/player/PlaybackProblem';
 import { SourcesSheet } from '@/player/SourcesSheet';
 import { mark } from '@/perf';
 import { Logo } from '@/ui/Logo';
@@ -26,6 +27,8 @@ import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
 import { stage as color, font, radius, space, stageType as type } from '@/theme';
 import { appear, reflow, vanish } from '@/ui/presets';
+
+const CLOSE_ROOM = 44 + space.md;
 
 export default function PlayScreen() {
   return (
@@ -174,18 +177,16 @@ function Starting({
             <Icon name={icons.close} size={24} tint={color.ink} />
           </Tap>
         </View>
-        <View style={[styles.body, { paddingLeft: insets.left + 56, paddingRight: insets.right + 56 }]}>
-          {id && name ? <Logo id={id} name={name} style={styles.logo} /> : <View style={styles.logo} />}
-          {detail ? <Text style={styles.detail}>{detail}</Text> : null}
-
-          {start.phase === 'failed' ? (
-            <Animated.View entering={appear} style={styles.failed}>
-              <View style={styles.failedLine}>
-                <Icon name={icons.warning} size={20} tint={color.error} />
-                <Text style={styles.failedText}>{sentence(start.message)}</Text>
-              </View>
-              {start.hint && !(video && pinned) ? <Text style={type.label}>{sentence(start.hint)}</Text> : null}
-              <View style={styles.actions}>
+        {start.phase === 'failed' ? (
+          <PlaybackProblem
+            align="start"
+            room={{ sides: CLOSE_ROOM }}
+            title={name}
+            detail={detail}
+            message={sentence(start.message)}
+            hint={start.hint && !(video && pinned) ? sentence(start.hint) : null}
+            actions={
+              <>
                 {video && pinned ? (
                   <Button
                     label="Find another source"
@@ -210,9 +211,13 @@ function Starting({
                   />
                 )}
                 <Button label="Back" kind="quiet" onPress={leave} />
-              </View>
-            </Animated.View>
-          ) : (
+              </>
+            }
+          />
+        ) : (
+          <View style={[styles.body, { paddingLeft: insets.left + 56, paddingRight: insets.right + 56 }]}>
+            {id && name ? <Logo id={id} name={name} style={styles.logo} /> : <View style={styles.logo} />}
+            {detail ? <Text style={styles.detail}>{detail}</Text> : null}
             <View style={styles.progress}>
               <View style={styles.stepLine}>
                 <LoadingMark size={22} label="Starting" />
@@ -238,8 +243,8 @@ function Starting({
                 </Animated.Text>
               ) : null}
             </View>
-          )}
-        </View>
+          </View>
+        )}
         {choosing && video ? (
           <SourcesSheet
             video={video}
@@ -274,9 +279,5 @@ const styles = StyleSheet.create({
   step: { flex: 1, fontFamily: font.semibold, fontSize: 17, color: color.ink },
   stepLine: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   release: { ...type.numeric, color: color.pencil },
-  failed: { gap: space.md, marginTop: space.lg, maxWidth: 520 },
-  failedLine: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },
-  failedText: { flex: 1, fontFamily: font.semibold, fontSize: 16, color: color.ink, lineHeight: 22 },
-  actions: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
   radius: { borderRadius: radius.md },
 });
