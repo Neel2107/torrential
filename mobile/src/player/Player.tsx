@@ -171,6 +171,29 @@ export function Player({
   const [drawn, setDrawn] = useState<SubtitleChoice | null>(null);
   const cues = useSubtitleCues(play, drawn);
   const online = useOnlineSubtitles(play.id, play.video.index);
+  const remember = (language: string | null) =>
+    setPreferences({ subtitles: language ? language.slice(0, 2).toLowerCase() : null });
+  const { availableSubtitleTracks } = useEvent(player, 'availableSubtitleTracksChange', {
+    availableSubtitleTracks: player.availableSubtitleTracks,
+  });
+  const picked = useRef(false);
+  const wanted = preferences.subtitles;
+
+  useEffect(() => {
+    if (picked.current || !wanted || drawn || player.subtitleTrack) return;
+    const own = availableSubtitleTracks.find((track) => track.language?.slice(0, 2).toLowerCase() === wanted);
+    if (own) {
+      picked.current = true;
+      player.subtitleTrack = own;
+      return;
+    }
+    if (online.kind !== 'found') return;
+    const found = online.subtitles.find((subtitle) => subtitle.language.slice(0, 2).toLowerCase() === wanted);
+    if (found) {
+      picked.current = true;
+      setDrawn({ kind: 'online', subtitle: found });
+    }
+  }, [availableSubtitleTracks, online, wanted, drawn, player]);
   const [offsets, setOffsets] = useState<Record<string, number>>({});
   const drawnKey = drawn ? choiceKey(drawn) : null;
   const offset = drawnKey ? (offsets[drawnKey] ?? 0) : null;
@@ -550,7 +573,9 @@ export function Player({
               onDraw={(choice) => {
                 setDrawn(choice);
                 if (choice) player.subtitleTrack = null;
+                if (choice?.kind === 'online') remember(choice.subtitle.language);
               }}
+              onLanguage={remember}
               look={
                 <SubtitleLook
                   offset={offset}

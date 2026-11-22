@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { SUBTITLE_STYLE, type SubtitleStyle } from '@web/lib/storage';
 
-export type PlayerPreferences = { speed: number; subtitleStyle: SubtitleStyle };
+/** `subtitles` is the language last picked, two letters, or null for off; undefined until one is picked. */
+export type PlayerPreferences = { speed: number; subtitleStyle: SubtitleStyle; subtitles?: string | null };
 
 const KEY = 'player-preferences';
 const DEFAULTS: PlayerPreferences = { speed: 1, subtitleStyle: SUBTITLE_STYLE };

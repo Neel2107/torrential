@@ -35,6 +35,7 @@ export function TracksSheet({
   online,
   drawn,
   onDraw,
+  onLanguage,
   look,
   onClose,
 }: {
@@ -45,6 +46,7 @@ export function TracksSheet({
   online: OnlineLookup;
   drawn: SubtitleChoice | null;
   onDraw: (choice: SubtitleChoice | null) => void;
+  onLanguage: (language: string | null) => void;
   look: ReactNode;
   onClose: () => void;
 }) {
@@ -63,6 +65,7 @@ export function TracksSheet({
           onPress={() => {
             player.subtitleTrack = null;
             onDraw(null);
+            onLanguage(null);
           }}
         />
         {subtitles.map((track: SubtitleTrack, index) => (
@@ -74,6 +77,7 @@ export function TracksSheet({
             onPress={() => {
               onDraw(null);
               player.subtitleTrack = track;
+              if (track.language) onLanguage(track.language);
             }}
           />
         ))}
