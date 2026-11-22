@@ -28,11 +28,14 @@ export function Pager({
   index,
   onIndex,
   position,
+  preload = true,
   children,
 }: {
   index: number;
   onIndex: (index: number) => void;
   position: SharedValue<number>;
+  /** Mount the pages beside the current one soon after it settles; otherwise only as a swipe nears them. */
+  preload?: boolean;
   children: ReactNode;
 }) {
   const { width } = useWindowDimensions();
@@ -40,11 +43,15 @@ export function Pager({
   const settled = useRef(index);
   const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set([index]));
 
+  const near = (page: number) => setMounted((seen) => (seen.has(page) ? seen : new Set([...seen, page])));
+  const asked = useSharedValue(1 << index);
+
   useEffect(() => {
-    setMounted((seen) => (seen.has(index) ? seen : new Set([...seen, index])));
+    near(index);
+    if (!preload) return;
     const timer = setTimeout(() => setMounted((seen) => new Set([...seen, index - 1, index + 1])), NEIGHBOURS_AFTER_MS);
     return () => clearTimeout(timer);
-  }, [index]);
+  }, [index, preload]);
 
   useEffect(() => {
     if (settled.current === index) return;
@@ -61,7 +68,13 @@ export function Pager({
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
-      position.value = event.contentOffset.x / width;
+      const at = event.contentOffset.x / width;
+      position.value = at;
+      for (const page of [Math.floor(at), Math.ceil(at)]) {
+        if (page < 0 || asked.value & (1 << page)) continue;
+        asked.value |= 1 << page;
+        runOnJS(near)(page);
+      }
     },
     onMomentumEnd: (event) => {
       runOnJS(land)(Math.round(event.contentOffset.x / width));

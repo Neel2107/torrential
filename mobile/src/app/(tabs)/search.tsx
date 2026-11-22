@@ -12,6 +12,7 @@ import Animated, {
   useSharedValue,
   withTiming,
   LinearTransition,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,6 +46,7 @@ import { Sheet } from '@/ui/Sheet';
 import { Skeleton } from '@/ui/Skeleton';
 import { Tap } from '@/ui/Tap';
 import { TitlePoster, TitleTap } from '@/ui/TitleTap';
+import { Pager, TabStrip, usePagerPosition } from '@/ui/Pager';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
@@ -60,6 +62,8 @@ const CATEGORIES: Record<Category, string> = {
   dataset: 'Dataset',
   other: 'Other',
 };
+
+const ignore = () => {};
 
 function useDebounced<T>(value: T, ms: number): T {
   const [settled, setSettled] = useState(value);
@@ -86,6 +90,7 @@ export default function Search() {
   const [busy, setBusy] = useState(false);
   const searching = useLingering(busy, 200);
   const [tab, setTab] = useState(0);
+  const position = usePagerPosition(0);
   const [everything, setEverything] = useState(false);
   const query = useDebounced(text.trim(), 280);
   const top = insets.top + BAR_HEIGHT + TABS_HEIGHT;
@@ -110,9 +115,16 @@ export default function Search() {
 
   return (
     <View style={styles.screen}>
-      {tab === 0 ? (
-        <Titles query={query} top={top} idle={idle} onOpen={remember} onBusy={setBusy} />
-      ) : (
+      <Pager
+        index={tab}
+        onIndex={(next) => {
+          setTab(next);
+          Keyboard.dismiss();
+        }}
+        position={position}
+        preload={false}
+      >
+        <Titles query={query} top={top} idle={idle} onOpen={remember} onBusy={tab === 0 ? setBusy : ignore} />
         <Torrents
           query={query}
           everything={everything}
@@ -120,10 +132,18 @@ export default function Search() {
           top={top}
           idle={idle}
           onOpen={remember}
-          onBusy={setBusy}
+          onBusy={tab === 1 ? setBusy : ignore}
         />
-      )}
-      <SearchHeader text={text} setText={setText} tab={tab} setTab={setTab} onSubmit={remember} searching={searching} />
+      </Pager>
+      <SearchHeader
+        text={text}
+        setText={setText}
+        tab={tab}
+        setTab={setTab}
+        position={position}
+        onSubmit={remember}
+        searching={searching}
+      />
     </View>
   );
 }
@@ -133,6 +153,7 @@ function SearchHeader({
   setText,
   tab,
   setTab,
+  position,
   onSubmit,
   searching,
 }: {
@@ -140,6 +161,7 @@ function SearchHeader({
   setText: (text: string) => void;
   tab: number;
   setTab: (tab: number) => void;
+  position: SharedValue<number>;
   onSubmit: () => void;
   searching: boolean;
 }) {
@@ -204,8 +226,10 @@ function SearchHeader({
             ) : null}
           </Animated.View>
         </View>
-        <Tabs
+        <TabStrip
+          labels={[...TABS]}
           index={tab}
+          position={position}
           onChange={(next) => {
             setTab(next);
             Keyboard.dismiss();
@@ -214,40 +238,6 @@ function SearchHeader({
       </Animated.View>
       <View style={[styles.statusShade, { height: insets.top }]} pointerEvents="none" />
     </>
-  );
-}
-
-function Tabs({ index, onChange }: { index: number; onChange: (index: number) => void }) {
-  const [width, setWidth] = useState(0);
-  const x = useSharedValue(0);
-  useEffect(() => {
-    x.value = withTiming(index, { duration: motion.standard, easing: motion.out });
-  }, [index, x]);
-  const underline = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value * (width / TABS.length) + (width / TABS.length - 56) / 2 }],
-  }));
-
-  return (
-    <View
-      style={styles.tabs}
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-      accessibilityRole="tablist"
-    >
-      {TABS.map((label, i) => (
-        <Tap
-          key={label}
-          shrink={1}
-          haptic={i !== index}
-          onPress={() => onChange(i)}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: i === index }}
-          style={styles.tab}
-        >
-          <Text style={[styles.tabLabel, i === index && styles.tabLabelOn]}>{label}</Text>
-        </Tap>
-      ))}
-      {width > 0 ? <Animated.View style={[styles.underline, underline]} /> : null}
-    </View>
   );
 }
 
@@ -851,24 +841,6 @@ const styles = StyleSheet.create({
     backgroundColor: color.soft,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  tabs: {
-    height: TABS_HEIGHT,
-    flexDirection: 'row',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.rule,
-  },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  tabLabel: { fontFamily: font.medium, fontSize: 15, color: color.pencil },
-  tabLabelOn: { fontFamily: font.bold, color: color.ink },
-  underline: {
-    position: 'absolute',
-    left: 0,
-    bottom: 0,
-    width: 56,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: color.action,
   },
   row: {
     flexDirection: 'row',
