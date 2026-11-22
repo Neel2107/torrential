@@ -26,7 +26,7 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
-import { color, font, motion, radius, space, type } from '@/theme';
+import { alpha, color, font, motion, radius, space, type } from '@/theme';
 
 const CONTAINERS: Record<string, string> = {
   mkv: 'MKV',
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     gap: space.sm,
     padding: space.md,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(226,128,110,0.12)',
+    backgroundColor: alpha(color.error, 0.12),
   },
   tvRow: {
     flexDirection: 'row',
@@ -386,14 +386,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: 26,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(166,199,154,0.16)',
+    backgroundColor: alpha(color.action, 0.16),
   },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: color.action },
   liveText: { fontFamily: font.semibold, fontSize: 12, color: color.action, letterSpacing: 0.3 },
   cover: { aspectRatio: 16 / 9, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: color.lifted },
   times: { flexDirection: 'row', justifyContent: 'space-between' },
   scrub: { height: 28, justifyContent: 'center' },
-  scrubTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(240,233,220,0.16)', overflow: 'hidden' },
+  scrubTrack: { height: 5, borderRadius: 3, backgroundColor: alpha(color.ink, 0.16), overflow: 'hidden' },
   scrubFill: { height: 5, backgroundColor: color.action },
   scrubKnob: { position: 'absolute', width: 18, height: 18, borderRadius: 9, backgroundColor: color.ink },
   transport: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 40 },

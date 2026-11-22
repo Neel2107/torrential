@@ -47,7 +47,7 @@ import { Skeleton } from '@/ui/Skeleton';
 import { Tap } from '@/ui/Tap';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
-import { color, font, motion, radius, space, type } from '@/theme';
+import { alpha, color, font, motion, radius, space, type } from '@/theme';
 
 const TABS = ['Films & shows', 'Torrents'] as const;
 const SHOWN = 3;
@@ -163,7 +163,7 @@ function SearchHeader({
   const focus = useSharedValue(0);
   const slide = useAnimatedStyle(() => ({ transform: [{ translateY: -hidden.value * BAR_HEIGHT }] }));
   const field = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(focus.value, [0, 1], ['rgba(166,199,154,0)', color.action]),
+    borderColor: interpolateColor(focus.value, [0, 1], [`${color.action}00`, color.action]),
   }));
 
   return (
@@ -846,7 +846,7 @@ function Hint({ icon, title, body }: { icon: (typeof icons)[keyof typeof icons];
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.paper },
-  header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: 'rgba(20,18,15,0.97)' },
+  header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: alpha(color.paper, 0.97) },
   statusShade: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 11, backgroundColor: color.paper },
   fieldRow: { height: BAR_HEIGHT, justifyContent: 'center', paddingHorizontal: space.lg },
   field: {

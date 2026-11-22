@@ -42,7 +42,7 @@ import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { TabStrip, usePagerPosition } from '@/ui/Pager';
 import { Tap } from '@/ui/Tap';
-import { color, font, motion, radius, space, type } from '@/theme';
+import { alpha, color, font, motion, radius, space, type } from '@/theme';
 
 export default function Title() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -81,7 +81,7 @@ export default function Title() {
         <Animated.View style={[styles.banner, { height: bannerHeight }, banner]}>
           <Art id={id} kind="background" style={StyleSheet.absoluteFill} name={title.data?.name} />
           <LinearGradient
-            colors={['rgba(20,18,15,0.35)', 'transparent', 'rgba(20,18,15,0.9)']}
+            colors={[alpha(color.paper, 0.35), 'transparent', alpha(color.paper, 0.9)]}
             locations={[0, 0.4, 1]}
             style={StyleSheet.absoluteFill}
           />
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   headerShade: {
-    backgroundColor: 'rgba(20,18,15,0.96)',
+    backgroundColor: alpha(color.paper, 0.96),
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.rule,
   },
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(20,18,15,0.6)',
+    backgroundColor: alpha(color.paper, 0.6),
   },
   sheet: { backgroundColor: color.paper, paddingHorizontal: space.page, minHeight: 600 },
   identity: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: -RISE },

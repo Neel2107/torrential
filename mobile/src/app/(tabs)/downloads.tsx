@@ -36,7 +36,7 @@ import { Pager, usePagerPosition } from '@/ui/Pager';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
-import { color, font, motion, space, type } from '@/theme';
+import { alpha, color, font, motion, scheme, space, type } from '@/theme';
 
 const ACTIVE = new Set<Job['state']>(['queued', 'metadata', 'checking', 'downloading', 'paused', 'error']);
 
@@ -450,7 +450,7 @@ function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
     );
   }
   return (
-    <Menu colorScheme="dark" onSelect={({ id }) => actions.find((action) => action.id === id)?.run()}>
+    <Menu colorScheme={scheme} onSelect={({ id }) => actions.find((action) => action.id === id)?.run()}>
       <Menu.Trigger glass={false} accessibilityLabel="More" style={styles.more}>
         <Icon name={icons.more} size={20} tint={color.pencil} />
       </Menu.Trigger>
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(240,233,220,0.12)', overflow: 'hidden' },
+  track: { height: 4, borderRadius: 2, backgroundColor: alpha(color.ink, 0.12), overflow: 'hidden' },
   fill: { height: 4, borderRadius: 2 },
   empty: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 80 },
   emptyIcon: {

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useJobs } from '@/engine/jobs';
 import { PullProvider } from '@/ui/pull';
 import { ChromeProvider } from '@/ui/chrome';
-import { color } from '@/theme';
+import { color, scheme } from '@/theme';
 
 /**
  * How much the system tab bar covers above the safe area. It cannot be measured, and it does not
@@ -20,7 +20,10 @@ export default function TabsLayout() {
   return (
     <PullProvider>
       <ChromeProvider bar={insets.bottom + SYSTEM_TAB_BAR}>
-        <NativeTabs tintColor={color.action}>
+        <NativeTabs
+          tintColor={color.action}
+          blurEffect={scheme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
+        >
           <NativeTabs.Trigger name="index">
             <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
             <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} />

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { LucideIcon } from 'lucide-react-native';
 
-import { color, font, space } from '@/theme';
+import { alpha, color, font, space } from '@/theme';
 
 import { useChrome } from './chrome';
 import { TabStrip } from './Pager';
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    backgroundColor: 'rgba(20, 18, 15, 0.96)',
+    backgroundColor: alpha(color.paper, 0.96),
   },
   statusShade: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 11, backgroundColor: color.paper },
   row: { height: BAR_HEIGHT, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.lg },

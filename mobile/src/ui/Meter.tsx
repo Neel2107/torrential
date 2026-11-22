@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { color, radius } from '@/theme';
+import { alpha, color, radius } from '@/theme';
 
 export function Meter({ fraction, tint = color.action }: { fraction: number; tint?: string }) {
   const clamped = Math.min(1, Math.max(0, fraction));
@@ -16,6 +16,6 @@ export function Meter({ fraction, tint = color.action }: { fraction: number; tin
 }
 
 const styles = StyleSheet.create({
-  track: { height: 4, borderRadius: radius.pill, backgroundColor: 'rgba(240, 233, 220, 0.18)', overflow: 'hidden' },
+  track: { height: 4, borderRadius: radius.pill, backgroundColor: alpha(color.ink, 0.18), overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radius.pill },
 });
