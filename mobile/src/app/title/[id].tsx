@@ -41,6 +41,7 @@ import { HeroTarget, useHeroPage, useLanded } from '@/ui/hero';
 import { bannerHeight as bannerHeightOf, OVERLAP, POSTER, RING, RISE } from '@/ui/titleGeometry';
 import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
+import { since } from '@/perf';
 import { MoreText } from '@/ui/MoreText';
 import { NavRow } from '@/ui/Row';
 import { ProgressRing } from '@/ui/ProgressRing';
@@ -177,6 +178,7 @@ function facts(page: Page): string[] {
 function Body({ page }: { page: Page }) {
   const landed = useLanded(page.id);
   const enter = (index: number) => (landed ? rise(index) : undefined);
+  useEffect(() => since('open', 'tap to title ready'), []);
   const target = page.play_target ?? page.next;
   useSources(landed ? (target?.video ?? null) : null);
   const targetEpisode = target ? findEpisode(page, target.video) : null;

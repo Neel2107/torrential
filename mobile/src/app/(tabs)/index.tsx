@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,6 +15,7 @@ import Animated, { useSharedValue } from 'react-native-reanimated';
 import type { Continue } from '@web/wire';
 
 import { useHome } from '@/engine/queries';
+import { once } from '@/perf';
 import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
@@ -42,6 +43,10 @@ import { EmptyState } from '@/ui/EmptyState';
 export default function Home() {
   const home = useHome();
   const top = useTopInset(false);
+  const ready = home.data !== undefined;
+  useEffect(() => {
+    if (ready) once('home ready');
+  }, [ready]);
   const offset = useSharedValue(0);
   const refetch = home.refetch;
 

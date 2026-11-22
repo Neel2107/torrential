@@ -21,3 +21,12 @@ export function lap(name: string, label: string) {
   if (at === undefined) return;
   console.log(`[perf] ${label} ${Math.round(performance.now() - at)} ms`);
 }
+
+const reached = new Set<string>();
+
+/** Logs `[perf] label` once per process, so a harness can time it against the launch line in the device log. */
+export function once(label: string) {
+  if (reached.has(label)) return;
+  reached.add(label);
+  console.log(`[perf] ${label}`);
+}

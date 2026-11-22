@@ -21,7 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { since } from '@/perf';
+import { lap } from '@/perf';
 import { radius } from '@/theme';
 
 import { Art } from './Art';
@@ -228,7 +228,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
     if (started.current) return;
     started.current = true;
 
-    if (!back) since('open', 'tap to flight');
+    if (!back) lap('open', 'tap to flight');
     visible.set(1);
     update(token, { shown: true });
     progress.set(
