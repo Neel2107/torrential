@@ -35,7 +35,7 @@ Homebrew's Rust has no mobile targets; use rustup's. A new engine route needs a 
 
 - **Poco F6 (Android):** reach it over adb. At home use wireless debugging. Away from home use Tailscale: `adb connect <f6 tailnet ip>:5555`. That needs `adb tcpip 5555` run once from home, again after every reboot. Unlock only with `mobile/scripts/f6-unlock.sh`, which types the PIN only when the PIN pad is on screen.
 - **Never use `adb shell monkey`.** It sends random input.
-- Never tap the F6 blind: take a screenshot or a uiautomator dump before every tap.
+- Never tap the F6 blind: take a screenshot or a uiautomator dump before every tap. In scripted loops, tap through `mobile/scripts/f6-tap.sh`, which refuses when torrential isn't in front or the keyboard is open.
 - Don't tap the F6 while its owner is using it.
 - At night, make no noise: keep media volume at 0, and play no video and fire no haptics.
 - **iPhone:** build Release with `xcodebuild … -allowProvisioningUpdates` and install with `xcrun devicectl device install app`. The free Apple ID signing expires after 7 days.
