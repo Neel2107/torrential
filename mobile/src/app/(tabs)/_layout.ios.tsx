@@ -3,9 +3,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SaveWhenDone } from '@/engine/download';
 import { useJobsSelect } from '@/engine/jobs';
+import { CastBar } from '@/ui/CastBar';
 import { PullProvider } from '@/ui/pull';
-import { ChromeProvider } from '@/ui/chrome';
-import { color, scheme } from '@/theme';
+import { ChromeProvider, useChrome } from '@/ui/chrome';
+import { color, scheme, space } from '@/theme';
 
 /**
  * How much the system tab bar covers above the safe area. It cannot be measured, and it does not
@@ -42,7 +43,15 @@ export default function TabsLayout() {
             <NativeTabs.Trigger.Icon sf="magnifyingglass" />
           </NativeTabs.Trigger>
         </NativeTabs>
+        <DockedCastBar />
       </ChromeProvider>
     </PullProvider>
   );
+}
+
+function DockedCastBar() {
+  const insets = useSafeAreaInsets();
+  const { setDocked } = useChrome();
+
+  return <CastBar bottom={insets.bottom + SYSTEM_TAB_BAR + space.sm} onHeight={setDocked} />;
 }
