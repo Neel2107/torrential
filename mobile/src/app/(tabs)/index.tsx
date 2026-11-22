@@ -30,6 +30,7 @@ import { Skeleton } from '@/ui/Skeleton';
 import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
 import { TitleTap } from '@/ui/TitleTap';
+import { NewEpisodes } from '@/ui/NewEpisodes';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { Button } from '@/ui/Button';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
@@ -69,6 +70,7 @@ export default function Home() {
           ) : (
             <>
               {home.data.continue.length > 0 ? <ContinueCarousel items={home.data.continue} /> : null}
+              <NewEpisodes saved={home.data.saved} index={1} />
               {home.data.saved.length > 0 ? (
                 <Animated.View entering={rise(2)} style={styles.section}>
                   <SectionTitle>Saved</SectionTitle>
