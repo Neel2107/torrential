@@ -201,12 +201,14 @@ pub async fn accept(ctx: Arc<Ctx>, mut listener: tokio::net::TcpListener, mut re
     let mut retry = tokio::time::Instant::now();
     let on_network = |listener: &tokio::net::TcpListener| reach_of(listener) == Reach::Network;
     let mut v6 = if on_network(&listener) { ipv6(ctx.http_port) } else { None };
+    let mut broken = false;
     loop {
         let want = *reach.borrow_and_update();
-        if reach_of(&listener) != want && tokio::time::Instant::now() >= retry {
+        if (broken || reach_of(&listener) != want) && tokio::time::Instant::now() >= retry {
             listener = listen(listener, want, ctx.http_port, &ctx.devices).await;
             v6 = if on_network(&listener) { ipv6(ctx.http_port) } else { None };
             retry = tokio::time::Instant::now() + RETRY;
+            broken = false;
         }
         let astray = reach_of(&listener) != want;
         tokio::select! {
@@ -215,9 +217,14 @@ pub async fn accept(ctx: Arc<Ctx>, mut listener: tokio::net::TcpListener, mut re
                 // A client that left before the engine took its connection.
                 Err(e) if matches!(e.kind(), io::ErrorKind::ConnectionAborted | io::ErrorKind::ConnectionReset) => {}
                 // Out of file descriptors or memory, which connections give back as they end.
-                Err(e) => {
+                Err(e) if exhausted(&e) => {
                     log(&format!("cannot take a connection: {e}"));
                     tokio::time::sleep(BACKOFF).await;
+                }
+                // The socket itself is gone, as iOS takes a suspended app's listening sockets.
+                Err(e) => {
+                    log(&format!("the listening socket failed, so the engine opens it again: {e}"));
+                    broken = true;
                 }
             },
             Ok((stream, remote)) = accept_on(&v6) => spawn(&ctx, &strangers, stream, remote),
@@ -230,6 +237,11 @@ pub async fn accept(ctx: Arc<Ctx>, mut listener: tokio::net::TcpListener, mut re
             () = tokio::time::sleep_until(retry), if astray => {}
         }
     }
+}
+
+/// Whether accepting failed for want of descriptors or memory, which come back by themselves.
+fn exhausted(error: &io::Error) -> bool {
+    matches!(error.kind(), io::ErrorKind::OutOfMemory) || matches!(error.raw_os_error(), Some(12 | 23 | 24 | 55 | 105))
 }
 
 /// The next connection to `listener`, or never when there is none.

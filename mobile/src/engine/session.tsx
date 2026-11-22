@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { AppState, PermissionsAndroid, Platform } from 'react-native';
 
 import type { Me } from '@web/wire';
 
@@ -80,17 +80,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [saved]);
 
   useEffect(() => {
-    if (engine?.kind !== 'phone' || !LocalEngine) return;
-    LocalEngine.start()
-      .then(({ port, secret }) => {
-        const link = { base: `http://127.0.0.1:${port}`, token: secret };
-        if (link.base === engine.link.base && link.token === engine.link.token) return;
-        return change((now) => ({
-          ...now,
-          engines: now.engines.map((e) => (e.id === engine.id ? { ...e, link } : e)),
-        }));
-      })
-      .catch(() => {});
+    const local = LocalEngine;
+    if (engine?.kind !== 'phone' || !local) return;
+    const start = () =>
+      local
+        .start()
+        .then(({ port, secret }) => {
+          const link = { base: `http://127.0.0.1:${port}`, token: secret };
+          if (link.base === engine.link.base && link.token === engine.link.token) return;
+          return change((now) => ({
+            ...now,
+            engines: now.engines.map((e) => (e.id === engine.id ? { ...e, link } : e)),
+          }));
+        })
+        .catch(() => {});
+    start();
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') start();
+    });
+    return () => subscription.remove();
   }, [engine, change]);
 
   const api = useMemo<SessionApi>(() => {
