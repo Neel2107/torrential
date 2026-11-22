@@ -30,7 +30,7 @@ import {
 } from '@web/wire';
 
 import { post, stream } from '@/engine/client';
-import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
+import { openJob, STATE, useJob, useJobName, useJobsSelect } from '@/engine/jobs';
 import { keys, useHome, useTitleSearch } from '@/engine/queries';
 import { useRecentSearches } from '@/engine/recent';
 import { useLink } from '@/engine/session';
@@ -609,12 +609,16 @@ function ReleaseRow({
   );
 }
 
-function usePickup(): { unfinished: Continue[]; downloads: Job[]; more: boolean } {
+const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((id, i) => id === b[i]);
+
+function usePickup(): { unfinished: Continue[]; downloads: string[]; more: boolean } {
   const home = useHome();
-  const { jobs } = useJobs();
   const unfinished = (home.data?.continue ?? []).slice(0, SHOWN);
   const watching = new Set(unfinished.map((item) => item.title.id));
-  const others = jobs.filter((job) => !(job.title && watching.has(job.title.title)));
+  const others = useJobsSelect(
+    ({ jobs }) => jobs.filter((job) => !(job.title && watching.has(job.title.title))).map((job) => job.id),
+    sameIds,
+  );
   return { unfinished, downloads: others.slice(0, SHOWN), more: others.length > SHOWN };
 }
 
@@ -628,7 +632,7 @@ function Recent({
   onClear,
 }: {
   unfinished: Continue[];
-  downloads: Job[];
+  downloads: string[];
   more: boolean;
   searches: string[];
   onPick: (query: string) => void;
@@ -659,9 +663,9 @@ function Recent({
             title="Downloads"
             action={more ? { label: 'See all', onPress: () => router.navigate('/downloads') } : undefined}
           />
-          {downloads.map((job) => (
-            <Animated.View key={job.id} entering={rise(order++)} layout={LinearTransition.duration(motion.standard)}>
-              <DownloadRow job={job} />
+          {downloads.map((id) => (
+            <Animated.View key={id} entering={rise(order++)} layout={LinearTransition.duration(motion.standard)}>
+              <DownloadRow id={id} />
             </Animated.View>
           ))}
         </Animated.View>
@@ -770,7 +774,13 @@ function summary(job: Job): string {
   return STATE[job.state];
 }
 
-function DownloadRow({ job }: { job: Job }) {
+function DownloadRow({ id }: { id: string }) {
+  const job = useJob(id);
+  if (!job) return null;
+  return <DownloadRowOf job={job} />;
+}
+
+function DownloadRowOf({ job }: { job: Job }) {
   const name = useJobName(job);
   const said = summary(job);
   const content = (

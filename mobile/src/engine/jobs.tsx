@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { createContext, use, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, use, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
 import { readable } from '@web/lib/release';
@@ -13,11 +13,40 @@ const SILENT_MS = 35_000;
 
 type Jobs = { jobs: Job[]; live: boolean };
 
-const Context = createContext<Jobs | null>(null);
+type State = { jobs: Map<string, Job>; live: boolean };
+
+type Store = {
+  get: () => Jobs;
+  subscribe: (listener: () => void) => () => void;
+  update: (change: (previous: State) => State) => void;
+};
+
+function createStore(): Store {
+  let state: State = { jobs: new Map(), live: false };
+  let view: Jobs = { jobs: [], live: false };
+  const listeners = new Set<() => void>();
+  return {
+    get: () => view,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    update: (change) => {
+      const next = change(state);
+      if (next === state) return;
+      state = next;
+      view = { jobs: [...next.jobs.values()].sort((a, b) => b.added_at - a.added_at), live: next.live };
+      for (const listener of listeners) listener();
+    },
+  };
+}
+
+const Context = createContext<Store | null>(null);
 
 export function JobsProvider({ children }: { children: ReactNode }) {
   const link = useLink();
-  const [state, setState] = useState<{ jobs: Map<string, Job>; live: boolean }>({ jobs: new Map(), live: false });
+  const [store] = useState(createStore);
+  const setState = store.update;
 
   useEffect(() => {
     let stopped = false;
@@ -79,17 +108,35 @@ export function JobsProvider({ children }: { children: ReactNode }) {
     };
   }, [link]);
 
-  const value = useMemo(
-    () => ({ jobs: [...state.jobs.values()].sort((a, b) => b.added_at - a.added_at), live: state.live }),
-    [state],
-  );
-  return <Context value={value}>{children}</Context>;
+  return <Context value={store}>{children}</Context>;
+}
+
+function useStore(): Store {
+  const store = use(Context);
+  if (!store) throw new Error('jobs read outside JobsProvider');
+  return store;
 }
 
 export function useJobs(): Jobs {
-  const jobs = use(Context);
-  if (!jobs) throw new Error('useJobs outside JobsProvider');
-  return jobs;
+  const store = useStore();
+  return useSyncExternalStore(store.subscribe, store.get);
+}
+
+/** A slice of the jobs that re-renders only when `same` says it changed, so progress ticks skip readers that do not show them. */
+export function useJobsSelect<T>(select: (jobs: Jobs) => T, same: (a: T, b: T) => boolean = Object.is): T {
+  const store = useStore();
+  const last = useRef<{ value: T } | null>(null);
+  const read = () => {
+    const next = select(store.get());
+    if (last.current && same(last.current.value, next)) return last.current.value;
+    last.current = { value: next };
+    return next;
+  };
+  return useSyncExternalStore(store.subscribe, read);
+}
+
+export function useJob(id: string): Job | undefined {
+  return useJobsSelect((all) => all.jobs.find((job) => job.id === id));
 }
 
 export const STATE: Record<Job['state'], string> = {

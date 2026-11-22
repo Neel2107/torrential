@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useJobs } from '@/engine/jobs';
+import { useJobsSelect } from '@/engine/jobs';
 import { CastBar } from '@/ui/CastBar';
 import { PullProvider } from '@/ui/pull';
 import { ChromeProvider, useChrome } from '@/ui/chrome';
@@ -10,8 +10,9 @@ import { color, space } from '@/theme';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const { jobs } = useJobs();
-  const downloading = jobs.some((job) => job.state === 'downloading' || job.state === 'metadata');
+  const downloading = useJobsSelect(({ jobs }) =>
+    jobs.some((job) => job.state === 'downloading' || job.state === 'metadata'),
+  );
 
   return (
     <PullProvider>

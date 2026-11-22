@@ -1,7 +1,7 @@
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useJobs } from '@/engine/jobs';
+import { useJobsSelect } from '@/engine/jobs';
 import { PullProvider } from '@/ui/pull';
 import { ChromeProvider } from '@/ui/chrome';
 import { color, scheme } from '@/theme';
@@ -14,8 +14,9 @@ const SYSTEM_TAB_BAR = 50;
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const { jobs } = useJobs();
-  const downloading = jobs.some((job) => job.state === 'downloading' || job.state === 'metadata');
+  const downloading = useJobsSelect(({ jobs }) =>
+    jobs.some((job) => job.state === 'downloading' || job.state === 'metadata'),
+  );
 
   return (
     <PullProvider>
