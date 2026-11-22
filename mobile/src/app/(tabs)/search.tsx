@@ -69,8 +69,8 @@ const CATEGORIES: Record<Category, string> = {
   other: 'Other',
 };
 
-/** How long typing must pause before a new search is sent. The engine drops a search whose request is cancelled, so a short pause costs little. */
-const SETTLE_MS = 100;
+/** How long typing must pause before a new search is sent. The engine finishes a search even after the app stops waiting for it, so each one sent costs its full lookup; keep this longer than the gap between keystrokes. */
+const SETTLE_MS = 280;
 
 const ignore = () => {};
 const NOTHING: ReadonlySet<string> = new Set();
