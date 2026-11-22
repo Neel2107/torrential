@@ -40,11 +40,18 @@ function computerName(base: string): string {
 
 const NONE: Saved = { engines: [], active: null };
 
+/** Where the paired engines are kept: the phone's secure store in the app, memory in a test. */
+export const keychain = {
+  get: (key: string): Promise<string | null> => SecureStore.getItemAsync(key),
+  set: (key: string, value: string): Promise<void> => SecureStore.setItemAsync(key, value),
+  remove: (key: string): Promise<void> => SecureStore.deleteItemAsync(key),
+};
+
 async function load(): Promise<Saved> {
-  const saved = await SecureStore.getItemAsync(KEY);
+  const saved = await keychain.get(KEY);
 
   if (saved) return readStored(savedEngines, saved, NONE);
-  const link = readStored(oldLink, await SecureStore.getItemAsync(OLD_KEY), null);
+  const link = readStored(oldLink, await keychain.get(OLD_KEY), null);
 
   if (!link) return NONE;
   const engine: Engine = { id: link.base, name: computerName(link.base), kind: 'computer', link };
@@ -72,8 +79,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const run = queue.current.then(async () => {
       const now = latest.current ?? { engines: [], active: null };
       const saving = next(now);
-      await SecureStore.setItemAsync(KEY, JSON.stringify(saving));
-      await SecureStore.deleteItemAsync(OLD_KEY);
+      await keychain.set(KEY, JSON.stringify(saving));
+      await keychain.remove(OLD_KEY);
       latest.current = saving;
       setSaved(saving);
     });

@@ -31,3 +31,33 @@ test('nothing, or something that is not an address, gives nothing', () => {
   expect(parsePairing('   ')).toBe(null);
   expect(parsePairing('http://[')).toBe(null);
 });
+
+test.each([
+  ['[fe80::1]', 'http://[fe80::1]:47919'],
+  ['[fe80::1]:9000', 'http://[fe80::1]:9000'],
+  ['http://[fe80::1]:8080', 'http://[fe80::1]:8080'],
+  ['2001:db8::5', 'http://[2001:db8::5]:47919'],
+])('the IPv6 address %p reaches the engine at %p', (input, base) => {
+  expect(parsePairing(input)?.base).toBe(base);
+});
+
+test('a path after the address is dropped and the code is still read', () => {
+  expect(parsePairing('http://192.168.1.5:47919/pair#123456')).toEqual({
+    base: 'http://192.168.1.5:47919',
+    code: '123456',
+  });
+  expect(parsePairing('engine.local/api#123456')).toEqual({ base: 'http://engine.local:47919', code: '123456' });
+});
+
+test('an https address keeps a port it names, and drops a trailing slash', () => {
+  expect(parsePairing('https://engine.example.com:8443/')?.base).toBe('https://engine.example.com:8443');
+  expect(parsePairing('https://engine.example.com/')?.base).toBe('https://engine.example.com');
+});
+
+test('the scheme and host are read in any case', () => {
+  expect(parsePairing('HTTP://Engine.Local')?.base).toBe('http://engine.local:47919');
+});
+
+test('a port and code with no scheme are both kept', () => {
+  expect(parsePairing('192.168.1.5:9000#123456')).toEqual({ base: 'http://192.168.1.5:9000', code: '123456' });
+});
