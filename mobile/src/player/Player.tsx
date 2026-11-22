@@ -398,7 +398,7 @@ export function Player({
           />
           <GestureDetector gesture={locked ? lockedTap : taps}>
             <View style={StyleSheet.absoluteFill}>
-              <SwipeLevel kind={sides.kind} percent={sides.percent} level={sides.level} shown={sides.shown} />
+              <SwipeLevel kind={sides.kind} readout={sides.readout} level={sides.level} shown={sides.shown} />
               <Animated.View style={[styles.skip, styles.skipLeft, leftStyle]} pointerEvents="none">
                 <Icon name={icons.rewind} size={30} tint={color.ink} />
                 <Text style={styles.skipText}>{SKIP} s</Text>
@@ -535,29 +535,33 @@ export function Player({
                 </Glass>
               </View>
 
-              <View style={[styles.middle, failed && styles.gone]} pointerEvents={failed ? 'none' : 'box-none'}>
-                <Tap
-                  shrink={0.86}
-                  onPress={() => skip(-SKIP)}
-                  accessibilityLabel={`Back ${SKIP} seconds`}
-                  style={styles.side}
-                >
-                  <Glass interactive fallback="transparent" style={styles.disc}>
-                    <Icon name={icons.rewind} size={30} tint={color.ink} />
-                  </Glass>
-                </Tap>
-                <PlayButton playing={isPlaying} buffering={buffering} onPress={toggle} />
-                <Tap
-                  shrink={0.86}
-                  onPress={() => skip(SKIP)}
-                  accessibilityLabel={`Forward ${SKIP} seconds`}
-                  style={styles.side}
-                >
-                  <Glass interactive fallback="transparent" style={styles.disc}>
-                    <Icon name={icons.forward} size={30} tint={color.ink} />
-                  </Glass>
-                </Tap>
-              </View>
+              {failed ? (
+                <View style={styles.middle} />
+              ) : (
+                <View style={styles.middle} pointerEvents="box-none">
+                  <Tap
+                    shrink={0.86}
+                    onPress={() => skip(-SKIP)}
+                    accessibilityLabel={`Back ${SKIP} seconds`}
+                    style={styles.side}
+                  >
+                    <Glass interactive fallback="transparent" style={styles.disc}>
+                      <Icon name={icons.rewind} size={30} tint={color.ink} />
+                    </Glass>
+                  </Tap>
+                  <PlayButton playing={isPlaying} buffering={buffering} onPress={toggle} />
+                  <Tap
+                    shrink={0.86}
+                    onPress={() => skip(SKIP)}
+                    accessibilityLabel={`Forward ${SKIP} seconds`}
+                    style={styles.side}
+                  >
+                    <Glass interactive fallback="transparent" style={styles.disc}>
+                      <Icon name={icons.forward} size={30} tint={color.ink} />
+                    </Glass>
+                  </Tap>
+                </View>
+              )}
 
               <View
                 style={[
@@ -773,7 +777,6 @@ const styles = StyleSheet.create({
   capsule: { flexDirection: 'row', alignItems: 'center', borderRadius: 22 },
   bottom: { paddingTop: space.sm },
   center: { position: 'absolute', alignSelf: 'center', top: '45%' },
-  gone: { opacity: 0 },
   unlockWrap: { position: 'absolute', alignSelf: 'center' },
   unlock: {
     flexDirection: 'row',

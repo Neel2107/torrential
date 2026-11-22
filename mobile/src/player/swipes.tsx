@@ -1,6 +1,6 @@
 import * as Brightness from 'expo-brightness';
 import { Sun, Volume2, VolumeX } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
@@ -14,9 +14,28 @@ const TRAVEL = 1;
 
 type Kind = 'brightness' | 'volume';
 
+type Readout = { get: () => number; set: (percent: number) => void; subscribe: (listener: () => void) => () => void };
+
+/** The percentage the pill shows, kept outside React state so a swipe re-renders only the pill. */
+function createReadout(): Readout {
+  let percent = 0;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => percent,
+    set: (next) => {
+      percent = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
 export function useSideSwipes({ width, height }: { width: number; height: number }) {
   const [kind, setKind] = useState<Kind>('brightness');
-  const [percent, setPercent] = useState(0);
+  const [readout] = useState(createReadout);
   const level = useSharedValue(0);
   const shown = useSharedValue(0);
   const start = useRef(0);
@@ -41,7 +60,7 @@ export function useSideSwipes({ width, height }: { width: number; height: number
         : ((await VolumeManager.getVolume().catch(() => null))?.volume ?? 0.5);
     start.current = now;
     written.current = Math.round(now * 100);
-    setPercent(written.current);
+    readout.set(written.current);
     level.value = now;
     shown.value = withTiming(1, { duration: motion.press });
   };
@@ -52,7 +71,7 @@ export function useSideSwipes({ width, height }: { width: number; height: number
     const percent = Math.round(next * 100);
     if (percent === written.current) return;
     written.current = percent;
-    setPercent(percent);
+    readout.set(percent);
     if (side === 'brightness') Brightness.setBrightnessAsync(Math.max(0.01, next)).catch(() => {});
     else VolumeManager.setVolume(next, { showUI: false }).catch(() => {});
   };
@@ -72,23 +91,24 @@ export function useSideSwipes({ width, height }: { width: number; height: number
       .onFinalize(end);
   const swipe = Gesture.Simultaneous(side('brightness'), side('volume'));
 
-  return { swipe, kind, percent, level, shown, middle: { left: -width * SIDE, right: -width * SIDE } };
+  return { swipe, kind, readout, level, shown, middle: { left: -width * SIDE, right: -width * SIDE } };
 }
 
 export function SwipeLevel({
   kind,
-  percent,
+  readout,
   level,
   shown,
 }: {
   kind: Kind;
-  percent: number;
+  readout: Readout;
   level: ReturnType<typeof useSideSwipes>['level'];
   shown: ReturnType<typeof useSideSwipes>['shown'];
 }) {
   const fill = useAnimatedStyle(() => ({ height: `${Math.round(level.value * 100)}%` }));
   const pill = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ scale: 0.92 + shown.value * 0.08 }] }));
 
+  const percent = useSyncExternalStore(readout.subscribe, readout.get);
   const icon = kind === 'brightness' ? Sun : percent === 0 ? VolumeX : Volume2;
   return (
     <View pointerEvents="none" style={[styles.wrap, kind === 'brightness' ? styles.left : styles.right]}>

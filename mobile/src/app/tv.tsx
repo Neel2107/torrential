@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -214,6 +214,15 @@ function Remote({ cast }: { cast: Cast }) {
   const playing = cast.state === 'playing';
 
   const [unreached, setUnreached] = useState(false);
+  const focused = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      focused.current = true;
+      return () => {
+        focused.current = false;
+      };
+    }, []),
+  );
   const control = async (action: CastAction): Promise<boolean> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const reached = await post(link, '/api/cast/control', { tv: cast.tv, ...action }).then(
@@ -253,16 +262,20 @@ function Remote({ cast }: { cast: Cast }) {
           <Text style={[type.label, { color: color.error, flex: 1 }]}>Couldn't reach {cast.tv_name}. Try again.</Text>
         </View>
       ) : null}
-      {cast.video ? (
+      {cast.video || cast.download ? (
         <Button
           label="Watch on this phone"
           kind="quiet"
           icon={icons.phone}
           onPress={async () => {
             const at = String(Math.floor(position));
-            if (await control({ action: 'stop' })) {
-              router.replace({ pathname: '/play', params: { video: cast.video!, at } });
-            }
+            if (!(await control({ action: 'stop' })) || !focused.current) return;
+            router.replace({
+              pathname: '/play',
+              params: cast.video
+                ? { video: cast.video, at }
+                : { ref: cast.download!, file: String(cast.file ?? 0), at },
+            });
           }}
           style={{ alignSelf: 'flex-start' }}
         />

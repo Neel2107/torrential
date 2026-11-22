@@ -75,14 +75,19 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
   useEffect(() => {
     const key = `offline-at-${copy.job}`;
     let stopped = false;
+    let restored = false;
     SecureStore.getItemAsync(key)
       .then((saved) => {
         const at = Number(saved);
         if (!stopped && at > 5) player.currentTime = at;
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        restored = true;
+      });
     const keep = () => {
       const at = player.currentTime;
+      if (!restored || at < 1) return;
       const near = player.duration > 0 && player.duration - at < ENDING_SECONDS;
       SecureStore.setItemAsync(key, near ? '0' : String(Math.floor(at))).catch(() => {});
     };
