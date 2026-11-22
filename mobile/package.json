@@ -62,7 +62,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "check": "tsc --noEmit && prettier --check \"src/**/*.{ts,tsx}\""
+    "check": "tsc --noEmit && prettier --check \"src/**/*.{ts,tsx}\" && node scripts/compiler-check.js --max 17 > /dev/null"
   },
   "private": true
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -43,7 +43,7 @@ export function Sheet({
   const offset = useSharedValue(screen);
   const height = useSharedValue(screen);
   const start = useSharedValue(0);
-  const leaving = useRef(false);
+  const leaving = useSharedValue(false);
   const [closing, setClosing] = useState(false);
 
   const finish = (after?: () => void) => {
@@ -51,8 +51,8 @@ export function Sheet({
     onClose();
   };
   const close: Close = (after) => {
-    if (leaving.current) return;
-    leaving.current = true;
+    if (leaving.get()) return;
+    leaving.set(true);
     setClosing(true);
     offset.set(
       withTiming(height.get(), { duration: 200, easing: motion.out }, (done) => done && scheduleOnRN(finish, after)),
