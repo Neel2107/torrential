@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeOut,
   LinearTransition,
@@ -146,6 +146,14 @@ function JobList({
       scrollEventThrottle={16}
       itemLayoutAnimation={LinearTransition.duration(motion.standard)}
       contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
+      ListHeaderComponent={
+        !live && jobs.length > 0 ? (
+          <View style={styles.lost}>
+            <ActivityIndicator size="small" color={color.soft} />
+            <Text style={[type.label, { color: color.soft }]}>Connection lost. Reconnecting…</Text>
+          </View>
+        ) : undefined
+      }
       ListEmptyComponent={
         live ? (
           <Animated.View entering={enter(0)} style={styles.empty}>
@@ -676,6 +684,14 @@ const styles = StyleSheet.create({
   },
   tagStrong: { color: color.actionInk, backgroundColor: color.action },
   screen: { flex: 1, backgroundColor: color.paper },
+  lost: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.page,
+    paddingVertical: space.md,
+    backgroundColor: color.raised,
+  },
   row: {
     flexDirection: 'row',
     gap: space.md,
