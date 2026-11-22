@@ -54,5 +54,5 @@ What we know about the app's speed and what to do next, in order. The `measure-a
   - Bundle: 6.3 → 4.4 MB. APK: 77.5 → 73.3 MB.
   - Changes: Lucide icons are imported one by one, so the barrel no longer ships 1,600 icons (ESLint now rejects the barrel). Android has the 4 Inter weights built in through the expo-font plugin and renders without waiting on `useFonts`. iOS loads only those 4 weights.
 
-- React Compiler compiled everything but 63 places at the start of 2026-11-22; it skips 9 now. `npm run check` fails if that number rises.
+- React Compiler compiled everything but 63 places at the start of 2026-11-22; it skips 9 now. `pnpm check` fails if that number rises.
 - Shared values use `.get()`/`.set()`, worklets call back with `scheduleOnRN`, springs are tokens, and entrances, exits and reflows come from `src/ui/presets.ts`.

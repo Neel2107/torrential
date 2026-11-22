@@ -11,8 +11,8 @@ export PATH=/opt/homebrew/opt/node@22/bin:$PATH CI=1
 
 "$mobile/scripts/build-engine.sh" android
 cd "$mobile"
-APP_VARIANT=preview npx expo prebuild --platform android --clean >/dev/null
+APP_VARIANT=preview pnpm exec expo prebuild --platform android --clean >/dev/null
 (cd android && APP_VARIANT=preview ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a -q)
 cp android/app/build/outputs/apk/release/app-release.apk ~/Desktop/torrential-preview.apk
-npx expo prebuild --platform android --clean >/dev/null
+pnpm exec expo prebuild --platform android --clean >/dev/null
 echo "~/Desktop/torrential-preview.apk ($(du -h ~/Desktop/torrential-preview.apk | cut -f1))"

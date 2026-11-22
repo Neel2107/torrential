@@ -44,7 +44,7 @@ That is time to first draw. The app's own `[perf]` marks (from `src/perf.ts`) sa
 
 ## Bundle
 
-`cd mobile && EXPO_ATLAS=1 npx expo export --platform android && npx expo-atlas` shows what ships. `unzip -v ~/Desktop/torrential-preview.apk assets/index.android.bundle` should say `Stored`, so Hermes can map it.
+`cd mobile && EXPO_ATLAS=1 pnpm exec expo export --platform android && pnpm dlx expo-atlas` shows what ships. `unzip -v ~/Desktop/torrential-preview.apk assets/index.android.bundle` should say `Stored`, so Hermes can map it.
 
 ## System trace
 

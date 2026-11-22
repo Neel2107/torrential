@@ -55,7 +55,7 @@ for the three targets is built once into `target/mobile-deps` by `build-openssl.
 `dev.torrential.app.preview`, which installs beside the development app:
 
     mobile/scripts/build-engine.sh android
-    APP_VARIANT=preview CI=1 npx expo prebuild --platform android --clean
+    APP_VARIANT=preview CI=1 pnpm exec expo prebuild --platform android --clean
     cd android && APP_VARIANT=preview ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 
 It is signed with Expo's shared debug key, so later previews install over it, and it runs on 64-bit

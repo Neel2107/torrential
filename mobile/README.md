@@ -4,13 +4,13 @@ A native client for the torrential engine, built with Expo. It talks to the same
 
 ## Run it
 
-You need the engine running on a computer, Bun, JDK 17 and the Android SDK.
+You need the engine running on a computer, Node 22, pnpm, JDK 17 and the Android SDK.
 
 ```sh
-bun install
-bunx expo prebuild --platform android
+pnpm install
+pnpm exec expo prebuild --platform android
 cd android && ./gradlew assembleDebug && adb install -r app/build/outputs/apk/debug/app-debug.apk
-bunx expo start --dev-client
+pnpm exec expo start --dev-client
 adb reverse tcp:8081 tcp:8081
 ```
 

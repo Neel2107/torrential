@@ -10,15 +10,15 @@ Expo ships breaking changes every SDK release. APIs you remember are likely rena
 
 ## Commands
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+The app installs with pnpm (`pnpm-lock.yaml`). Where Expo's docs say `npx`, use `pnpm exec`.
 
 ```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx oxlint src              # lint (Node 22)
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
+pnpm exec expo install <package>  # ALWAYS use instead of pnpm add — resolves SDK-compatible versions
+pnpm exec expo start              # start the dev server
+pnpm exec oxlint src              # lint (Node 22)
+pnpm exec tsc --noEmit            # typecheck
+pnpm dlx expo-doctor              # diagnose dependency and config issues
+pnpm exec expo install --fix      # fix incompatible package versions
 ```
 
 Run lint and typecheck before declaring any task done.
@@ -33,19 +33,19 @@ Run lint and typecheck before declaring any task done.
 
 We build locally, not on EAS. The app runs torrential's engine inside itself, so build the engine library before any native build: `scripts/build-engine.sh android|ios`.
 
-- **Android dev:** `CI=1 npx expo prebuild --platform android`, then in `android/` run `./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a`. Install with `adb install -r`, then `npx expo start --dev-client` and `adb reverse tcp:8081 tcp:8081`.
+- **Android dev:** `CI=1 pnpm exec expo prebuild --platform android`, then in `android/` run `./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a`. Install with `adb install -r`, then `pnpm exec expo start --dev-client` and `adb reverse tcp:8081 tcp:8081`.
 - **Android release ("torrential preview"):** `scripts/build-preview.sh` writes `~/Desktop/torrential-preview.apk`. Judge motion and speed here, never in a dev build.
-- **iOS simulator:** `npx expo run:ios --device <udid>`. For Release, use xcodebuild with `-sdk iphonesimulator ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, because the engine framework is arm64 only. If the Debug link breaks after a `pod install`, run `CI=1 npx expo prebuild --platform ios --clean`.
+- **iOS simulator:** `pnpm exec expo run:ios --device <udid>`. For Release, use xcodebuild with `-sdk iphonesimulator ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`, because the engine framework is arm64 only. If the Debug link breaks after a `pod install`, run `CI=1 pnpm exec expo prebuild --platform ios --clean`.
 
 ## Rules
 
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
+- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `pnpm exec expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
 
 ## This app
 
-- **Check:** `npm run -s check` runs tsc, oxlint with the anti-slop rules (`.oxlintrc.json`, plugin vendored in `tools/oxlint/anti-slop`, at most 92 warnings, all known debt, no errors), Prettier and `scripts/compiler-check.js`. oxlint's anti-slop plugin is TypeScript, so use Node 22 (`.nvmrc`; on this Mac `/opt/homebrew/opt/node@22/bin`). The compiler check fails when React Compiler skips more components and hooks than it does today (9). Don’t raise that number; fix the cause.
+- **Check:** `pnpm -s check` runs tsc, oxlint with the anti-slop rules (`.oxlintrc.json`, plugin vendored in `tools/oxlint/anti-slop`, at most 92 warnings, all known debt, no errors), Prettier and `scripts/compiler-check.js`. oxlint's anti-slop plugin is TypeScript, so use Node 22 (`.nvmrc`; on this Mac `/opt/homebrew/opt/node@22/bin`). The compiler check fails when React Compiler skips more components and hooks than it does today (9). Don’t raise that number; fix the cause.
 - **Shared values:** read and write them with `.get()` and `.set()`, never `.value`. `.value` makes React Compiler skip the whole component.
 - **Inside a worklet** (`useAnimatedStyle`, `useDerivedValue`, gesture callbacks), call only other worklets. A plain helper called there crashes the app on the UI thread in release builds ("Tried to synchronously call a Remote Function"); work the value out in the component and use the result.
 - **Worklet to React:** call back from a worklet with `scheduleOnRN` from `react-native-worklets` (`runOnJS` is deprecated). Never call back every frame; use `useAnimatedReaction` at a threshold.

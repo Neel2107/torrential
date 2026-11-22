@@ -1,8 +1,7 @@
 import { Button as NativeButton, Host, Image as SwiftImage, Menu as NativeMenu } from '@expo/ui/swift-ui';
 import * as modifiers from '@expo/ui/swift-ui/modifiers';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import type { SFSymbol } from 'sf-symbols-typescript';
 
 import { Menu } from '../../modules/glass-menu-android';
 
@@ -12,6 +11,8 @@ import { ask, type Question } from './Ask';
 import { Icon, icons, type Glyph } from './Icon';
 import { ActionRow } from './Row';
 import { Sheet } from './Sheet';
+
+type SFSymbol = NonNullable<ComponentProps<typeof SwiftImage>['systemName']>;
 
 /** Something a row's menu can do. `ask` makes it confirm first; `symbol` is its SF Symbol in the iOS menu. */
 export type RowAction = {
