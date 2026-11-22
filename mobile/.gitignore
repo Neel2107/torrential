@@ -52,3 +52,6 @@ modules/torrential-engine/android/src/main/jniLibs/
 modules/torrential-engine/ios/TorrentialMobile.xcframework/
 modules/*/android/build/
 /build
+
+# Jest
+.jest-cache/
