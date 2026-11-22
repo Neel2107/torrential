@@ -12,9 +12,20 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
+import { Skeleton } from '@/ui/Skeleton';
 import { STAGE_DIFFERS, useStaged, useTone } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
-import { color as themedColor, font, motion, space, stage, stageType, type as themedType, type Palette } from '@/theme';
+import {
+  color as themedColor,
+  font,
+  motion,
+  radius,
+  space,
+  stage,
+  stageType,
+  type as themedType,
+  type Palette,
+} from '@/theme';
 
 import { useSources, type Sources } from './sources';
 
@@ -34,6 +45,41 @@ export function SourcesSheet({
   onClose: () => void;
 }) {
   const styles = useStaged(themed, staged);
+  const type = useStaged(themedType, stageType);
+  return (
+    <Sheet onClose={onClose}>
+      {(close) => (
+        <>
+          <View style={styles.head}>
+            <Text style={type.title}>{heading}</Text>
+            <Text style={type.caption}>{label}</Text>
+          </View>
+          <SourcesList
+            video={video}
+            current={current}
+            onPick={(release) =>
+              close(() =>
+                onPick ? onPick(release) : router.push({ pathname: '/play', params: { video, source: release.id } }),
+              )
+            }
+          />
+        </>
+      )}
+    </Sheet>
+  );
+}
+
+/** The sources for a video, best first, as rows to pick from, with the search's progress and problems under them. */
+export function SourcesList({
+  video,
+  current,
+  onPick,
+}: {
+  video: string;
+  current?: string;
+  onPick: (release: Release) => void;
+}) {
+  const styles = useStaged(themed, staged);
   const color = useTone();
   const type = useStaged(themedType, stageType);
   const sources = useSources(video);
@@ -44,47 +90,34 @@ export function SourcesSheet({
   };
 
   return (
-    <Sheet onClose={onClose}>
-      {(close) => (
-        <>
-          <View style={styles.head}>
-            <Text style={type.title}>{heading}</Text>
-            <Text style={type.caption}>{label}</Text>
-          </View>
-          <ScrollView contentContainerStyle={{ paddingBottom: space.md }}>
-            {state.releases.map((release, index) => (
-              <SourceRow
-                key={release.id}
-                release={release}
-                index={index}
-                why={index === 0 ? whyFirst(release, state.releases) : null}
-                playing={release.id === current}
-                onPress={() =>
-                  close(() =>
-                    onPick
-                      ? onPick(release)
-                      : router.push({ pathname: '/play', params: { video, source: release.id } }),
-                  )
-                }
-              />
-            ))}
-            {!state.done ? (
-              <View style={styles.status}>
-                <ActivityIndicator color={color.soft} />
-                <Text style={type.caption}>Looking for sources…</Text>
-              </View>
-            ) : state.error || state.releases.length === 0 ? (
-              <View style={styles.problem}>
-                <Text style={[type.label, { color: state.error ? color.error : color.soft }]}>
-                  {state.error ? `Couldn't load sources. ${state.error}` : 'No playable sources found.'}
-                </Text>
-                <Button label="Try again" kind="secondary" onPress={() => sources.refetch()} />
-              </View>
-            ) : null}
-          </ScrollView>
-        </>
-      )}
-    </Sheet>
+    <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: space.md }}>
+      {state.releases.map((release, index) => (
+        <SourceRow
+          key={release.id}
+          release={release}
+          index={index}
+          why={index === 0 ? whyFirst(release, state.releases) : null}
+          playing={release.id === current}
+          onPress={() => onPick(release)}
+        />
+      ))}
+      {!state.done && state.releases.length === 0
+        ? [0, 1, 2].map((row) => <Skeleton key={row} style={[styles.ghost, { backgroundColor: color.lifted }]} />)
+        : null}
+      {!state.done ? (
+        <View style={styles.status}>
+          <ActivityIndicator color={color.soft} />
+          <Text style={type.caption}>Looking for sources…</Text>
+        </View>
+      ) : state.error || state.releases.length === 0 ? (
+        <View style={styles.problem}>
+          <Text style={[type.label, { color: state.error ? color.error : color.soft }]}>
+            {state.error ? `Couldn't load sources. ${state.error}` : 'No playable sources found.'}
+          </Text>
+          <Button label="Try again" kind="secondary" onPress={() => sources.refetch()} />
+        </View>
+      ) : null}
+    </ScrollView>
   );
 }
 
@@ -208,6 +241,8 @@ function SourceRow({
 const sheet = (c: Palette, t: typeof themedType) =>
   StyleSheet.create({
     head: { paddingHorizontal: space.xl, paddingBottom: space.md, gap: 2 },
+    list: { flexGrow: 0, flexShrink: 1 },
+    ghost: { height: 52, marginHorizontal: space.xl, marginVertical: space.xs, borderRadius: radius.md },
     line: { flexDirection: 'row', alignItems: 'center', paddingRight: space.sm },
     more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
     details: { paddingHorizontal: space.xl, paddingBottom: space.md, gap: 4 },

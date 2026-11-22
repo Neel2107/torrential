@@ -326,6 +326,15 @@ export function Player({
     };
   }, [save, client, video]);
 
+  const switchSource = (source: Release) => {
+    if (!video) return;
+    const at = String(Math.floor(timeline.now()));
+    player.pause();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    save().catch(() => {});
+    router.replace({ pathname: '/play', params: { video, source: source.id, at } });
+  };
+
   const [touched, setTouched] = useState(0);
   const poke = () => setTouched((n) => n + 1);
 
@@ -725,7 +734,9 @@ export function Player({
           {sheet === 'settings' ? (
             <SettingsSheet
               source={video ? release : null}
-              onSources={() => setSheet('sources')}
+              video={video}
+              label={episode ? subheading : heading}
+              onSource={switchSource}
               speed={preferences.speed}
               onSpeed={(speed) => setPreferences({ speed })}
               sleep={sleep}
@@ -739,14 +750,7 @@ export function Player({
               video={video}
               label={episode ? subheading : heading}
               current={release.id}
-              onPick={(source) => {
-                const at = String(Math.floor(timeline.now()));
-                setSheet(null);
-                player.pause();
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                save().catch(() => {});
-                router.replace({ pathname: '/play', params: { video, source: source.id, at } });
-              }}
+              onPick={switchSource}
               onClose={() => setSheet(null)}
             />
           ) : null}

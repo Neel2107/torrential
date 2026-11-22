@@ -4,7 +4,6 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
   interpolate,
-  LinearTransition,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -20,20 +19,19 @@ import { STAGE_DIFFERS, useStaged } from './stage';
 
 type Close = (after?: () => void) => void;
 
-const MORPH = LinearTransition.duration(260).easing(motion.inOut);
+export const SHEET_SHARE = 0.88;
+export const SHEET_CHROME = 28 + space.xs;
 
-/** A sheet from the bottom. Its content gets `close`, which slides it away before running what was picked, once. `onBack` takes the back button first, for a sheet with pages of its own. `morph` eases the sheet to each new height when its content changes. */
+/** A sheet from the bottom. Its content gets `close`, which slides it away before running what was picked, once. `onBack` takes the back button first, for a sheet with pages of its own (see Pages). */
 export function Sheet({
   children,
   onClose,
   onBack,
-  morph = false,
   maxWidth = 560,
 }: {
   children: ReactNode | ((close: Close) => ReactNode);
   onClose: () => void;
   onBack?: () => boolean;
-  morph?: boolean;
   maxWidth?: number;
 }) {
   const styles = useStaged(themed, staged);
@@ -99,7 +97,6 @@ export function Sheet({
           <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} accessibilityLabel="Close" />
         </Animated.View>
         <Animated.View
-          layout={morph ? MORPH : undefined}
           onLayout={(event) => {
             height.set(event.nativeEvent.layout.height);
             if (offset.get() >= screen) offset.set(withSpring(0, motion.settle));
@@ -132,12 +129,12 @@ const sheet = (c: Palette) =>
     sheet: {
       position: 'absolute',
       bottom: 0,
-      maxHeight: '88%',
+      maxHeight: `${SHEET_SHARE * 100}%`,
       backgroundColor: c.raised,
       borderTopLeftRadius: radius.xl,
       borderTopRightRadius: radius.xl,
     },
-    handle: { height: 28, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
+    handle: { height: SHEET_CHROME - space.xs, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
     body: { flexShrink: 1 },
     grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: c.rule },
   });

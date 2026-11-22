@@ -9,9 +9,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { color } from '@/theme';
+import { useTone } from './stage';
 
 export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
+  const tone = useTone();
   const reduced = useReducedMotion();
   const pulse = useSharedValue(0);
 
@@ -22,5 +23,5 @@ export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
 
   const animated = useAnimatedStyle(() => ({ opacity: 0.55 + pulse.get() * 0.45 }));
 
-  return <Animated.View style={[{ backgroundColor: color.raised }, animated, style]} />;
+  return <Animated.View style={[{ backgroundColor: tone.raised }, animated, style]} />;
 }

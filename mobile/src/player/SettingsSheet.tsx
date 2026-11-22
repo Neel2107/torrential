@@ -1,12 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
-import Animated, {
-  interpolateColor,
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useState, type ReactNode } from 'react';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { bytes } from '@web/lib/format';
@@ -14,7 +7,11 @@ import { readable } from '@web/lib/release';
 import type { Release } from '@web/wire';
 
 import { Icon, icons } from '@/ui/Icon';
+import { PageHeader, Pages } from '@/ui/Pages';
 import { Sheet } from '@/ui/Sheet';
+
+import { useSources } from './sources';
+import { SourcesList } from './SourcesSheet';
 import { Tap } from '@/ui/Tap';
 import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
 
@@ -42,7 +39,9 @@ function speedText(speed: number): string {
 
 export function SettingsSheet({
   source,
-  onSources,
+  video,
+  label,
+  onSource,
   speed,
   onSpeed,
   sleep,
@@ -50,75 +49,110 @@ export function SettingsSheet({
   onClose,
 }: {
   source: Release | null;
-  onSources: () => void;
+  video: string | null;
+  label: string;
+  onSource: (release: Release) => void;
   speed: number;
   onSpeed: (speed: number) => void;
   sleep: Sleep;
   onSleep: (sleep: Sleep) => void;
   onClose: () => void;
 }) {
-  return (
-    <Sheet onClose={onClose}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[type.title, styles.heading]}>Settings</Text>
+  const [page, setPage] = useState<'menu' | 'sources'>('menu');
+  useSources(video);
+  const menu = (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <Text style={[type.title, styles.heading]}>Settings</Text>
 
-        {source ? (
-          <Tap shrink={1} highlight haptic onPress={onSources} accessibilityLabel="Choose a source" style={styles.link}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={type.headline}>Source</Text>
-              <Text style={type.caption} numberOfLines={1}>
-                {[readable(source.name).title, source.quality.resolution, source.size && bytes(source.size)]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Text>
-            </View>
-            <Text style={type.label}>Change</Text>
-            <Icon name={icons.chevron} size={20} tint={color.pencil} />
-          </Tap>
-        ) : null}
-
-        <Section title="Speed" value={speedText(speed)}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.line}>
-            {SPEEDS.map((choice) => (
-              <Chip
-                key={choice}
-                label={speedText(choice)}
-                selected={choice === speed}
-                onPress={() => onSpeed(choice)}
-                accessibilityLabel={choice === 1 ? 'Normal speed' : `${choice} times speed`}
-              />
-            ))}
-          </ScrollView>
-        </Section>
-
-        <Section title="Sleep timer" value={sleepText(sleep)}>
-          <View style={styles.wrapLine}>
-            {SLEEPS.map(([label, minutes]) => (
-              <Chip
-                key={label}
-                label={label}
-                selected={
-                  minutes === null
-                    ? sleep === null
-                    : minutes === 0
-                      ? sleep?.kind === 'end'
-                      : sleep?.kind === 'after' && sleep.minutes === minutes
-                }
-                onPress={() =>
-                  onSleep(
-                    minutes === null
-                      ? null
-                      : minutes === 0
-                        ? { kind: 'end' }
-                        : { kind: 'after', minutes, at: Date.now() + minutes * 60_000 },
-                  )
-                }
-                accessibilityLabel={minutes === null ? 'No sleep timer' : `Pause ${label.toLowerCase()}`}
-              />
-            ))}
+      {source ? (
+        <Tap
+          shrink={1}
+          highlight
+          haptic
+          onPress={() => setPage('sources')}
+          accessibilityLabel="Choose a source"
+          style={styles.link}
+        >
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={type.headline}>Source</Text>
+            <Text style={type.caption} numberOfLines={1}>
+              {[readable(source.name).title, source.quality.resolution, source.size && bytes(source.size)]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
           </View>
-        </Section>
-      </ScrollView>
+          <Text style={type.label}>Change</Text>
+          <Icon name={icons.chevron} size={20} tint={color.pencil} />
+        </Tap>
+      ) : null}
+
+      <Section title="Speed" value={speedText(speed)}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.line}>
+          {SPEEDS.map((choice) => (
+            <Chip
+              key={choice}
+              label={speedText(choice)}
+              selected={choice === speed}
+              onPress={() => onSpeed(choice)}
+              accessibilityLabel={choice === 1 ? 'Normal speed' : `${choice} times speed`}
+            />
+          ))}
+        </ScrollView>
+      </Section>
+
+      <Section title="Sleep timer" value={sleepText(sleep)}>
+        <View style={styles.wrapLine}>
+          {SLEEPS.map(([label, minutes]) => (
+            <Chip
+              key={label}
+              label={label}
+              selected={
+                minutes === null
+                  ? sleep === null
+                  : minutes === 0
+                    ? sleep?.kind === 'end'
+                    : sleep?.kind === 'after' && sleep.minutes === minutes
+              }
+              onPress={() =>
+                onSleep(
+                  minutes === null
+                    ? null
+                    : minutes === 0
+                      ? { kind: 'end' }
+                      : { kind: 'after', minutes, at: Date.now() + minutes * 60_000 },
+                )
+              }
+              accessibilityLabel={minutes === null ? 'No sleep timer' : `Pause ${label.toLowerCase()}`}
+            />
+          ))}
+        </View>
+      </Section>
+    </ScrollView>
+  );
+
+  return (
+    <Sheet
+      onClose={onClose}
+      onBack={() => {
+        if (page === 'menu') return false;
+        setPage('menu');
+        return true;
+      }}
+    >
+      {(close) => (
+        <Pages page={page} depth={page === 'menu' ? 0 : 1}>
+          {(shown) =>
+            shown === 'menu' || !video ? (
+              menu
+            ) : (
+              <>
+                <PageHeader title="Source" detail={label} onBack={() => setPage('menu')} />
+                <SourcesList video={video} current={source?.id} onPick={(release) => close(() => onSource(release))} />
+              </>
+            )
+          }
+        </Pages>
+      )}
     </Sheet>
   );
 }
@@ -147,20 +181,17 @@ export function Chip({
   accessibilityLabel: string;
 }) {
   const on = useSharedValue(selected ? 1 : 0);
-  const pop = useSharedValue(1);
   useEffect(() => {
     on.set(withTiming(selected ? 1 : 0, { duration: motion.quick, easing: motion.out }));
-    if (selected) pop.set(withSequence(withTiming(1.08, { duration: 90 }), withSpring(1, motion.pop)));
-  }, [selected, on, pop]);
+  }, [selected, on]);
   const fill = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(on.get(), [0, 1], [color.lifted, color.ink]),
-    transform: [{ scale: pop.get() }],
   }));
   const text = useAnimatedStyle(() => ({ color: interpolateColor(on.get(), [0, 1], [color.soft, color.paper]) }));
 
   return (
     <Tap
-      shrink={0.92}
+      shrink={0.96}
       haptic
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
@@ -174,6 +205,7 @@ export function Chip({
 }
 
 const styles = StyleSheet.create({
+  scroll: { flexGrow: 0, flexShrink: 1 },
   content: { paddingHorizontal: space.xl, paddingBottom: space.sm, gap: space.lg },
   heading: { marginBottom: -space.xs },
   section: { gap: space.sm },

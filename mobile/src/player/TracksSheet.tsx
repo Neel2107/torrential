@@ -18,6 +18,7 @@ import { languageLabel, languageName, phoneLanguage, sameLanguage } from './lang
 import type { OnlineLookup, SubtitleChoice } from './Subtitles';
 
 import { Icon, icons } from '@/ui/Icon';
+import { PageHeader, Pages } from '@/ui/Pages';
 import { Sheet } from '@/ui/Sheet';
 import { Check } from '@/ui/Check';
 import { Tap } from '@/ui/Tap';
@@ -37,13 +38,6 @@ function trackName(
 
 type Page = 'menu' | 'subtitles' | 'audio' | 'style';
 
-const PAGE_IN = new Keyframe({
-  0: { opacity: 0, transform: [{ translateY: 6 }, { scale: 0.98 }] },
-  100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: motion.out },
-})
-  .duration(220)
-  .delay(60);
-const PAGE_OUT = FadeOut.duration(120).easing(motion.out);
 const MENU_AUDIO = 3;
 
 /** Names for a list of tracks where two would read the same: the second English becomes English 2. */
@@ -243,7 +237,6 @@ export function TracksSheet({
 
   return (
     <Sheet
-      morph
       maxWidth={wide ? 760 : 560}
       onClose={onClose}
       onBack={() => {
@@ -252,26 +245,20 @@ export function TracksSheet({
         return true;
       }}
     >
-      <Animated.View key={page} entering={PAGE_IN} exiting={PAGE_OUT} style={styles.shrink}>
-        {page === 'menu' ? (
-          menu
-        ) : (
-          <>
-            <Tap
-              shrink={0.97}
-              onPress={() => setPage('menu')}
-              accessibilityLabel={`Back to subtitles and audio`}
-              style={styles.back}
-            >
-              <Icon name={icons.back} size={20} tint={color.ink} />
-              <Text style={type.title}>{pages[page].title}</Text>
-            </Tap>
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
-              {pages[page].body}
-            </ScrollView>
-          </>
-        )}
-      </Animated.View>
+      <Pages page={page} depth={page === 'menu' ? 0 : 1}>
+        {(shown) =>
+          shown === 'menu' ? (
+            menu
+          ) : (
+            <>
+              <PageHeader title={pages[shown as Exclude<Page, 'menu'>].title} onBack={() => setPage('menu')} />
+              <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
+                {pages[shown as Exclude<Page, 'menu'>].body}
+              </ScrollView>
+            </>
+          )
+        }
+      </Pages>
     </Sheet>
   );
 }
@@ -461,14 +448,6 @@ const styles = StyleSheet.create({
   wide: { flexDirection: 'row', gap: space.xl },
   scroll: { flexGrow: 0, flexShrink: 1 },
   page: { paddingHorizontal: space.xl, gap: space.xs, paddingBottom: space.sm },
-  back: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.xl,
-    paddingBottom: space.sm,
-    minHeight: 44,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
