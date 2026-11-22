@@ -12,7 +12,7 @@ import {
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 
-import type { Continue } from '@web/wire';
+import type { Continue, Home as HomeData } from '@web/wire';
 
 import { useHome } from '@/engine/queries';
 import { Art } from '@/ui/Art';
@@ -31,6 +31,7 @@ import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
 import { TitleTap } from '@/ui/TitleTap';
 import { NewEpisodes } from '@/ui/NewEpisodes';
+import { PopularRow } from '@/ui/Popular';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { Button } from '@/ui/Button';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
@@ -66,7 +67,11 @@ export default function Home() {
           ) : home.isError ? (
             <EngineProblem error={home.error} onRetry={() => home.refetch()} />
           ) : home.data.continue.length === 0 && home.data.saved.length === 0 ? (
-            <Empty />
+            <>
+              <Empty />
+              <PopularRow kind="film" title="Popular films" skip={NONE} index={1} />
+              <PopularRow kind="series" title="Popular shows" skip={NONE} index={2} />
+            </>
           ) : (
             <>
               {home.data.continue.length > 0 ? <ContinueCarousel items={home.data.continue} /> : null}
@@ -77,6 +82,8 @@ export default function Home() {
                   <PosterGrid titles={home.data.saved} />
                 </Animated.View>
               ) : null}
+              <PopularRow kind="film" title="Popular films" skip={have(home.data)} index={3} />
+              <PopularRow kind="series" title="Popular shows" skip={have(home.data)} index={4} />
             </>
           )}
         </Animated.ScrollView>
@@ -98,6 +105,12 @@ export default function Home() {
       <Fab icon={icons.add} label="Add a magnet link" onPress={() => router.push('/add')} />
     </View>
   );
+}
+
+const NONE: ReadonlySet<string> = new Set();
+
+function have(home: HomeData): ReadonlySet<string> {
+  return new Set([...home.continue.map((item) => item.title.id), ...home.saved.map((card) => card.id)]);
 }
 
 function SectionTitle({ children }: { children: string }) {

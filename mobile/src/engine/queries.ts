@@ -11,6 +11,7 @@ export const keys = {
   home: ['home'] as const,
   title: (id: string) => ['title', id] as const,
   titles: (q: string) => ['titles', q] as const,
+  popular: (kind: 'film' | 'series') => ['popular', kind] as const,
   me: ['me'] as const,
   version: ['version'] as const,
   tvs: ['tvs'] as const,
@@ -49,6 +50,18 @@ export function usePrefetchTitle() {
     },
     [client, link],
   );
+}
+
+/** What is popular now, films or series. Kept for an hour; a failure, such as an engine without the route, leaves it empty. */
+export function usePopular(kind: 'film' | 'series', enabled = true) {
+  const link = useLink();
+  return useQuery({
+    queryKey: [...keys.popular(kind), link.base],
+    enabled,
+    staleTime: 60 * 60_000,
+    retry: false,
+    queryFn: ({ signal }) => get<TitleSearch>(link, `/api/titles/popular?kind=${kind}`, signal),
+  });
 }
 
 export function useTitleSearch(q: string) {
