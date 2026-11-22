@@ -2,7 +2,7 @@ import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
@@ -17,6 +17,7 @@ import { ActionRow } from '@/ui/Row';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
 import { ThemePicker } from '@/ui/ThemePicker';
+import { Toggle } from '@/ui/Toggle';
 import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';
 
@@ -74,12 +75,7 @@ export default function Settings() {
               <Text style={styles.value}>Smaller videos on mobile data</Text>
               <Text style={type.caption}>Prefers smaller sources on mobile data.</Text>
             </View>
-            <Switch
-              value={saver}
-              onValueChange={setSaver}
-              trackColor={{ true: color.action, false: color.lifted }}
-              accessibilityLabel="Smaller videos on mobile data"
-            />
+            <Toggle value={saver} onValueChange={setSaver} accessibilityLabel="Smaller videos on mobile data" />
           </View>
         </Group>
         <Group title="About" index={3}>
