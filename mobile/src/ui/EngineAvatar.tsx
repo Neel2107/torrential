@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { HardDrive, Smartphone } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
+import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
 
 import { useVersion } from '@/engine/queries';
 import { useSession } from '@/engine/session';
-import { color } from '@/theme';
+import { color, motion } from '@/theme';
 
 import { Glass, LIQUID_GLASS } from './Glass';
 import { Icon } from './Icon';
@@ -26,7 +27,15 @@ export function EngineAvatar() {
       style={styles.avatar}
     >
       <Glass interactive style={styles.disc}>
-        <Icon name={phone ? Smartphone : HardDrive} size={18} tint={color.soft} />
+        {/* Keyed by engine, so switching fades one glyph out as the other comes in. */}
+        <Animated.View
+          key={phone ? 'phone' : 'computer'}
+          entering={ZoomIn.duration(motion.standard).easing(motion.out)}
+          exiting={FadeOut.duration(motion.quick)}
+          style={styles.glyph}
+        >
+          <Icon name={phone ? Smartphone : HardDrive} size={18} tint={color.soft} />
+        </Animated.View>
       </Glass>
       <View
         style={[
@@ -40,6 +49,7 @@ export function EngineAvatar() {
 
 const styles = StyleSheet.create({
   avatar: { width: LIQUID_GLASS ? 38 : 34, height: LIQUID_GLASS ? 38 : 34 },
+  glyph: { position: 'absolute' },
   disc: { flex: 1, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   dot: {
     position: 'absolute',

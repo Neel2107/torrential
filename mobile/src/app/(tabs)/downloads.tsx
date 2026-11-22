@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeOut,
@@ -23,6 +23,7 @@ import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
+import { JobBadge } from '@/ui/JobBadge';
 import { MenuRow } from '@/ui/MenuRow';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
@@ -34,6 +35,7 @@ const ACTIVE = new Set<Job['state']>(['queued', 'metadata', 'checking', 'downloa
 
 export default function Downloads() {
   const { jobs, live } = useJobs();
+  const landed = useLanded(jobs);
   const top = useTopInset(true);
   const onScroll = useChromeScroll();
   const { bottom: chromeBottom } = useChrome();
@@ -100,7 +102,9 @@ export default function Downloads() {
               <Text style={[type.caption, { textAlign: 'center', marginTop: space.xxl }]}>Connecting…</Text>
             )
           }
-          renderItem={({ item, index }) => <JobRow job={item} index={index} onMenu={() => setMenu(item)} />}
+          renderItem={({ item, index }) => (
+            <JobRow job={item} index={index} onMenu={() => setMenu(item)} landed={landed.has(item.id)} />
+          )}
         />
       )}
       <TopBar
@@ -124,6 +128,30 @@ export default function Downloads() {
   );
 }
 
+/**
+ * Downloads that finished a moment ago, seen live rather than on opening the app: their badge pops
+ * from the full mark into the check, and the phone gives one success tap for the lot.
+ */
+function useLanded(jobs: Job[]): ReadonlySet<string> {
+  const seen = useRef<Map<string, Job['state']> | null>(null);
+  const [landed, setLanded] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    const before = seen.current;
+    seen.current = new Map(jobs.map((job) => [job.id, job.state]));
+    if (!before) return;
+    const fresh = jobs.filter((job) => job.state === 'done' && before.has(job.id) && before.get(job.id) !== 'done');
+    if (fresh.length === 0) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setLanded((now) => new Set([...now, ...fresh.map((job) => job.id)]));
+    const timer = setTimeout(
+      () => setLanded((now) => new Set([...now].filter((id) => !fresh.some((job) => job.id === id)))),
+      4000,
+    );
+    return () => clearTimeout(timer);
+  }, [jobs]);
+  return landed;
+}
+
 /** Time left in the unit that matters, so it reads calmly as each second's estimate moves. */
 function roughly(seconds: number): string {
   if (seconds >= 86400) return `about ${Math.round(seconds / 86400)}d`;
@@ -132,7 +160,7 @@ function roughly(seconds: number): string {
   return 'under 2 min';
 }
 
-function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () => void }) {
+function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMenu: () => void; landed: boolean }) {
   const name = useJobName(job);
   const copy = useCopy(job.id);
   // Two downloads of one film read the same by name; the release's quality tells them apart.
@@ -170,40 +198,10 @@ function JobRow({ job, index, onMenu }: { job: Job; index: number; onMenu: () =>
         {name.poster ? (
           <View>
             <Art id={name.poster} kind="poster" name={name.title} style={styles.poster} />
-            <View style={[styles.miniBadge, job.state === 'error' && { backgroundColor: color.error }]}>
-              <Icon
-                name={
-                  job.state === 'done'
-                    ? icons.check
-                    : job.state === 'paused'
-                      ? icons.pause
-                      : job.state === 'error'
-                        ? icons.warning
-                        : icons.downloads
-                }
-                size={11}
-                tint={color.actionInk}
-                weight={3}
-              />
-            </View>
+            <JobBadge job={job} landed={landed} small />
           </View>
         ) : (
-          <View style={[styles.badge, job.state === 'error' && { backgroundColor: 'rgba(226,128,110,0.14)' }]}>
-            <Icon
-              name={
-                job.state === 'done'
-                  ? icons.check
-                  : job.state === 'paused'
-                    ? icons.pause
-                    : job.state === 'error'
-                      ? icons.warning
-                      : icons.downloads
-              }
-              size={18}
-              tint={job.state === 'error' ? color.error : job.state === 'done' ? color.action : color.soft}
-              weight={2.2}
-            />
-          </View>
+          <JobBadge job={job} landed={landed} small={false} />
         )}
         <View style={{ flex: 1, gap: 6 }}>
           <Text style={type.callout} numberOfLines={2}>
@@ -502,19 +500,6 @@ const styles = StyleSheet.create({
     borderBottomColor: color.hairline,
   },
   poster: { width: 40, height: 60, borderRadius: 6 },
-  miniBadge: {
-    position: 'absolute',
-    right: -5,
-    bottom: -5,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: color.action,
-    borderWidth: 2,
-    borderColor: color.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   badge: {
     width: 40,
     height: 40,

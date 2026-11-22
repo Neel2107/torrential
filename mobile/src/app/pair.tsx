@@ -1,9 +1,17 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { sentence } from '@web/lib/format';
@@ -15,7 +23,7 @@ import { parsePairing, useSession } from '@/engine/session';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { Mark } from '@/ui/Mark';
-import { color, font, radius, space, type } from '@/theme';
+import { color, font, motion, radius, space, type } from '@/theme';
 
 type Mode = 'scan' | 'type';
 
@@ -162,7 +170,7 @@ function Scanner({ onScan, busy }: { onScan: (data: string) => void; busy: boole
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={({ data }) => onScan(data)}
       />
-      <View style={styles.reticle} pointerEvents="none" />
+      <Reticle locked={busy} />
       {busy ? (
         <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: color.scrim }]}>
           <Text style={type.headline}>Pairing…</Text>
@@ -170,6 +178,20 @@ function Scanner({ onScan, busy }: { onScan: (data: string) => void; busy: boole
       ) : null}
     </View>
   );
+}
+
+/** The frame the code goes in. When a code is read it tightens and turns green: hold on, it has it. */
+function Reticle({ locked }: { locked: boolean }) {
+  const lock = useSharedValue(0);
+  useEffect(() => {
+    lock.value = locked ? withSpring(1, motion.pop) : withTiming(0, { duration: motion.quick });
+  }, [locked, lock]);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - 0.12 * lock.value }],
+    borderColor: interpolateColor(lock.value, [0, 1], ['rgba(240, 233, 220, 0.85)', color.action]),
+    borderWidth: 2 + lock.value,
+  }));
+  return <Animated.View style={[styles.reticle, style]} pointerEvents="none" />;
 }
 
 function Typed({
