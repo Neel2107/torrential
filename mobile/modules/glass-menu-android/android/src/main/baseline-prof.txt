@@ -1,0 +1,2 @@
+HSPLexpo/modules/glassmenuandroid/**->**(**)**
+Lexpo/modules/glassmenuandroid/**;

@@ -1,0 +1,2 @@
+HSPLexpo/modules/glyphandroid/**->**(**)**
+Lexpo/modules/glyphandroid/**;

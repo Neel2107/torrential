@@ -1,0 +1,2 @@
+HSPLexpo/modules/torrentialengine/**->**(**)**
+Lexpo/modules/torrentialengine/**;
