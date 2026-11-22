@@ -98,17 +98,28 @@ function onScreen(rect: Rect | null): rect is Rect {
   return !!rect && rect.y + rect.height > 0 && rect.y < height;
 }
 
+/** How far the bars over a screen reach in from its top and bottom edges. */
+export type Covered = { top: number; bottom: number };
+
+/** Whether `rect` lies wholly in the part of the window no bar covers, so its poster can fly from where it shows. */
+function inView(rect: Rect, covered: Covered): boolean {
+  const { height } = Dimensions.get('window');
+
+  return rect.y >= covered.top && rect.y + rect.height <= height - covered.bottom;
+}
+
 export function useHeroSource(id: string) {
   const ref = useRef<Measurable>(null);
 
-  const open = async (navigate: () => void) => {
+  /** Opens the title, flying its poster from where it shows unless a bar covers part of it; then the page fades in. */
+  const open = async (navigate: () => void, covered: Covered = { top: 0, bottom: 0 }) => {
     if (!HERO) return navigate();
 
     if (flight && flight.phase !== 'open') return;
     const source = () => measure(ref.current);
     const from = await source();
 
-    if (from) {
+    if (from && inView(from, covered)) {
       progress.set(0);
       tokens += 1;
       const to = posterRect(Dimensions.get('window').width);

@@ -5,8 +5,10 @@ import { View } from 'react-native';
 import { usePrefetchTitle } from '@/engine/queries';
 import { mark } from '@/perf';
 
+import { useOptionalChrome } from './chrome';
 import { HERO, useHeroSource } from './hero';
 import { Tap } from './Tap';
+import { useTopInset } from './TopBar';
 
 const Source = createContext<ReturnType<typeof useHeroSource>['ref'] | null>(null);
 
@@ -20,6 +22,8 @@ export function TitleTap({
 }: Omit<ComponentProps<typeof Tap>, 'onPress'> & { id: string; onOpen?: () => void; children: ReactNode }) {
   const { ref, open } = useHeroSource(id);
   const prefetch = usePrefetchTitle();
+  const chrome = useOptionalChrome();
+  const top = useTopInset(false);
   const href = { pathname: '/title/[id]', params: { id } } as const;
 
   const press = (
@@ -34,7 +38,8 @@ export function TitleTap({
           ? () => {
               mark('open');
               onOpen?.();
-              open(() => router.navigate(href));
+              const bars = chrome && chrome.hidden.get() < 0.5;
+              open(() => router.navigate(href), { top: bars ? top : 0, bottom: bars ? chrome.bottom : 0 });
             }
           : undefined
       }

@@ -22,6 +22,11 @@ export function ChromeProvider({ bar, children }: { bar: number; children: React
   return <Context value={value}>{children}</Context>;
 }
 
+/** The tabs' chrome, or null on a screen outside the tabs. */
+export function useOptionalChrome(): Chrome | null {
+  return use(Context);
+}
+
 export function useChrome(): Chrome {
   const chrome = use(Context);
 
