@@ -73,7 +73,8 @@ export function Meter({
 type FillStyle = { height: number; backgroundColor: string };
 
 function EasedFill({ fraction, style }: { fraction: number; style: FillStyle }) {
-  const value = useDerivedValue(() => withTiming(clamp(fraction), { duration: motion.tick, easing: Easing.linear }));
+  const target = clamp(fraction);
+  const value = useDerivedValue(() => withTiming(target, { duration: motion.tick, easing: Easing.linear }));
   const scale = useAnimatedStyle(() => ({ transform: [{ scaleX: value.get() }] }));
 
   return <Animated.View style={[styles.fill, style, scale]} />;
