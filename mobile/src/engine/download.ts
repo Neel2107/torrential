@@ -58,14 +58,21 @@ export async function startDownload(link: Link, viewer: Viewer, video: string): 
 }
 
 /** A Download button's state for `video`, and the press that starts it. The press saves the title first, so the engine keeps the download rather than pausing it as an idle play; on a computer's engine the copy comes to this phone once it finishes. */
-/** Whether a download already covers `video`: the film, the episode, or the season it is in. */
-export function useHeld(video: string | null): boolean {
+/** How far a download covering `video` has come: the film, the episode, or the season it is in. */
+export function useHeldState(video: string | null): 'none' | 'downloading' | 'done' {
   const [title, season, episode] = (video ?? '').split(':');
   const spans = season ? [`s${Number(season)}e${Number(episode)}`, `s${Number(season)}`] : ['film'];
-  return useJobsSelect(
-    ({ jobs }) =>
-      Boolean(video) && jobs.some((job) => job.title?.title === title && spans.includes(job.title.span.toLowerCase())),
-  );
+  return useJobsSelect(({ jobs }) => {
+    if (!video) return 'none';
+    const covering = jobs.filter((job) => job.title?.title === title && spans.includes(job.title.span.toLowerCase()));
+    if (covering.some((job) => job.state === 'done')) return 'done';
+    return covering.length > 0 ? 'downloading' : 'none';
+  });
+}
+
+/** Whether a download already covers `video`. */
+export function useHeld(video: string | null): boolean {
+  return useHeldState(video) !== 'none';
 }
 
 export function useDownload(video: string | null, label: Label) {

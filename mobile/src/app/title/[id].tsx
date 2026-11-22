@@ -26,7 +26,7 @@ import { episodeCode, episodeName, findEpisode, seasonName } from '@web/titles/w
 import type { EpisodeInfo, TitlePage as Page, Watched } from '@web/wire';
 
 import { authHeaders, url } from '@/engine/client';
-import { useDownload, useHeld, type Fetching } from '@/engine/download';
+import { useDownload, useHeld, useHeldState, type Fetching } from '@/engine/download';
 import { useSaveTitle, useTitle } from '@/engine/queries';
 import { useLink, useSession } from '@/engine/session';
 import { useSources } from '@/player/sources';
@@ -501,6 +501,7 @@ function EpisodeRow({
   current: boolean;
 }) {
   const video = videoOf(page.id, episode);
+  const held = useHeldState(video);
   const progress = watched?.finished ? 1 : watched?.duration ? watched.position / watched.duration : null;
   const aired = episode.has_aired;
 
@@ -543,6 +544,12 @@ function EpisodeRow({
             {[episode.aired ? day(episode.aired) : null, watched?.finished ? 'Watched' : null]
               .filter(Boolean)
               .join(' · ')}
+            {held === 'none' ? null : (
+              <Text style={{ color: color.action }}>
+                {episode.aired || watched?.finished ? ' · ' : ''}
+                {held === 'done' ? 'Downloaded' : 'Downloading'}
+              </Text>
+            )}
           </Text>
           {episode.overview ? (
             <Text style={[type.caption, { color: color.soft }]} numberOfLines={2}>
