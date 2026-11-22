@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { Link, router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Keyboard, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
@@ -30,14 +30,13 @@ import {
 
 import { post, stream } from '@/engine/client';
 import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
-import { keys, useHome, usePrefetchTitle, useTitleSearch } from '@/engine/queries';
+import { keys, useHome, useTitleSearch } from '@/engine/queries';
 import { useRecentSearches } from '@/engine/recent';
 import { useLink } from '@/engine/session';
 import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Glass } from '@/ui/Glass';
-import { HERO, useHeroSource } from '@/ui/hero';
 import { Icon, icons } from '@/ui/Icon';
 import { MenuRow } from '@/ui/MenuRow';
 import { Meter } from '@/ui/Meter';
@@ -45,6 +44,7 @@ import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { Skeleton } from '@/ui/Skeleton';
 import { Tap } from '@/ui/Tap';
+import { TitlePoster, TitleTap } from '@/ui/TitleTap';
 import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { color, font, motion, radius, space, type } from '@/theme';
@@ -315,60 +315,38 @@ function Titles({
 }
 
 function TitleRow({ title, index, onOpen }: { title: TitleCard; index: number; onOpen: () => void }) {
-  const prefetch = usePrefetchTitle();
-  const { ref, open } = useHeroSource(title.id);
-  const href = { pathname: '/title/[id]', params: { id: title.id } } as const;
-  const leave = () => {
-    onOpen();
-    Keyboard.dismiss();
-  };
-  const row = (
-    <Tap
-      shrink={1}
-      highlight
-      onPressIn={() => prefetch(title.id)}
-      onPress={
-        HERO
-          ? () => {
-              leave();
-              open(() => router.navigate(href));
-            }
-          : undefined
-      }
-      accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
-      style={styles.row}
-    >
-      <Link.AppleZoom>
-        <View ref={ref} collapsable={false}>
-          <Art id={title.id} kind="poster" name={title.name} style={styles.thumb} />
-        </View>
-      </Link.AppleZoom>
-      <View style={{ flex: 1, gap: 3 }}>
-        <Text style={type.headline} numberOfLines={2}>
-          {title.name}
-        </Text>
-        <View style={styles.facts}>
-          {title.rating ? (
-            <>
-              <Icon name={icons.star} size={12} tint={color.action} filled />
-              <Text style={[type.numeric, { color: color.ink }]}>{title.rating.toFixed(1)}</Text>
-            </>
-          ) : null}
-          <Text style={type.label}>{cardFacts(title)}</Text>
-        </View>
-      </View>
-      <Icon name={icons.chevron} size={18} tint={color.pencil} />
-    </Tap>
-  );
   return (
     <Animated.View entering={rise(index)}>
-      {HERO ? (
-        row
-      ) : (
-        <Link href={href} onPress={leave} asChild>
-          {row}
-        </Link>
-      )}
+      <TitleTap
+        id={title.id}
+        shrink={1}
+        highlight
+        onOpen={() => {
+          onOpen();
+          Keyboard.dismiss();
+        }}
+        accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
+        style={styles.row}
+      >
+        <TitlePoster>
+          <Art id={title.id} kind="poster" name={title.name} style={styles.thumb} />
+        </TitlePoster>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={type.headline} numberOfLines={2}>
+            {title.name}
+          </Text>
+          <View style={styles.facts}>
+            {title.rating ? (
+              <>
+                <Icon name={icons.star} size={12} tint={color.action} filled />
+                <Text style={[type.numeric, { color: color.ink }]}>{title.rating.toFixed(1)}</Text>
+              </>
+            ) : null}
+            <Text style={type.label}>{cardFacts(title)}</Text>
+          </View>
+        </View>
+        <Icon name={icons.chevron} size={18} tint={color.pencil} />
+      </TitleTap>
     </Animated.View>
   );
 }
@@ -805,16 +783,12 @@ function summary(job: Job): string {
 function DownloadRow({ job }: { job: Job }) {
   const name = useJobName(job);
   const said = summary(job);
-  return (
-    <Tap
-      shrink={1}
-      highlight
-      onPress={() => openJob(job)}
-      accessibilityLabel={`${name.title}, ${said}`}
-      style={styles.pickRow}
-    >
+  const content = (
+    <>
       {name.poster ? (
-        <Art id={name.poster} kind="poster" name={name.title} style={styles.pickPoster} />
+        <TitlePoster>
+          <Art id={name.poster} kind="poster" name={name.title} style={styles.pickPoster} />
+        </TitlePoster>
       ) : (
         <View style={styles.pickBadge}>
           <Icon name={job.state === 'done' ? icons.check : icons.downloads} size={18} tint={color.soft} />
@@ -828,6 +802,16 @@ function DownloadRow({ job }: { job: Job }) {
           {said}
         </Text>
       </View>
+    </>
+  );
+  const label = `${name.title}, ${said}`;
+  return job.title ? (
+    <TitleTap id={job.title.title} shrink={1} highlight accessibilityLabel={label} style={styles.pickRow}>
+      {content}
+    </TitleTap>
+  ) : (
+    <Tap shrink={1} highlight onPress={() => openJob(job)} accessibilityLabel={label} style={styles.pickRow}>
+      {content}
     </Tap>
   );
 }

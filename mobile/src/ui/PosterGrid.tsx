@@ -1,16 +1,13 @@
-import { Link, router } from 'expo-router';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { cardFacts } from '@web/titles/words';
 import type { TitleCard } from '@web/wire';
 
-import { usePrefetchTitle } from '@/engine/queries';
 import { color, radius, space, type } from '@/theme';
 
 import { Art } from './Art';
-import { HERO, useHeroSource } from './hero';
 import { Icon, icons } from './Icon';
-import { Tap } from './Tap';
+import { TitlePoster, TitleTap } from './TitleTap';
 
 export function PosterGrid({ titles }: { titles: TitleCard[] }) {
   const { width } = useWindowDimensions();
@@ -29,27 +26,21 @@ export function PosterGrid({ titles }: { titles: TitleCard[] }) {
 }
 
 export function Poster({ title, width }: { title: TitleCard; width: number }) {
-  const { ref, open } = useHeroSource(title.id);
-  const prefetch = usePrefetchTitle();
-  const href = { pathname: '/title/[id]', params: { id: title.id } } as const;
-  const card = (
-    <Tap
+  return (
+    <TitleTap
+      id={title.id}
       shrink={0.95}
-      onPressIn={() => prefetch(title.id)}
-      onPress={HERO ? () => open(() => router.push(href)) : undefined}
       accessibilityLabel={[title.name, cardFacts(title)].filter(Boolean).join(', ')}
       style={{ width }}
     >
-      <Link.AppleZoom>
-        <View ref={ref} collapsable={false}>
-          <Art
-            id={title.id}
-            kind="poster"
-            name={title.name}
-            style={StyleSheet.flatten([styles.poster, { height: width * 1.5 }])}
-          />
-        </View>
-      </Link.AppleZoom>
+      <TitlePoster>
+        <Art
+          id={title.id}
+          kind="poster"
+          name={title.name}
+          style={StyleSheet.flatten([styles.poster, { height: width * 1.5 }])}
+        />
+      </TitlePoster>
       <Text style={[type.label, styles.name]} numberOfLines={2}>
         {title.name}
       </Text>
@@ -65,14 +56,7 @@ export function Poster({ title, width }: { title: TitleCard; width: number }) {
           {cardFacts(title)}
         </Text>
       </View>
-    </Tap>
-  );
-  return HERO ? (
-    card
-  ) : (
-    <Link href={href} asChild>
-      {card}
-    </Link>
+    </TitleTap>
   );
 }
 

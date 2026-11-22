@@ -35,6 +35,7 @@ import { rise } from '@/ui/rise';
 import { Pager, usePagerPosition } from '@/ui/Pager';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
+import { TitlePoster, TitleTap } from '@/ui/TitleTap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { color, font, motion, space, type } from '@/theme';
 
@@ -219,64 +220,78 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
           ? `${bytes(job.progress.verified)} of ${bytes(size)}`
           : null;
 
+  const press = {
+    shrink: 1,
+    highlight: true,
+    onLongPress: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onMenu();
+    },
+    accessibilityLabel: [name.title, name.tags, ...tags.map((tag) => tag.label), state, numbers]
+      .filter(Boolean)
+      .join(', '),
+    accessibilityHint: 'Long press for pause, resume and remove.',
+    style: styles.row,
+  };
+  const content = (
+    <>
+      {name.poster ? (
+        <TitlePoster>
+          <Art id={name.poster} kind="poster" name={name.title} style={styles.poster} />
+        </TitlePoster>
+      ) : (
+        <View style={[styles.poster, styles.posterless]}>
+          <Icon name={icons.film} size={18} tint={color.pencil} />
+        </View>
+      )}
+      <View style={styles.body}>
+        <View style={styles.head}>
+          <Text style={[type.callout, { flex: 1 }]} numberOfLines={1}>
+            {name.title} <Text style={styles.titleTags}>{name.tags}</Text>
+          </Text>
+          <View style={styles.more} />
+        </View>
+        <View style={styles.tags}>
+          {tags.map((tag) => (
+            <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
+              {tag.label}
+            </Text>
+          ))}
+          {size ? <Text style={styles.size}>{bytes(size)}</Text> : null}
+        </View>
+        {job.state !== 'done' && job.state !== 'error' ? (
+          <Progress fraction={fraction} paused={job.state === 'paused'} />
+        ) : null}
+        <View style={styles.status}>
+          <JobBadge job={job} landed={landed} />
+          <Text
+            style={[styles.state, job.state === 'error' && { color: color.error }]}
+            numberOfLines={job.state === 'error' ? 2 : 1}
+          >
+            {state}
+          </Text>
+          {numbers ? (
+            <Text style={styles.numbers} numberOfLines={1}>
+              {numbers}
+            </Text>
+          ) : null}
+        </View>
+        {copy ? <CopyState copy={copy} /> : null}
+      </View>
+    </>
+  );
+
   return (
     <Animated.View entering={enter(index)} exiting={FadeOut.duration(motion.quick)}>
-      <Tap
-        shrink={1}
-        highlight
-        onPress={() => openJob(job)}
-        onLongPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onMenu();
-        }}
-        accessibilityLabel={[name.title, name.tags, ...tags.map((tag) => tag.label), state, numbers]
-          .filter(Boolean)
-          .join(', ')}
-        accessibilityHint="Long press for pause, resume and remove."
-        style={styles.row}
-      >
-        {name.poster ? (
-          <Art id={name.poster} kind="poster" name={name.title} style={styles.poster} />
-        ) : (
-          <View style={[styles.poster, styles.posterless]}>
-            <Icon name={icons.film} size={18} tint={color.pencil} />
-          </View>
-        )}
-        <View style={styles.body}>
-          <View style={styles.head}>
-            <Text style={[type.callout, { flex: 1 }]} numberOfLines={1}>
-              {name.title} <Text style={styles.titleTags}>{name.tags}</Text>
-            </Text>
-            <View style={styles.more} />
-          </View>
-          <View style={styles.tags}>
-            {tags.map((tag) => (
-              <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
-                {tag.label}
-              </Text>
-            ))}
-            {size ? <Text style={styles.size}>{bytes(size)}</Text> : null}
-          </View>
-          {job.state !== 'done' && job.state !== 'error' ? (
-            <Progress fraction={fraction} paused={job.state === 'paused'} />
-          ) : null}
-          <View style={styles.status}>
-            <JobBadge job={job} landed={landed} />
-            <Text
-              style={[styles.state, job.state === 'error' && { color: color.error }]}
-              numberOfLines={job.state === 'error' ? 2 : 1}
-            >
-              {state}
-            </Text>
-            {numbers ? (
-              <Text style={styles.numbers} numberOfLines={1}>
-                {numbers}
-              </Text>
-            ) : null}
-          </View>
-          {copy ? <CopyState copy={copy} /> : null}
-        </View>
-      </Tap>
+      {job.title ? (
+        <TitleTap id={job.title.title} {...press}>
+          {content}
+        </TitleTap>
+      ) : (
+        <Tap onPress={() => openJob(job)} {...press}>
+          {content}
+        </Tap>
+      )}
       <View style={styles.moreSpot}>
         <MoreButton job={job} onMenu={onMenu} />
       </View>
