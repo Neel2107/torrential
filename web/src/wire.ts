@@ -470,7 +470,12 @@ source?: string,
 /**
  * The download that stalled.
  */
-replace?: string, };
+replace?: string,
+/**
+ * Download to keep, into the downloads folder as `get` does, instead of into the plays
+ * folder, so it is never paused or taken away for lying unwatched.
+ */
+keep?: boolean, };
 
 export type PlayingLine = { "type": "playing", video: string, release: Release, play: PlayInfo, resume_at: number | null, };
 

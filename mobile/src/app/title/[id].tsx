@@ -27,7 +27,7 @@ import { episodeCode, episodeName, findEpisode, seasonName } from '@web/titles/w
 import type { EpisodeInfo, TitlePage as Page, Watched } from '@web/wire';
 
 import { authHeaders, url } from '@/engine/client';
-import { useDownload, useHeld, useHeldState, type Fetching } from '@/engine/download';
+import { useDownload, useHeldState, type Fetching } from '@/engine/download';
 import { useSaveTitle, useTitle } from '@/engine/queries';
 import { useLink, useSession } from '@/engine/session';
 import { useSources } from '@/player/sources';
@@ -309,26 +309,41 @@ function DownloadButton({
   label: Label;
   onState: (fetching: Fetching) => void;
 }) {
-  const { fetching: asked, start } = useDownload(video, label);
-  const held = useHeld(video);
-  const fetching: Fetching = asked.state === 'idle' && held ? { state: 'started', job: '' } : asked;
+  const { fetching: asked, start, onComputer } = useDownload(video, label);
+  const held = useHeldState(video);
+  const state =
+    asked.state === 'finding'
+      ? 'finding'
+      : held === 'done'
+        ? 'done'
+        : held === 'downloading' || asked.state === 'started'
+          ? 'downloading'
+          : 'idle';
   useEffect(() => onState(asked), [asked, onState]);
   return (
     <Tap
       shrink={0.92}
-      disabled={!video || fetching.state === 'finding' || fetching.state === 'started'}
+      disabled={!video || state !== 'idle'}
       onPress={start}
-      accessibilityLabel={fetching.state === 'started' ? 'Downloading to this phone' : 'Download to this phone'}
-      accessibilityState={{ busy: fetching.state === 'finding' }}
-      style={styles.squareButton}
+      accessibilityLabel={
+        state === 'done'
+          ? onComputer
+            ? 'Downloaded on your computer'
+            : 'Downloaded to this phone'
+          : state === 'downloading'
+            ? 'Downloading. Follow it in Downloads.'
+            : 'Download to this phone'
+      }
+      accessibilityState={{ busy: state === 'finding' }}
+      style={[styles.squareButton, state === 'downloading' && { borderColor: color.action }]}
     >
-      {fetching.state === 'finding' ? (
+      {state === 'finding' ? (
         <LoadingMark size={20} label="Finding a source" />
       ) : (
         <Icon
-          name={fetching.state === 'started' ? icons.check : icons.downloads}
+          name={state === 'done' ? icons.check : icons.downloads}
           size={20}
-          tint={fetching.state === 'started' ? color.action : color.ink}
+          tint={state === 'idle' ? color.ink : color.action}
         />
       )}
     </Tap>
@@ -515,6 +530,8 @@ function EpisodeRow({
 }) {
   const video = videoOf(page.id, episode);
   const held = useHeldState(video);
+  const { session } = useSession();
+  const onComputer = session.state === 'paired' && session.engine.kind !== 'phone';
   const progress = watched?.finished ? 1 : watched?.duration ? watched.position / watched.duration : null;
   const aired = episode.has_aired;
 
@@ -525,7 +542,7 @@ function EpisodeRow({
         highlight
         disabled={!aired}
         onPress={() => router.push({ pathname: '/play', params: { video } })}
-        accessibilityLabel={`${episodeCode(episode)}, ${episodeName(episode)}${aired ? '' : ', not out yet'}`}
+        accessibilityLabel={`${episodeCode(episode)}, ${episodeName(episode)}${aired ? '' : ', not out yet'}${held === 'none' ? '' : held === 'done' ? (onComputer ? ', on your computer' : ', on this phone') : ', downloading'}`}
         style={[styles.episode, !aired && { opacity: 0.45 }]}
       >
         <View style={styles.still}>
@@ -560,7 +577,7 @@ function EpisodeRow({
             {held === 'none' ? null : (
               <Text style={{ color: color.action }}>
                 {episode.aired || watched?.finished ? ' · ' : ''}
-                {held === 'done' ? 'Downloaded' : 'Downloading'}
+                {held === 'done' ? (onComputer ? 'On your computer' : 'On this phone') : 'Downloading'}
               </Text>
             )}
           </Text>

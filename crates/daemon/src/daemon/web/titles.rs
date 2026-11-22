@@ -226,6 +226,9 @@ pub(super) struct Play {
     source: Option<ReleaseId>,
     /// The download that stalled.
     replace: Option<TorrentId>,
+    /// Download to keep, into the downloads folder as `get` does, instead of into the plays
+    /// folder, so it is never paused or taken away for lying unwatched.
+    keep: Option<bool>,
 }
 
 /// `POST /api/title/play`: a line of JSON for each step of the play, the last being `playing` or
@@ -238,9 +241,10 @@ pub async fn play(conn: &mut Connection<'_>, request: &Request, asker: &Asker) -
         Ok(open) => open,
         Err(updating) => return fail(conn, request, &updating).await,
     };
-    let ask = super::body::<Play>(request).and_then(|Play { video, viewer, playback, source, replace }| {
+    let ask = super::body::<Play>(request).and_then(|Play { video, viewer, playback, source, replace, keep }| {
         let player = player(viewer.map(Measured::viewer).transpose()?, playback, asker);
-        Ok(PlayTitle { video, pin: source, replace, player, plays: SCREEN_PLAYS, to: Destination::Plays })
+        let to = if keep == Some(true) { Destination::Folder(None) } else { Destination::Plays };
+        Ok(PlayTitle { video, pin: source, replace, player, plays: SCREEN_PLAYS, to })
     });
     let ask = match ask {
         Ok(ask) => ask,
