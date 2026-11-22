@@ -6,11 +6,11 @@ import { bytes } from '@web/lib/format';
 import { readable } from '@web/lib/release';
 import type { Release } from '@web/wire';
 
-import { Icon, icons } from '@/ui/Icon';
+import { qualityOf } from '@/engine/quality';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
-import { color, font, radius, space, type } from '@/theme';
+import { color, font, space, type } from '@/theme';
 
 import { useSources, type Sources } from './sources';
 
@@ -38,60 +38,21 @@ export function SourcesSheet({
     <Sheet onClose={onClose}>
       <View style={styles.head}>
         <Text style={type.title}>Sources</Text>
-        <Text style={type.caption}>{label} · best first for this phone</Text>
+        <Text style={type.caption}>{label}</Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: space.md }}>
         {state.releases.map((release, index) => (
-          <Animated.View key={release.id} entering={rise(index)}>
-            <Tap
-              shrink={1}
-              highlight
-              haptic={release.id !== current}
-              disabled={release.id === current}
-              accessibilityState={{ selected: release.id === current }}
-              onPress={() => {
-                if (onPick) return onPick(release);
-                onClose();
-                router.push({ pathname: '/play', params: { video, source: release.id } });
-              }}
-              accessibilityLabel={`Play ${readable(release.name).title}, ${release.size ? bytes(release.size) : ''}`}
-              style={styles.row}
-            >
-              <View style={styles.rank}>
-                <Text style={styles.rankText}>{index + 1}</Text>
-              </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={type.callout} numberOfLines={2}>
-                  {readable(release.name).title}{' '}
-                  <Text style={{ color: color.pencil, fontFamily: font.regular }}>{readable(release.name).tags}</Text>
-                </Text>
-                <View style={styles.facts}>
-                  {[
-                    release.quality.resolution?.toUpperCase(),
-                    release.quality.codec?.toUpperCase(),
-                    release.quality.hdr ? 'HDR' : null,
-                  ]
-                    .filter(Boolean)
-                    .map((chip) => (
-                      <View key={chip} style={styles.chip}>
-                        <Text style={styles.chipText}>{chip}</Text>
-                      </View>
-                    ))}
-                  {release.size ? <Text style={type.numeric}>{bytes(release.size)}</Text> : null}
-                  {release.seeders !== null ? (
-                    <Text style={[type.numeric, { color: release.seeders > 10 ? color.action : color.pencil }]}>
-                      {release.seeders} seeds
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-              {release.id === current ? (
-                <Text style={[type.label, { color: color.action }]}>Playing</Text>
-              ) : (
-                <Icon name={icons.play} size={18} tint={color.soft} filled />
-              )}
-            </Tap>
-          </Animated.View>
+          <SourceRow
+            key={release.id}
+            release={release}
+            index={index}
+            playing={release.id === current}
+            onPress={() => {
+              if (onPick) return onPick(release);
+              onClose();
+              router.push({ pathname: '/play', params: { video, source: release.id } });
+            }}
+          />
         ))}
         {!state.done ? (
           <View style={styles.status}>
@@ -108,6 +69,72 @@ export function SourcesSheet({
   );
 }
 
+function SourceRow({
+  release,
+  index,
+  playing,
+  onPress,
+}: {
+  release: Release;
+  index: number;
+  playing: boolean;
+  onPress: () => void;
+}) {
+  const name = readable(release.name);
+  const tags = qualityOf(release.name);
+  const detail = name.tags || name.title;
+  const seeds = release.seeders;
+  const health = seeds === null ? color.pencil : seeds >= 20 ? color.action : seeds >= 5 ? color.soft : color.error;
+
+  return (
+    <Animated.View entering={rise(index)}>
+      <Tap
+        shrink={1}
+        highlight
+        haptic={!playing}
+        disabled={playing}
+        accessibilityState={{ selected: playing }}
+        onPress={onPress}
+        accessibilityLabel={[
+          index === 0 ? 'Best match' : null,
+          ...tags.map((tag) => tag.label),
+          release.size ? bytes(release.size) : null,
+          seeds !== null ? `${seeds} seeds` : null,
+          release.name,
+        ]
+          .filter(Boolean)
+          .join(', ')}
+        style={[styles.row, playing && styles.rowPlaying]}
+      >
+        <View style={styles.body}>
+          <View style={styles.tags}>
+            {index === 0 && !playing ? <Text style={[styles.tag, styles.best]}>Best</Text> : null}
+            {playing ? <Text style={[styles.tag, styles.best]}>Playing</Text> : null}
+            {tags.map((tag) => (
+              <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
+                {tag.label}
+              </Text>
+            ))}
+            {tags.length === 0 ? <Text style={styles.unknown}>Unknown quality</Text> : null}
+          </View>
+          <Text style={styles.detail} numberOfLines={1}>
+            {detail}
+          </Text>
+        </View>
+        <View style={styles.side}>
+          {release.size ? <Text style={styles.size}>{bytes(release.size)}</Text> : null}
+          {seeds !== null ? (
+            <View style={styles.seeds}>
+              <View style={[styles.dot, { backgroundColor: health }]} />
+              <Text style={styles.seedText}>{seeds}</Text>
+            </View>
+          ) : null}
+        </View>
+      </Tap>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   head: { paddingHorizontal: space.xl, paddingBottom: space.md, gap: 2 },
   row: {
@@ -115,20 +142,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.md,
     paddingHorizontal: space.xl,
-    paddingVertical: space.md,
+    paddingVertical: 14,
   },
-  rank: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  rowPlaying: { backgroundColor: 'rgba(166, 199, 154, 0.08)' },
+  body: { flex: 1, gap: 6 },
+  tags: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  tag: {
+    fontFamily: font.semibold,
+    fontSize: 11,
+    letterSpacing: 0.2,
+    color: color.soft,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    overflow: 'hidden',
     backgroundColor: color.lifted,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  rankText: { fontFamily: font.bold, fontSize: 12, color: color.soft, fontVariant: ['tabular-nums'] },
-  facts: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
-  chip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm - 2, backgroundColor: color.lifted },
-  chipText: { fontFamily: font.semibold, fontSize: 11, color: color.soft, letterSpacing: 0.3 },
+  tagStrong: { color: color.actionInk, backgroundColor: color.action },
+  best: { color: color.action, backgroundColor: 'transparent', borderWidth: 1, borderColor: color.action },
+  unknown: { ...type.caption, color: color.pencil },
+  detail: { ...type.caption, color: color.pencil },
+  side: { alignItems: 'flex-end', gap: 6 },
+  size: { ...type.numeric, color: color.ink },
+  seeds: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  seedText: { ...type.caption, fontVariant: ['tabular-nums'] },
   status: {
     flexDirection: 'row',
     alignItems: 'center',
