@@ -35,9 +35,23 @@ const MOST = 130;
 /** Past this a release refreshes. */
 const LINE = 70;
 /** One pass of light down the three bands. */
-const CYCLE = 750;
-/** A refresh lights at least this long, one full pass and its fade, so a quick answer still reads as one. */
-const AT_LEAST = 1000;
+const CYCLE = 1200;
+
+/** How lit band `index` is at `phase` of a pass: each band peaks in turn, top to bottom. */
+const band = (phase: number, index: number): number => {
+  'worklet';
+  // Each band takes its turn in a third of the pass: it lights fully, then falls back to almost
+  // nothing, so the eye follows one bright band down the mark.
+  const t = (((phase - index / 3) % 1) + 1) % 1;
+  const peak = t < 0.15 ? t / 0.15 : t < 0.33 ? 1 : t < 0.48 ? 1 - (t - 0.33) / 0.15 : 0;
+  return 0.12 + 0.88 * peak;
+};
+
+/** How lit band `index` is at `progress` of the way to the line: each fills in its own third. */
+const fill = (progress: number, index: number): number => {
+  'worklet';
+  return 0.15 + 0.85 * Math.min(1, Math.max(0, progress * 3 - index));
+};
 
 type Pull = {
   /** Points pulled, after resistance. */
@@ -46,6 +60,8 @@ type Pull = {
   spin: SharedValue<number>;
   /** 1 while refreshing, easing to 0 after, so the bands return to rest smoothly. */
   busy: SharedValue<number>;
+  /** 1 while a finger is pulling: the bands fill with the pull then, as X's logo fills in. */
+  holding: SharedValue<number>;
 };
 
 const Context = createContext<Pull | null>(null);
@@ -54,7 +70,8 @@ export function PullProvider({ children }: { children: ReactNode }) {
   const pull = useSharedValue(0);
   const spin = useSharedValue(0);
   const busy = useSharedValue(0);
-  const value = useMemo(() => ({ pull, spin, busy }), [pull, spin, busy]);
+  const holding = useSharedValue(0);
+  const value = useMemo(() => ({ pull, spin, busy, holding }), [pull, spin, busy, holding]);
   return <Context value={value}>{children}</Context>;
 }
 
@@ -76,7 +93,8 @@ function resist(distance: number): number {
  * offset (iOS), and the feed's style, which moves it down with the pull on Android.
  */
 export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => Promise<unknown>) {
-  const { pull, spin, busy: lit } = usePull();
+  const { pull, spin, busy: lit, holding } = usePull();
+  const bounced = useSharedValue(false);
   const busy = useRef(false);
   const crossed = useSharedValue(false);
 
@@ -89,9 +107,12 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
     lit.value = withTiming(1, { duration: 160 });
     const started = Date.now();
     await onRefresh().catch(() => {});
-    await new Promise((done) => setTimeout(done, Math.max(0, AT_LEAST - (Date.now() - started))));
-    // The bands finish the cycle under way, then settle back to the mark at rest.
-    lit.value = withTiming(0, { duration: 250 }, () => cancelAnimation(spin));
+    // Whole passes only, at least one: the light reaches the last band before the mark settles,
+    // however quickly the feed came back. The last band's light ends a little after its pass.
+    const passes = Math.max(1, Math.ceil((Date.now() - started) / CYCLE));
+    const end = started + passes * CYCLE + CYCLE * 0.15;
+    await new Promise((done) => setTimeout(done, Math.max(0, end - Date.now())));
+    lit.value = withTiming(0, { duration: 300 }, () => cancelAnimation(spin));
     busy.current = false;
   }, [onRefresh, spin, lit]);
 
@@ -111,6 +132,7 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
 
   const release = () => {
     'worklet';
+    holding.value = 0;
     const go = pull.value >= LINE;
     pull.value = withSpring(0, { ...motion.settle, overshootClamping: true });
     if (go) runOnJS(refresh)();
@@ -122,6 +144,7 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
       .activeOffsetY([-8, 8])
       .onStart(() => {
         'worklet';
+        holding.value = 1;
       })
       .onUpdate((event) => {
         'worklet';
@@ -130,20 +153,27 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
       .onEnd(release)
       .onFinalize(() => {
         'worklet';
+        holding.value = 0;
         if (pull.value > 0 && pull.value < LINE) pull.value = withSpring(0, motion.settle);
       });
     return Gesture.Simultaneous(Gesture.Native(), pan);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset, pull, refresh]);
+  }, [offset, pull, refresh, holding]);
 
   /** For the scroll handler on iOS: the bounce past the top is the pull. */
   const fromBounce = (y: number) => {
     'worklet';
-    if (Platform.OS === 'ios') pull.value = Math.min(MOST, Math.max(0, -y));
+    if (Platform.OS !== 'ios') return;
+    pull.value = Math.min(MOST, Math.max(0, -y));
+    // The bounce back after letting go is not a finger pulling.
+    if (y >= 0) bounced.value = false;
+    else if (!bounced.value) holding.value = 1;
   };
   const endBounce = () => {
     'worklet';
-    if (Platform.OS === 'ios') release();
+    if (Platform.OS !== 'ios') return;
+    bounced.value = true;
+    release();
   };
 
   const feed = useAnimatedStyle(() => (Platform.OS === 'android' ? { transform: [{ translateY: pull.value }] } : {}));
@@ -157,33 +187,29 @@ export function usePullHeight() {
   return pull;
 }
 
-/** How lit band `index` is at `phase` of a pass: each band peaks in turn, top to bottom. */
-function band(phase: number, index: number): number {
-  'worklet';
-  const t = (((phase - index * 0.18) % 1) + 1) % 1;
-  const peak = t < 0.35 ? t / 0.35 : Math.max(0, 1 - (t - 0.35) / 0.4);
-  return 0.3 + 0.7 * peak;
-}
-
 /**
  * The mark in the bar. It grows with the pull, dim until the pull would refresh, as X's does; while
  * the feed refreshes its three bands light top to bottom, like pieces of a torrent landing.
  */
 export function PullMark({ size = 30 }: { size?: number }) {
-  const { pull, spin, busy } = usePull();
-  const style = useAnimatedStyle(() => ({
-    opacity: pull.value > 0 ? 0.4 + 0.6 * Math.min(1, pull.value / LINE) : 1,
-    transform: [{ scale: 1 + (pull.value / MOST) * 0.6 }],
-  }));
+  const { pull, spin, busy, holding } = usePull();
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: 1 + (pull.value / MOST) * 0.6 }] }));
   // At rest the last band is the faint one still arriving; while refreshing, light runs down all
   // three. Each band is its own layer: animated SVG props do not reach the drawing on Android.
-  const lit = (index: number, rest: number) => {
-    'worklet';
-    return rest + (band(spin.value, index) - rest) * busy.value;
-  };
-  const top = useAnimatedStyle(() => ({ opacity: lit(0, 1) }));
-  const middle = useAnimatedStyle(() => ({ opacity: lit(1, 1) }));
-  const last = useAnimatedStyle(() => ({ opacity: lit(2, 0.42) }));
+  // The maths sits inside each style: a helper closure here is rewritten by the React Compiler and
+  // never reaches the UI thread.
+  // While pulling, as X's logo fills in stroke by stroke, the bands fill in turn: all three are lit
+  // exactly at the line, so the mark shows when letting go will refresh.
+  const top = useAnimatedStyle(() => ({
+    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 0) : 1 + (band(spin.value, 0) - 1) * busy.value,
+  }));
+  const middle = useAnimatedStyle(() => ({
+    opacity: holding.value && pull.value > 0 ? fill(pull.value / LINE, 1) : 1 + (band(spin.value, 1) - 1) * busy.value,
+  }));
+  const last = useAnimatedStyle(() => ({
+    opacity:
+      holding.value && pull.value > 0 ? fill(pull.value / LINE, 2) : 0.42 + (band(spin.value, 2) - 0.42) * busy.value,
+  }));
   const layers: [number, number, typeof top][] = [
     [300, 118, top],
     [446, 132, middle],
