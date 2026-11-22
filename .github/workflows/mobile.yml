@@ -49,7 +49,18 @@ jobs:
           cache-dependency-path: mobile/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run -s check
-      - run: pnpm run -s --if-present test
+      - name: Test, network budgets included
+        run: pnpm run -s --if-present test
+        env:
+          TORRENTIAL_BUDGET_REPORT_PATH: ${{ runner.temp }}/torrential-network-budgets.md
+      - name: Publish network budget report
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/torrential-network-budgets.md"; then
+            tee -a "$GITHUB_STEP_SUMMARY" < "$RUNNER_TEMP/torrential-network-budgets.md"
+          else
+            echo "The network budget report was not produced." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - run: pnpm run -s --if-present test:tools
       - name: Bundle for Android and iOS
         run: pnpm exec expo export --platform android --platform ios

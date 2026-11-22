@@ -1,5 +1,6 @@
 import type {
   AudioTrack,
+  EpisodeInfo,
   Error as WireError,
   ErrorCode,
   FilesReply,
@@ -9,7 +10,9 @@ import type {
   PlayInfo,
   Position,
   Release,
+  SearchResult,
   TitleCard,
+  TitlePage,
   TorrentFile,
 } from '@web/wire';
 
@@ -135,6 +138,60 @@ export function aMedia(change: Partial<MediaInfo> = {}): MediaInfo {
     direct: null,
     ffmpeg: 'ready',
     chapters: [],
+  };
+
+  return { ...base, ...change };
+}
+
+/** An episode as a show's page lists it, the first of season 1, aired and with a still, changed only where a test says. */
+export function anEpisode(change: Partial<EpisodeInfo> = {}): EpisodeInfo {
+  const base: EpisodeInfo = {
+    name: 'Big Buck Bunny',
+    aired: 0,
+    has_aired: true,
+    overview: null,
+    thumbnail: true,
+    season: 1,
+    episode: 1,
+  };
+
+  return { ...base, ...change };
+}
+
+/** A title's page as the engine sends it: a film, not saved, never watched, changed only where a test says. */
+export function aTitlePage(change: Partial<TitlePage> = {}): TitlePage {
+  const base: TitlePage = {
+    id: 'tt0063350',
+    kind: 'film',
+    name: 'Night of the Living Dead',
+    year: 1968,
+    rating: 7.8,
+    saved: false,
+    watched: [],
+    next: null,
+    play_target: { video: 'tt0063350', resume_at: null },
+    downloads: [],
+    synopsis: 'A ragtag group barricade themselves in an old Pennsylvania farmhouse.',
+    genres: ['Horror'],
+    runtime_min: 96,
+    cast: ['Duane Jones', "Judith O'Dea"],
+    countries: ['US'],
+    art: { poster: true, background: true, logo: false },
+    seasons: [],
+  };
+
+  return { ...base, ...change };
+}
+
+/** A finished source search with these releases, as its last message carries it. */
+export function aSearchResult(releases: Release[], change: Partial<SearchResult> = {}): SearchResult {
+  const base: SearchResult = {
+    query: null,
+    releases,
+    total: releases.length,
+    hidden_adult: 0,
+    sources: [{ source: 'archive', elapsed_ms: 0, outcome: 'ok', results: releases.length }],
+    elapsed_ms: 0,
   };
 
   return { ...base, ...change };
