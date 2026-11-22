@@ -102,12 +102,34 @@ export const STATE: Record<Job['state'], string> = {
   error: 'Failed',
 };
 
+const EPISODE = /s(\d{1,2})[ ._-]*e(\d{1,3})|\b(\d{1,2})x(\d{2,3})\b/i;
+
+function episodesOf(job: Job): string | null {
+  if (job.title && /e\d/i.test(job.title.span)) return null;
+  const names = job.selection.kind === 'patterns' ? job.selection.value : job.path ? [job.path] : [];
+  const numbers = [
+    ...new Set(
+      names
+        .map((name) => EPISODE.exec(name))
+        .filter((found) => found !== null)
+        .map((found) => Number(found[2] ?? found[4])),
+    ),
+  ].sort((a, b) => a - b);
+  if (numbers.length === 0) return null;
+  if (numbers.length === 1) return `E${numbers[0]}`;
+  return `${numbers.length} episodes`;
+}
+
 export function useJobName(job: Job): { title: string; tags: string; poster: string | null } {
   const page = useTitle(job.title?.title ?? '', Boolean(job.title));
   const fromName = readable(job.name ?? job.id);
   if (job.title && page.data) {
     const span =
-      job.title.span === 'film' ? (page.data.year ? String(page.data.year) : '') : job.title.span.toUpperCase();
+      job.title.span === 'film'
+        ? page.data.year
+          ? String(page.data.year)
+          : ''
+        : [job.title.span.toUpperCase(), episodesOf(job)].filter(Boolean).join(' ');
     return { title: page.data.name, tags: span, poster: job.title.title };
   }
   return { ...fromName, poster: null };
