@@ -218,6 +218,11 @@ pub(super) struct Play {
 
 /// `POST /api/title/play`: a line of JSON for each step of the play, the last being `playing` or
 /// `failed`. Closing the connection stops the play and gives up the source under test.
+/// What the screen asking for a title opens. An engine inside the Android app serves only that app,
+/// whose player opens Matroska and the rest without ffmpeg, which a phone does not have; everywhere
+/// else the asker is the web app or a phone that reaches a computer, which has ffmpeg to convert.
+const SCREEN_PLAYS: Plays = if cfg!(target_os = "android") { Plays::ANY } else { Plays::BROWSER };
+
 pub async fn play(conn: &mut Connection<'_>, request: &Request, asker: &Asker) -> io::Result<bool> {
     let ctx = conn.ctx;
     let _playing = match ctx.playing.open() {
@@ -226,7 +231,7 @@ pub async fn play(conn: &mut Connection<'_>, request: &Request, asker: &Asker) -
     };
     let ask = super::body::<Play>(request).and_then(|Play { video, viewer, playback, source, replace }| {
         let player = player(viewer.map(Measured::viewer).transpose()?, playback, asker);
-        Ok(PlayTitle { video, pin: source, replace, player, plays: Plays::BROWSER, to: Destination::Plays })
+        Ok(PlayTitle { video, pin: source, replace, player, plays: SCREEN_PLAYS, to: Destination::Plays })
     });
     let ask = match ask {
         Ok(ask) => ask,
