@@ -4,7 +4,7 @@ import { File } from 'expo-file-system';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
-import { AppState, StyleSheet, Text, View } from 'react-native';
+import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VttParser, type Cue } from '@web/player/vtt';
@@ -22,6 +22,7 @@ import { jumpTo } from '@/player/control';
 
 const KEEP_EVERY_MS = 5000;
 const ENDING_SECONDS = 60;
+const NATIVE_CONTROLS_HEIGHT = Platform.select({ ios: 96, default: 88 });
 
 export default function OfflineScreen() {
   return (
@@ -132,7 +133,12 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
           startsPictureInPictureAutomatically
         />
         {cues.length > 0 ? (
-          <SubtitleOverlay cues={cues} time={currentTime} lifted look={preferences.subtitleStyle} />
+          <SubtitleOverlay
+            cues={cues}
+            time={currentTime}
+            bottom={NATIVE_CONTROLS_HEIGHT + insets.bottom}
+            look={preferences.subtitleStyle}
+          />
         ) : null}
       </View>
     </View>
