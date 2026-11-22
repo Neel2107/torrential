@@ -17,10 +17,10 @@ const ENGINE_STOPPED: i32 = -2;
 const NOT_READY: i32 = -3;
 
 fn start(home: &Path, port: u16) -> i32 {
-    let Ok(secret) = prepare(home) else { return HOME_UNUSABLE };
-    torrential_daemon::daemon::require_loopback_secret(secret);
     {
         let mut engine = ENGINE.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let Ok(secret) = prepare(home) else { return HOME_UNUSABLE };
+        torrential_daemon::daemon::require_loopback_secret(secret);
         if !engine.as_ref().is_some_and(|thread| !thread.is_finished()) {
             let folder = home.to_string_lossy().into_owned();
             let spawned = std::thread::Builder::new().name("torrential-engine".into()).spawn(move || {

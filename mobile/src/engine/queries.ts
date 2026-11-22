@@ -111,12 +111,14 @@ export function findTvs(link: Link, fresh: boolean) {
   return post<TvList>(link, '/api/tvs', { fresh });
 }
 
+const IDLE_CAST_MS = 60_000;
+
 export function useCasts() {
   const link = useLink();
   return useQuery({
     queryKey: [...keys.tvs, link.base],
     queryFn: ({ signal }) => get<TvList>(link, '/api/tvs', signal),
-    refetchInterval: (query) => (query.state.data?.casts.some((cast) => cast.state !== 'ended') ? 1000 : 5000),
+    refetchInterval: (query) => (query.state.data?.casts.some((cast) => cast.state !== 'ended') ? 1000 : IDLE_CAST_MS),
   });
 }
 

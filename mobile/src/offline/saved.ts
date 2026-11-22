@@ -90,9 +90,20 @@ export function freeSpace(): number | null {
   }
 }
 
+const claimed = new Set<string>();
+
 export async function save(link: Link, job: string, label: Label): Promise<void> {
   const before = copies.get(job);
-  if (before?.state === 'saving' || before?.state === 'saved') return;
+  if (claimed.has(job) || before?.state === 'saving' || before?.state === 'saved') return;
+  claimed.add(job);
+  try {
+    await copy(link, job, label);
+  } finally {
+    claimed.delete(job);
+  }
+}
+
+async function copy(link: Link, job: string, label: Label): Promise<void> {
   const fail = (error: string) => put({ job, label, size: 0, state: 'failed', error });
 
   let reply: FilesReply;

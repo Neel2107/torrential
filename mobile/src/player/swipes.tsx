@@ -16,6 +16,7 @@ type Kind = 'brightness' | 'volume';
 
 export function useSideSwipes({ width, height }: { width: number; height: number }) {
   const [kind, setKind] = useState<Kind>('brightness');
+  const [percent, setPercent] = useState(0);
   const level = useSharedValue(0);
   const shown = useSharedValue(0);
   const start = useRef(0);
@@ -40,6 +41,7 @@ export function useSideSwipes({ width, height }: { width: number; height: number
         : ((await VolumeManager.getVolume().catch(() => null))?.volume ?? 0.5);
     start.current = now;
     written.current = Math.round(now * 100);
+    setPercent(written.current);
     level.value = now;
     shown.value = withTiming(1, { duration: motion.press });
   };
@@ -50,6 +52,7 @@ export function useSideSwipes({ width, height }: { width: number; height: number
     const percent = Math.round(next * 100);
     if (percent === written.current) return;
     written.current = percent;
+    setPercent(percent);
     if (side === 'brightness') Brightness.setBrightnessAsync(Math.max(0.01, next)).catch(() => {});
     else VolumeManager.setVolume(next, { showUI: false }).catch(() => {});
   };
@@ -69,26 +72,22 @@ export function useSideSwipes({ width, height }: { width: number; height: number
       .onFinalize(end);
   const swipe = Gesture.Simultaneous(side('brightness'), side('volume'));
 
-  return { swipe, kind, level, shown, middle: { left: -width * SIDE, right: -width * SIDE } };
+  return { swipe, kind, percent, level, shown, middle: { left: -width * SIDE, right: -width * SIDE } };
 }
 
 export function SwipeLevel({
   kind,
+  percent,
   level,
   shown,
 }: {
   kind: Kind;
+  percent: number;
   level: ReturnType<typeof useSideSwipes>['level'];
   shown: ReturnType<typeof useSideSwipes>['shown'];
 }) {
-  const [percent, setPercent] = useState(0);
   const fill = useAnimatedStyle(() => ({ height: `${Math.round(level.value * 100)}%` }));
   const pill = useAnimatedStyle(() => ({ opacity: shown.value, transform: [{ scale: 0.92 + shown.value * 0.08 }] }));
-
-  useEffect(() => {
-    const timer = setInterval(() => setPercent(Math.round(level.value * 100)), 80);
-    return () => clearInterval(timer);
-  }, [level]);
 
   const icon = kind === 'brightness' ? Sun : percent === 0 ? VolumeX : Volume2;
   return (

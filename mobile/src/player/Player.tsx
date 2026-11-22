@@ -335,7 +335,7 @@ export function Player({
           />
           <GestureDetector gesture={taps}>
             <View style={StyleSheet.absoluteFill}>
-              <SwipeLevel kind={sides.kind} level={sides.level} shown={sides.shown} />
+              <SwipeLevel kind={sides.kind} percent={sides.percent} level={sides.level} shown={sides.shown} />
               <Animated.View style={[styles.skip, styles.skipLeft, leftStyle]} pointerEvents="none">
                 <Icon name={icons.rewind} size={30} tint={color.ink} />
                 <Text style={styles.skipText}>{SKIP} s</Text>
