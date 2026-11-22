@@ -33,7 +33,7 @@ Check what refresh rate the app actually gets before you aim at 8.3 ms frames: `
 ```sh
 P=dev.torrential.app.preview
 adb shell cmd package compile -f -m speed-profile $P     # or -m verify for the worst case
-for i in 1 2 3 4 5; do adb shell am start-activity -S -W -n $P/dev.torrential.app.MainActivity | grep TotalTime; done
+for i in 1 2 3 4 5; do adb shell am start-activity -S -W -n $P/.MainActivity | grep TotalTime; done
 ```
 
 That is time to first draw. The app's own `[perf]` marks (from `src/perf.ts`) say when Home is usable: `adb logcat -s ReactNativeJS | grep '\[perf\]'`.
