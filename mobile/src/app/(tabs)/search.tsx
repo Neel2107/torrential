@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { bytes, percent, rate } from '@web/lib/format';
+import { bytes, percent, rate, sentence } from '@web/lib/format';
 import { isVideo, readable } from '@web/lib/release';
 import { cardFacts } from '@web/titles/words';
 import {
@@ -50,6 +50,7 @@ import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
 import { appear, reflow, vanish } from '@/ui/presets';
+import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { SectionHeading } from '@/ui/SectionHeading';
 
@@ -402,10 +403,14 @@ function Torrents({
   });
 
   const [notVideo, setNotVideo] = useState<Release | null>(null);
+  const running = useRef<AbortController | null>(null);
 
-  useEffect(() => {
+  const search = useCallback(() => {
+    running.current?.abort();
+
     if (!query) return setState({ releases: [], pending: [], done: false, error: null });
     const controller = new AbortController();
+    running.current = controller;
     setState({ releases: [], pending: ['…'], done: false, error: null });
     stream<SearchMessage>(
       link,
@@ -425,9 +430,15 @@ function Torrents({
       (error: Error) =>
         !controller.signal.aborted && setState((previous) => ({ ...previous, done: true, error: error.message })),
     );
-
-    return () => controller.abort();
   }, [link, query, everything]);
+
+  useEffect(() => {
+    search();
+
+    return () => running.current?.abort();
+  }, [search]);
+
+  const retry = search;
 
   const busy = query.length > 0 && !state.done;
   useEffect(() => onBusy(busy), [busy, onBusy]);
@@ -464,17 +475,30 @@ function Torrents({
                 body="Torrents are listed best first. Tap one to play it while it downloads."
               />
             ))
+          ) : state.done && state.error ? (
+            <EmptyState icon={icons.warning} title="Search failed" body={sentence(state.error)}>
+              <Button label="Try again" icon={icons.refresh} kind="secondary" onPress={retry} />
+            </EmptyState>
           ) : state.done ? (
             <Hint
               icon={icons.warning}
-              title={state.error ? 'Search failed' : 'No torrents found'}
+              title="No torrents found"
               body={
-                state.error ??
-                (everything
+                everything
                   ? 'Try fewer or different words.'
-                  : 'Try fewer or different words, or search everything instead of only video.')
+                  : 'Try fewer or different words, or search everything instead of only video.'
               }
             />
+          ) : undefined
+        }
+        ListFooterComponent={
+          state.error && state.releases.length > 0 ? (
+            <View style={styles.partial}>
+              <Text style={[type.caption, { color: color.error }]}>
+                Not every source answered. {sentence(state.error)}
+              </Text>
+              <Button label="Try again" icon={icons.refresh} kind="secondary" onPress={retry} />
+            </View>
           ) : undefined
         }
         renderItem={({ item }) => (
@@ -841,6 +865,7 @@ function Hint({ icon, title, body }: { icon: (typeof icons)[keyof typeof icons];
 }
 
 const styles = StyleSheet.create({
+  partial: { paddingHorizontal: space.page, paddingVertical: space.lg, gap: space.md, alignItems: 'flex-start' },
   screen: { flex: 1, backgroundColor: color.paper },
   header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: alpha(color.paper, 0.97) },
   statusShade: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 11, backgroundColor: color.paper },
