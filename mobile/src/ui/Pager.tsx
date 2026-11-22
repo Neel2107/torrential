@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View, type ViewStyle } from 'react-native';
 import Animated, {
   interpolate,
   interpolateColor,
@@ -107,7 +107,7 @@ export function TabStrip({
   index,
   position,
   onChange,
-  scroll = false,
+  scroll: wanted = false,
   glide = false,
   style,
 }: {
@@ -115,13 +115,18 @@ export function TabStrip({
   index: number;
   position: SharedValue<number>;
   onChange: (index: number) => void;
-  /** Tabs as wide as their labels in a strip that scrolls, for more tabs than fit. */
+  /** Tabs as wide as their labels in a strip that scrolls. Equal tabs turn into this on their own when their labels don't fit. */
   scroll?: boolean;
   /** The underline slides to a tapped tab instead of jumping with the content. */
   glide?: boolean;
   style?: ViewStyle;
 }) {
   const [spots, setSpots] = useState<({ x: number; width: number } | undefined)[]>([]);
+  const [natural, setNatural] = useState<number[]>([]);
+  const [room, setRoom] = useState(0);
+  const measured = natural.length === labels.length && room > 0;
+  const crowded = measured && natural.some((width) => width + 24 > room / labels.length);
+  const scroll = wanted || crowded;
   const strip = useAnimatedRef<Animated.ScrollView>();
   const [stripWidth, setStripWidth] = useState(0);
   const ready = spots.length === labels.length && spots.every(Boolean);
@@ -169,9 +174,41 @@ export function TabStrip({
     </Pressable>
   ));
 
+  const measure = wanted ? null : (
+    <View
+      style={styles.measure}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {labels.map((label, i) => (
+        <Text
+          key={label}
+          style={styles.label}
+          onLayout={(event) => {
+            const width = event.nativeEvent.layout.width;
+            setNatural((previous) => {
+              const next = [...previous];
+              next[i] = width;
+
+              return next;
+            });
+          }}
+        >
+          {label}
+        </Text>
+      ))}
+    </View>
+  );
+
   if (!scroll) {
     return (
-      <View style={[styles.tabs, style]} accessibilityRole="tablist">
+      <View
+        style={[styles.tabs, style]}
+        accessibilityRole="tablist"
+        onLayout={(event) => setRoom(event.nativeEvent.layout.width)}
+      >
+        {measure}
         {tabs}
         <Animated.View style={[styles.underline, underline]} />
       </View>
@@ -183,11 +220,15 @@ export function TabStrip({
       ref={strip}
       horizontal
       showsHorizontalScrollIndicator={false}
-      onLayout={(event) => setStripWidth(event.nativeEvent.layout.width)}
+      onLayout={(event) => {
+        setStripWidth(event.nativeEvent.layout.width);
+        setRoom(event.nativeEvent.layout.width);
+      }}
       style={[styles.tabs, style]}
       contentContainerStyle={styles.tabsScroll}
       accessibilityRole="tablist"
     >
+      {measure}
       {tabs}
       <Animated.View style={[styles.underline, underline]} />
     </Animated.ScrollView>
@@ -213,6 +254,7 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.rule },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', height: 48 },
   tabsScroll: { paddingHorizontal: 4 },
+  measure: { position: 'absolute', opacity: 0, flexDirection: 'row', alignItems: 'flex-start' },
   tabScroll: { alignItems: 'center', justifyContent: 'center', height: 48, paddingHorizontal: TAB_PAD },
   label: { fontFamily: font.bold, fontSize: 15 },
   underline: { position: 'absolute', bottom: 0, height: 4, borderRadius: 2, backgroundColor: color.action },

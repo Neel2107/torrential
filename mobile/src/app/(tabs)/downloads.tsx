@@ -610,13 +610,14 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: -4 },
   titleTags: { color: color.pencil, fontFamily: font.regular },
   size: { ...type.caption, alignSelf: 'center', fontVariant: ['tabular-nums'] },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  state: { ...type.label, color: color.soft, flexShrink: 1, fontVariant: ['tabular-nums'] },
+  status: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 7, rowGap: 2 },
+  state: { ...type.label, color: color.soft, flexShrink: 0, maxWidth: '100%', fontVariant: ['tabular-nums'] },
   numbers: {
     ...type.label,
     color: color.pencil,
     marginLeft: 'auto',
     paddingLeft: space.sm,
+    flexShrink: 0,
     fontVariant: ['tabular-nums'],
   },
   badge: {

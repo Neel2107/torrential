@@ -51,6 +51,7 @@ import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
 import { appear, reflow, vanish } from '@/ui/presets';
 import { EmptyState } from '@/ui/EmptyState';
+import { SectionHeading } from '@/ui/SectionHeading';
 
 const TABS = ['Films & shows', 'Torrents'] as const;
 const SHOWN = 3;
@@ -661,7 +662,7 @@ function Recent({
     <View style={{ gap: space.md }}>
       {unfinished.length > 0 ? (
         <Animated.View entering={rise(0)}>
-          <SectionHead title="Continue watching" />
+          <SectionHeading title="Continue watching" />
           {unfinished.map((item, index) => (
             <Animated.View key={item.video} entering={rise(index + 1)} exiting={vanish} layout={reflow}>
               <UnfinishedRow item={item} />
@@ -671,7 +672,7 @@ function Recent({
       ) : null}
       {downloads.length > 0 ? (
         <Animated.View entering={rise(afterUnfinished)}>
-          <SectionHead
+          <SectionHeading
             title="Downloads"
             action={more ? { label: 'See all', onPress: () => router.navigate('/downloads') } : undefined}
           />
@@ -684,7 +685,7 @@ function Recent({
       ) : null}
       {searches.length > 0 ? (
         <Animated.View entering={rise(afterDownloads)}>
-          <SectionHead title="Recent searches" action={{ label: 'Clear all', onPress: onClear }} />
+          <SectionHeading title="Recent searches" action={{ label: 'Clear all', onPress: onClear }} />
           {searches.map((item, index) => (
             <Animated.View key={item} entering={rise(afterDownloads + index + 1)} exiting={vanish} layout={reflow}>
               <Tap
@@ -710,21 +711,6 @@ function Recent({
             </Animated.View>
           ))}
         </Animated.View>
-      ) : null}
-    </View>
-  );
-}
-
-function SectionHead({ title, action }: { title: string; action?: { label: string; onPress: () => void } }) {
-  return (
-    <View style={styles.recentHead}>
-      <Text style={type.title} accessibilityRole="header">
-        {title}
-      </Text>
-      {action ? (
-        <Tap shrink={0.94} haptic onPress={action.onPress} accessibilityLabel={action.label}>
-          <Text style={[type.label, { color: color.action }]}>{action.label}</Text>
-        </Tap>
       ) : null}
     </View>
   );
@@ -767,7 +753,7 @@ function UnfinishedRow({ item }: { item: Continue }) {
       >
         <Art id={item.title.id} kind="poster" name={item.title.name} style={styles.pickPoster} />
         <View style={{ flex: 1, gap: 6 }}>
-          <Text style={type.callout} numberOfLines={1}>
+          <Text style={type.callout} numberOfLines={2}>
             {item.title.name} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{subtitle}</Text>
           </Text>
           {progress !== null ? <Meter fraction={progress} /> : null}
@@ -827,7 +813,7 @@ function DownloadRowOf({ job }: { job: Job }) {
         </View>
       )}
       <View style={{ flex: 1, gap: 3 }}>
-        <Text style={type.callout} numberOfLines={1}>
+        <Text style={type.callout} numberOfLines={2}>
           {name.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{name.tags}</Text>
         </Text>
         <Text style={[type.numeric, job.state === 'error' && { color: color.error }]} numberOfLines={1}>
@@ -911,14 +897,6 @@ const styles = StyleSheet.create({
   scopeText: { fontFamily: font.semibold, fontSize: 14, color: color.soft },
   scopeTextOn: { color: color.paper },
   chipText: { fontFamily: font.semibold, fontSize: 11, color: color.soft, letterSpacing: 0.3 },
-  recentHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.page,
-    paddingTop: space.lg,
-    paddingBottom: space.sm,
-  },
   recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
