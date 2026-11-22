@@ -32,7 +32,7 @@ export function Tap({
 
   return (
     <AnimatedPressable
-      hitSlop={hitSlop}
+      hitSlop={highlight ? undefined : hitSlop}
       accessibilityRole="button"
       onPressIn={(event) => {
         pressed.value = withTiming(1, { duration: motion.press, easing: motion.out });
