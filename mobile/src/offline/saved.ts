@@ -12,7 +12,8 @@ import { NO_PREFERENCES, playerPreferences, readStored, savedCopies } from '@/en
 
 export type Label = { title: string; tags: string; poster: string | null };
 
-export type Copy = { job: string; label: Label; size: number } & (
+/** A download's video copied to this phone. `file` is the file asked for, by index, kept in every state so trying again copies the same one; none means the largest video. */
+export type Copy = { job: string; label: Label; size: number; file?: number } & (
   | { state: 'saving'; written: number }
   | { state: 'failed'; error: string }
   | { state: 'saved'; saved_at: number; uri: string; subtitles?: string }
@@ -128,13 +129,13 @@ export async function save(link: Link, job: string, label: Label, file?: number)
   }
 }
 
-/** Tries a failed copy again. */
+/** Tries a failed copy again, of the file it was asked for. */
 export function retry(link: Link, failed: Copy): Promise<void> {
-  return save(link, failed.job, failed.label);
+  return save(link, failed.job, failed.label, failed.file);
 }
 
 async function copy(link: Link, job: string, label: Label, index?: number): Promise<void> {
-  const fail = (error: string) => put({ job, label, size: 0, state: 'failed', error });
+  const fail = (error: string) => put({ job, label, size: 0, file: index, state: 'failed', error });
 
   let reply: FilesReply;
 
@@ -168,7 +169,7 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
     return fail(error instanceof Error ? error.message : 'The phone would not make room for the file.');
   }
 
-  put({ job, label, size, state: 'saving', written: 0 });
+  put({ job, label, size, file: index, state: 'saving', written: 0 });
   let shown = 0;
   let task: Download | null = null;
 
@@ -180,7 +181,7 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
 
         if (now - shown < PROGRESS_MS || copies.get(job)?.state !== 'saving') return;
         shown = now;
-        put({ job, label, size, state: 'saving', written: bytesWritten });
+        put({ job, label, size, file: index, state: 'saving', written: bytesWritten });
       },
     });
     tasks.set(job, task);
@@ -195,6 +196,7 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
       job,
       label,
       size,
+      file: index,
       state: 'saved',
       saved_at: Date.now() / 1000,
       uri: target.uri,

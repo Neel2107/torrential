@@ -30,6 +30,7 @@ export const savedCopies = z.array(
     job: z.string(),
     label,
     size: z.number(),
+    file: z.number().optional(),
     state: z.literal('saved'),
     saved_at: z.number(),
     uri: z.string(),
