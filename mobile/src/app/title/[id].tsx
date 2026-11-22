@@ -34,7 +34,7 @@ import { Burst, type BurstHandle } from '@/ui/Burst';
 import { Button } from '@/ui/Button';
 import { CastBar } from '@/ui/CastBar';
 import { EngineProblem } from '@/ui/EngineProblem';
-import { HeroTarget, useHeroPage } from '@/ui/hero';
+import { HeroTarget, useHeroPage, useLanded } from '@/ui/hero';
 import { bannerHeight as bannerHeightOf, OVERLAP, POSTER, RING, RISE } from '@/ui/titleGeometry';
 import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
@@ -165,6 +165,7 @@ function facts(page: Page): string[] {
 }
 
 function Body({ page }: { page: Page }) {
+  const landed = useLanded(page.id);
   const target = page.play_target ?? page.next;
   useSources(target?.video ?? null);
   const targetEpisode = target ? findEpisode(page, target.video) : null;
@@ -256,7 +257,9 @@ function Body({ page }: { page: Page }) {
         </Animated.Text>
       ) : null}
 
-      {page.kind === 'series' ? <Episodes page={page} watched={watched} current={target?.video ?? null} /> : null}
+      {page.kind === 'series' && landed ? (
+        <Episodes page={page} watched={watched} current={target?.video ?? null} />
+      ) : null}
 
       {sourcesOpen && target ? (
         <SourcesSheet
@@ -542,7 +545,7 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   headerShade: {
-    backgroundColor: alpha(color.paper, 0.96),
+    backgroundColor: color.paper,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.rule,
   },

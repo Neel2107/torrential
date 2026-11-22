@@ -155,6 +155,17 @@ export function useHeroPage(id: string) {
   return { style, Provider: Slot.Provider, slot };
 }
 
+/** Whether the page for `id` has finished flying in, so content below the fold can mount without stealing frames from the flight. Stays true once true. */
+export function useLanded(id: string): boolean {
+  const current = useFlight();
+  const now = !HERO || current?.id !== id || current.phase === 'open';
+  const [landed, setLanded] = useState(now);
+  useEffect(() => {
+    if (now) setLanded(true);
+  }, [now]);
+  return landed || now;
+}
+
 export function HeroTarget({ id, children }: { id: string; children: ReactNode }) {
   const slot = use(Slot);
   const current = useFlight();
