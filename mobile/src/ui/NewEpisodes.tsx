@@ -1,5 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -20,13 +21,19 @@ import { Tap } from './Tap';
 const RECENT_DAYS = 14;
 const SHOWN = 10;
 const CARD = 220;
+const AFTER_HOME_MS = 800;
 
 type Fresh = { page: TitlePage; episode: EpisodeInfo };
 
 /** Episodes of saved shows that aired in the last two weeks and are not watched yet, newest first. */
 function useFresh(saved: TitleCard[]): Fresh[] {
   const link = useLink();
-  const shows = saved.filter((title) => title.kind === 'series');
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), AFTER_HOME_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  const shows = settled ? saved.filter((title) => title.kind === 'series') : [];
   const pages = useQueries({
     queries: shows.map((show) => ({
       queryKey: [...keys.title(show.id), link.base],
