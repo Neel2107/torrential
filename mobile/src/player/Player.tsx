@@ -53,6 +53,7 @@ import { usePlayerPreferences } from './preferences';
 import { RecoveryNotice, useStallRecovery, type Takeover } from './recovery';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
+import { sameLanguage } from './languages';
 import { SettingsSheet, type Sleep } from './SettingsSheet';
 import { SwipeLevel, useSideSwipes } from './swipes';
 import { SubtitleLook } from './SubtitleLook';
@@ -84,6 +85,8 @@ function nextEpisode(page: TitlePage | null, video: string | null): UpNext | nul
 }
 
 const UNLOCK_SHOWN_MS = 3000;
+
+let carriedSleep: Sleep = null;
 
 const TAB = Math.random().toString(36).slice(2, 10);
 
@@ -154,7 +157,13 @@ export function Player({
   const position = time.currentTime >= 0 ? timeline.now() : 0;
   const failed = status === 'error' || Boolean(timeline.problem);
   const [visible, setVisible] = useState(true);
-  const [sleep, setSleep] = useState<Sleep>(null);
+  const [sleep, keepSleep] = useState<Sleep>(() =>
+    carriedSleep?.kind === 'after' && carriedSleep.at <= Date.now() ? null : carriedSleep,
+  );
+  const setSleep = (next: Sleep) => {
+    carriedSleep = next;
+    keepSleep(next);
+  };
   const [locked, setLocked] = useState(false);
   const [unlockShown, setUnlockShown] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
@@ -176,8 +185,7 @@ export function Player({
   const [drawn, setDrawn] = useState<SubtitleChoice | null>(null);
   const cues = useSubtitleCues(play, drawn);
   const online = useOnlineSubtitles(play.id, play.video.index);
-  const remember = (language: string | null) =>
-    setPreferences({ subtitles: language ? language.slice(0, 2).toLowerCase() : null });
+  const remember = (language: string | null) => setPreferences({ subtitles: language ? language.toLowerCase() : null });
   const { availableSubtitleTracks } = useEvent(player, 'availableSubtitleTracksChange', {
     availableSubtitleTracks: player.availableSubtitleTracks,
   });
@@ -186,19 +194,19 @@ export function Player({
 
   useEffect(() => {
     if (picked.current || !wanted || drawn || player.subtitleTrack) return;
-    const own = availableSubtitleTracks.find((track) => track.language?.slice(0, 2).toLowerCase() === wanted);
+    const own = availableSubtitleTracks.find((track) => sameLanguage(track.language, wanted));
     if (own) {
       picked.current = true;
       player.subtitleTrack = own;
       return;
     }
-    if (online.kind !== 'found') return;
-    const found = online.subtitles.find((subtitle) => subtitle.language.slice(0, 2).toLowerCase() === wanted);
+    if (online.kind !== 'found' || status !== 'readyToPlay') return;
+    const found = online.subtitles.find((subtitle) => sameLanguage(subtitle.language, wanted));
     if (found) {
       picked.current = true;
       setDrawn({ kind: 'online', subtitle: found });
     }
-  }, [availableSubtitleTracks, online, wanted, drawn, player]);
+  }, [availableSubtitleTracks, online, wanted, drawn, player, status]);
   const [offsets, setOffsets] = useState<Record<string, number>>({});
   const drawnKey = drawn ? choiceKey(drawn) : null;
   const offset = drawnKey ? (offsets[drawnKey] ?? 0) : null;

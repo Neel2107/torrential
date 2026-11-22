@@ -111,3 +111,10 @@ export function languageName(code: string | null | undefined): string | null {
   const base = code.toLowerCase().split(/[-_]/)[0]!;
   return NAMES[base] ?? code;
 }
+
+/** Whether two language tags name the same language, whatever their form: `en`, `eng` and `en-US` agree. */
+export function sameLanguage(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  const base = (tag: string) => tag.toLowerCase().split(/[-_]/)[0]!;
+  return (NAMES[base(a)] ?? base(a)) === (NAMES[base(b)] ?? base(b));
+}

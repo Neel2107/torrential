@@ -7,6 +7,7 @@ import { fileName, fileUrl, savedVideo } from '@web/lib/release';
 import type { FilesReply, OnlineSubtitles } from '@web/wire';
 
 import { authHeaders, get, post, url, type Link } from '@/engine/client';
+import { languageName, sameLanguage } from '@/player/languages';
 
 export type Label = { title: string; tags: string; poster: string | null };
 
@@ -197,14 +198,14 @@ async function keepSubtitles(link: Link, job: string, video: number, reply: File
   const own = reply.files.find(
     (candidate) =>
       SUBTITLE_FILE.test(candidate.path) &&
-      new RegExp(`\\b(${language}|${languageWord(language)})\\b`, 'i').test(candidate.path),
+      new RegExp(`\\b(${language}|${languageName(language) ?? language})\\b`, 'i').test(candidate.path),
   );
   let address: string | null = own ? url(link, '/api/subtitles', { id: job, file: own.index }) : null;
   if (!address) {
     const online = await get<OnlineSubtitles>(link, `/api/subtitles/online?id=${job}&file=${video}`);
     const match = [...online.subtitles]
       .sort((a, b) => Number(b.exact) - Number(a.exact))
-      .find((subtitle) => subtitle.language.slice(0, 2).toLowerCase() === language);
+      .find((subtitle) => sameLanguage(subtitle.language, language));
     if (!match) return null;
     address = url(link, '/api/subtitles/online/fetch', { id: job, file: video, subtitle: match.id });
   }
@@ -215,22 +216,6 @@ async function keepSubtitles(link: Link, job: string, video: number, reply: File
   const target = new File(folder, `${job}.vtt`);
   target.writeSync(text);
   return target.uri;
-}
-
-function languageWord(code: string): string {
-  return (
-    (
-      {
-        en: 'english',
-        es: 'spanish',
-        fr: 'french',
-        de: 'german',
-        hi: 'hindi',
-        it: 'italian',
-        pt: 'portuguese',
-      } as Record<string, string>
-    )[code] ?? code
-  );
 }
 
 export function cancel(job: string) {
