@@ -9,8 +9,7 @@ import { videoOf } from '@web/lib/video';
 import { episodeCode, episodeName } from '@web/titles/words';
 import type { EpisodeInfo, TitleCard, TitlePage } from '@web/wire';
 
-import { get } from '@/engine/client';
-import { keys } from '@/engine/queries';
+import { titleQuery } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { color, radius, space, stage, type } from '@/theme';
 
@@ -23,6 +22,9 @@ const RECENT_DAYS = 14;
 const SHOWN = 10;
 const CARD = 220;
 const AFTER_HOME_MS = 800;
+
+/** How long a show's page answers for New episodes before it is asked again: episodes air at most daily. */
+const FRESH_FOR_MS = 6 * 60 * 60_000;
 const STACK_FROM_FONT_SCALE = 1.15;
 
 type Fresh = { page: TitlePage; episode: EpisodeInfo };
@@ -39,12 +41,7 @@ function useFresh(saved: TitleCard[]): Fresh[] {
   const shows = settled !== null ? saved.filter((title) => title.kind === 'series') : [];
 
   const pages = useQueries({
-    queries: shows.map((show) => ({
-      queryKey: [...keys.title(show.id), link.base],
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        get<TitlePage>(link, `/api/title?id=${encodeURIComponent(show.id)}`, signal),
-      staleTime: 30 * 60_000,
-    })),
+    queries: shows.map((show) => ({ ...titleQuery(link, show.id), staleTime: FRESH_FOR_MS })),
   });
 
   const since = (settled ?? 0) / 1000 - RECENT_DAYS * 86_400;

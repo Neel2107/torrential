@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useCallback } from 'react';
 
@@ -33,14 +33,26 @@ export function useHome() {
   });
 }
 
+/** A title's page: one query for the title screen, its prefetch and New episodes, kept on disk so it draws at once next time. */
+export function titleQuery(link: Link, id: string) {
+  const route = `/api/title?id=${encodeURIComponent(id)}`;
+
+  return queryOptions({
+    queryKey: [...keys.title(id), link.base],
+    queryFn: async ({ signal }) => {
+      const page = await get<TitlePage>(link, route, signal);
+      keepReply(link, route, page);
+
+      return page;
+    },
+    ...keptOptions<TitlePage>(link, route),
+  });
+}
+
 export function useTitle(id: string, enabled = true) {
   const link = useLink();
 
-  return useQuery({
-    queryKey: [...keys.title(id), link.base],
-    enabled: enabled && id.length > 0,
-    queryFn: ({ signal }) => get<TitlePage>(link, `/api/title?id=${encodeURIComponent(id)}`, signal),
-  });
+  return useQuery({ ...titleQuery(link, id), enabled: enabled && id.length > 0 });
 }
 
 export function usePrefetchTitle() {
@@ -49,10 +61,7 @@ export function usePrefetchTitle() {
 
   return useCallback(
     (id: string) => {
-      client.prefetchQuery({
-        queryKey: [...keys.title(id), link.base],
-        queryFn: ({ signal }) => get<TitlePage>(link, `/api/title?id=${encodeURIComponent(id)}`, signal),
-      });
+      client.prefetchQuery(titleQuery(link, id));
       Image.prefetch(url(link, '/api/title/art', { id, kind: 'background' }), {
         headers: authHeaders(link),
         cachePolicy: 'memory-disk',
