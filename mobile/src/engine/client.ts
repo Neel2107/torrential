@@ -92,7 +92,13 @@ async function failure(response: Reply): Promise<EngineError> {
   return new EngineError(response.status, wire, text.trim() || `The engine answered ${response.status}.`);
 }
 
-async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; body?: object; signal?: AbortSignal }) {
+/** Sends a request and reads its answer with `read`. Stopping `init.signal` stops it until `read` is done, the body too, so a stream ends when its caller leaves; the engine has 75 s to start answering. */
+async function send<T>(
+  link: Link,
+  path: string,
+  init: { method: 'GET' | 'POST'; body?: object; signal?: AbortSignal },
+  read: (response: Reply) => Promise<T>,
+): Promise<T> {
   const posting = init.method === 'POST';
 
   const headers = posting
@@ -117,21 +123,28 @@ async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; bo
       redirect: 'manual',
     });
 
+    clearTimeout(timer);
+
     if (!response.ok) throw await failure(response);
 
-    return response;
+    return await read(response);
   } finally {
     clearTimeout(timer);
     init.signal?.removeEventListener('abort', cancel);
   }
 }
 
-export async function get<T>(link: Link, path: string, signal?: AbortSignal): Promise<T> {
-  const startedAt = performance.now();
-  const text = await (await send(link, path, { method: 'GET', signal })).text();
-  net(path, text.length, startedAt);
+function readJson<T>(path: string, startedAt: number) {
+  return async (response: Reply): Promise<T> => {
+    const text = await response.text();
+    net(path, text.length, startedAt);
 
-  return fromEngine<T>(text);
+    return fromEngine<T>(text);
+  };
+}
+
+export async function get<T>(link: Link, path: string, signal?: AbortSignal): Promise<T> {
+  return send(link, path, { method: 'GET', signal }, readJson<T>(path, performance.now()));
 }
 
 export async function post<T, B extends object = object>(
@@ -140,11 +153,7 @@ export async function post<T, B extends object = object>(
   body: B,
   signal?: AbortSignal,
 ): Promise<T> {
-  const startedAt = performance.now();
-  const text = await (await send(link, path, { method: 'POST', body, signal })).text();
-  net(path, text.length, startedAt);
-
-  return fromEngine<T>(text);
+  return send(link, path, { method: 'POST', body, signal }, readJson<T>(path, performance.now()));
 }
 
 async function readLines(response: Reply, onLine: (line: string) => void): Promise<void> {
@@ -185,12 +194,13 @@ export async function stream<T>(
   onMessage: (message: T) => void,
 ): Promise<void> {
   const startedAt = performance.now();
-  const response = await send(link, path, init);
   let chars = 0;
-  await readLines(response, (line) => {
-    chars += line.length;
-    onMessage(fromEngine<T>(line));
-  });
+  await send(link, path, init, (response) =>
+    readLines(response, (line) => {
+      chars += line.length;
+      onMessage(fromEngine<T>(line));
+    }),
+  );
   net(path, chars, startedAt);
 }
 

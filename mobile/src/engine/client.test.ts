@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { answer, inBytes, inPieces, json, LINK, refusal } from '@/test/engine';
+import { answer, anOpenStream, inBytes, inPieces, json, LINK, refusal } from '@/test/engine';
 import { aJob, anError } from '@/test/wire';
 import type { Event, Job } from '@web/wire';
 
@@ -66,6 +66,44 @@ describe('reading what the engine streams', () => {
     );
 
     expect(await heard(eventsFrom('/api/events'))).toEqual([{ event: 'heartbeat', at: 7 }]);
+  });
+});
+
+describe('stopping a stream', () => {
+  const settled = (streaming: Promise<void>) =>
+    Promise.race([
+      streaming.then(
+        () => 'ended',
+        () => 'stopped',
+      ),
+      new Promise((resolve) => setTimeout(() => resolve('still streaming'), 100)),
+    ]);
+
+  test('a stream its caller stops after it has begun stops at once', async () => {
+    const stopping = new AbortController();
+    answer(({ init }) => {
+      const { reply, send } = anOpenStream(init);
+      send(`${JSON.stringify(aJob())}\n`);
+
+      return reply;
+    });
+
+    const streaming = stream<Job>(LINK, '/api/jobs/a1/watch', { method: 'GET', signal: stopping.signal }, () =>
+      stopping.abort(),
+    );
+
+    expect(await settled(streaming)).toBe('stopped');
+  });
+
+  test('a stream stopped before it is sent goes out already stopped', async () => {
+    const stopping = new AbortController();
+    stopping.abort();
+    const asked = answer(({ init }) => anOpenStream(init).reply);
+
+    expect(await settled(stream<Job>(LINK, '/api/jobs', { method: 'GET', signal: stopping.signal }, () => {}))).toBe(
+      'stopped',
+    );
+    expect(asked.map(({ init }) => init.signal?.aborted)).toEqual([true]);
   });
 });
 

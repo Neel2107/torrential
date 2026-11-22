@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { answer, inPieces, LINK, refusal } from '@/test/engine';
+import { answer, anOpenStream, inPieces, LINK, refusal } from '@/test/engine';
 import { anError, aPlay, aRelease, aTitle } from '@/test/wire';
 import type { PlayTitle } from '@web/wire';
 
@@ -134,5 +134,22 @@ describe('following a title as it starts', () => {
     expect(shown.map((start) => (start.phase === 'failed' ? start.message : start.phase))).toEqual([
       'Lost the engine while starting the video.',
     ]);
+  });
+
+  test('leaving while it starts shows nothing more, not a failure', async () => {
+    const leaving = new AbortController();
+    const shown: Start[] = [];
+
+    answer(({ init }) => {
+      const { reply, send } = anOpenStream(init);
+      send(lines([resolved])[0]);
+      setTimeout(() => leaving.abort(), 0);
+
+      return reply;
+    });
+
+    await followPlay(LINK, BODY, leaving.signal, (start) => shown.push(start));
+
+    expect(shown.map((start) => start.phase)).toEqual(['finding']);
   });
 });
