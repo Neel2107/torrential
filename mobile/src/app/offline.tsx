@@ -1,11 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEvent } from 'expo';
+import { File } from 'expo-file-system';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { VttParser, type Cue } from '@web/player/vtt';
+
 import { useCopy, type Copy } from '@/offline/saved';
+import { usePlayerPreferences } from '@/player/preferences';
+import { SubtitleOverlay } from '@/player/Subtitles';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { Stage } from '@/ui/stage';
@@ -44,6 +50,28 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
     p.play();
   });
 
+  const [preferences] = usePlayerPreferences();
+  const [cues, setCues] = useState<Cue[]>([]);
+  const { currentTime } = useEvent(player, 'timeUpdate', {
+    currentTime: player.currentTime,
+    currentLiveTimestamp: null,
+    currentOffsetFromLive: null,
+    bufferedPosition: 0,
+  });
+
+  useEffect(() => {
+    player.timeUpdateEventInterval = 0.25;
+  }, [player]);
+
+  useEffect(() => {
+    if (!copy.subtitles) return;
+    try {
+      const parser = new VttParser();
+      const text = new File(copy.subtitles).textSync();
+      setCues([...parser.feed(text), ...parser.finish()].sort((a, b) => a.start - b.start));
+    } catch {}
+  }, [copy.subtitles]);
+
   useEffect(() => {
     const key = `offline-at-${copy.job}`;
     let stopped = false;
@@ -80,14 +108,19 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
           {copy.label.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{copy.label.tags}</Text>
         </Text>
       </View>
-      <VideoView
-        player={player}
-        style={styles.video}
-        nativeControls
-        contentFit="contain"
-        allowsPictureInPicture
-        startsPictureInPictureAutomatically
-      />
+      <View style={styles.video}>
+        <VideoView
+          player={player}
+          style={StyleSheet.absoluteFill}
+          nativeControls
+          contentFit="contain"
+          allowsPictureInPicture
+          startsPictureInPictureAutomatically
+        />
+        {cues.length > 0 ? (
+          <SubtitleOverlay cues={cues} time={currentTime} lifted look={preferences.subtitleStyle} />
+        ) : null}
+      </View>
     </View>
   );
 }

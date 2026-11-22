@@ -1,18 +1,19 @@
 import { Directory, File, Paths, type DownloadTask } from 'expo-file-system';
+import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 
 import { bytes } from '@web/lib/format';
 import { fileName, fileUrl, savedVideo } from '@web/lib/release';
-import type { FilesReply } from '@web/wire';
+import type { FilesReply, OnlineSubtitles } from '@web/wire';
 
-import { authHeaders, post, url, type Link } from '@/engine/client';
+import { authHeaders, get, post, url, type Link } from '@/engine/client';
 
 export type Label = { title: string; tags: string; poster: string | null };
 
 export type Copy = { job: string; label: Label; size: number } & (
   | { state: 'saving'; written: number }
   | { state: 'failed'; error: string }
-  | { state: 'saved'; saved_at: number; uri: string }
+  | { state: 'saved'; saved_at: number; uri: string; subtitles?: string }
 );
 
 type Saved = Extract<Copy, { state: 'saved' }>;
@@ -149,7 +150,16 @@ async function copy(link: Link, job: string, label: Label): Promise<void> {
     const target = new File(folder, whole);
     if (target.exists) target.delete();
     part.rename(whole);
-    put({ job, label, size, state: 'saved', saved_at: Date.now() / 1000, uri: target.uri });
+    const subtitles = await keepSubtitles(link, job, file.index, reply).catch(() => null);
+    put({
+      job,
+      label,
+      size,
+      state: 'saved',
+      saved_at: Date.now() / 1000,
+      uri: target.uri,
+      ...(subtitles ? { subtitles } : {}),
+    });
     keep();
   } catch (error) {
     try {
@@ -162,6 +172,59 @@ async function copy(link: Link, job: string, label: Label): Promise<void> {
   }
 }
 
+const SUBTITLE_FILE = /\.(srt|vtt|ass|ssa)$/i;
+
+/** The language the player last turned subtitles on in, two letters, if any. */
+async function wantedLanguage(): Promise<string | null> {
+  const saved = await SecureStore.getItemAsync('player-preferences').catch(() => null);
+  if (!saved) return null;
+  const language = (JSON.parse(saved) as { subtitles?: string | null }).subtitles;
+  return language ?? null;
+}
+
+/** Keeps beside the copy a subtitle file in the language the player remembers: the torrent's own first, then one found online. */
+async function keepSubtitles(link: Link, job: string, video: number, reply: FilesReply): Promise<string | null> {
+  const language = await wantedLanguage();
+  if (!language) return null;
+  const own = reply.files.find(
+    (candidate) =>
+      SUBTITLE_FILE.test(candidate.path) &&
+      new RegExp(`\\b(${language}|${languageWord(language)})\\b`, 'i').test(candidate.path),
+  );
+  let address: string | null = own ? url(link, '/api/subtitles', { id: job, file: own.index }) : null;
+  if (!address) {
+    const online = await get<OnlineSubtitles>(link, `/api/subtitles/online?id=${job}&file=${video}`);
+    const match = [...online.subtitles]
+      .sort((a, b) => Number(b.exact) - Number(a.exact))
+      .find((subtitle) => subtitle.language.slice(0, 2).toLowerCase() === language);
+    if (!match) return null;
+    address = url(link, '/api/subtitles/online/fetch', { id: job, file: video, subtitle: match.id });
+  }
+  const response = await fetch(address, { headers: authHeaders(link) });
+  if (!response.ok) return null;
+  const text = await response.text();
+  if (!text.trim()) return null;
+  const target = new File(folder, `${job}.vtt`);
+  target.write(text);
+  return target.uri;
+}
+
+function languageWord(code: string): string {
+  return (
+    (
+      {
+        en: 'english',
+        es: 'spanish',
+        fr: 'french',
+        de: 'german',
+        hi: 'hindi',
+        it: 'italian',
+        pt: 'portuguese',
+      } as Record<string, string>
+    )[code] ?? code
+  );
+}
+
 export function cancel(job: string) {
   tasks.get(job)?.cancel();
 }
@@ -170,10 +233,13 @@ export function remove(job: string) {
   const copy = copies.get(job);
   if (copy?.state === 'saving') return cancel(job);
   if (copy?.state === 'saved') {
-    try {
-      const file = new File(copy.uri);
-      if (file.exists) file.delete();
-    } catch {}
+    for (const uri of [copy.uri, copy.subtitles]) {
+      if (!uri) continue;
+      try {
+        const file = new File(uri);
+        if (file.exists) file.delete();
+      } catch {}
+    }
   }
   drop(job);
   keep();
