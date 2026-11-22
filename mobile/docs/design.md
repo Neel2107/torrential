@@ -27,6 +27,9 @@ The owner likes floating surfaces, so they're the default for anything that sits
 | Something appears, leaves or makes room | `appear`, `vanish`, `vanishDown`, `reflow` (`src/ui/presets.ts`); `rise(i)` for staggered entrances |
 | Press | `Tap` (`src/ui/Tap.tsx`); `Button` for labelled actions |
 | Nothing to show yet | `EmptyState` (`src/ui/EmptyState.tsx`) |
+| One choice of a few, side by side (search scope, speed, sleep, subtitle look) | `Chip` (`src/ui/Chip.tsx`); `radio` inside a radio group |
+| A section's title over a screen's content | `SectionHeading` (`src/ui/SectionHeading.tsx`) |
+| Text in a narrow column (poster captions) | `maxFontSizeMultiplier={DENSE_TEXT_SCALE}` so words never split |
 
 ## Motion
 

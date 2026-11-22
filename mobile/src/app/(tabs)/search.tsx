@@ -52,6 +52,7 @@ import { alpha, color, font, motion, radius, space, type } from '@/theme';
 import { appear, reflow, vanish } from '@/ui/presets';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
+import { Chip } from '@/ui/Chip';
 import { SectionHeading } from '@/ui/SectionHeading';
 
 const TABS = ['Films & shows', 'Torrents'] as const;
@@ -532,17 +533,13 @@ function Scope({
         const on = everything === all;
 
         return (
-          <Tap
+          <Chip
             key={String(all)}
-            shrink={0.94}
-            haptic={!on}
+            radio
+            label={all ? 'Everything' : 'Video'}
+            selected={on}
             onPress={() => onChange(all)}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: on }}
-            style={[styles.scopeChip, on && styles.scopeChipOn]}
-          >
-            <Text style={[styles.scopeText, on && styles.scopeTextOn]}>{all ? 'Everything' : 'Video'}</Text>
-          </Tap>
+          />
         );
       })}
       {status ? (
@@ -910,17 +907,6 @@ const styles = StyleSheet.create({
   releaseFacts: { flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' },
   chip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: color.lifted },
   scope: { flexDirection: 'row', gap: space.sm, paddingHorizontal: space.page, paddingTop: space.md },
-  scopeChip: {
-    height: 32,
-    paddingHorizontal: 14,
-    borderRadius: radius.pill,
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.rule,
-  },
-  scopeChipOn: { backgroundColor: color.ink, borderColor: color.ink },
-  scopeText: { fontFamily: font.semibold, fontSize: 14, color: color.soft },
-  scopeTextOn: { color: color.paper },
   chipText: { fontFamily: font.semibold, fontSize: 11, color: color.soft, letterSpacing: 0.3 },
   recentRow: {
     flexDirection: 'row',

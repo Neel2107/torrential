@@ -4,7 +4,9 @@ import type { SubtitleBacking, SubtitleStyle } from '@web/lib/storage';
 
 import { space, stageType as type } from '@/theme';
 
-import { Chip, Section } from './SettingsSheet';
+import { Chip } from '@/ui/Chip';
+
+import { Section } from './SettingsSheet';
 
 const SIZES: [short: string, label: string, scale: number][] = [
   ['S', 'Small', 0.8],

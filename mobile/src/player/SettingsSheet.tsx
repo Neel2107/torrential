@@ -1,5 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { bytes } from '@web/lib/format';
@@ -8,12 +7,12 @@ import type { Release } from '@web/wire';
 
 import { PageHeader, Pages } from '@/ui/Pages';
 import { NavRow } from '@/ui/Row';
+import { Chip } from '@/ui/Chip';
 import { Sheet } from '@/ui/Sheet';
 
 import { useSources } from './sources';
 import { SourcesList } from './SourcesSheet';
-import { Tap } from '@/ui/Tap';
-import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
+import { space, stageType as type } from '@/theme';
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
@@ -164,43 +163,6 @@ export function Section({ title, value, children }: { title: string; value?: str
   );
 }
 
-export function Chip({
-  label,
-  selected,
-  onPress,
-  accessibilityLabel,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-  accessibilityLabel: string;
-}) {
-  const on = useSharedValue(selected ? 1 : 0);
-  useEffect(() => {
-    on.set(withTiming(selected ? 1 : 0, { duration: motion.quick, easing: motion.out }));
-  }, [selected, on]);
-
-  const fill = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(on.get(), [0, 1], [color.lifted, color.ink]),
-  }));
-
-  const text = useAnimatedStyle(() => ({ color: interpolateColor(on.get(), [0, 1], [color.soft, color.paper]) }));
-
-  return (
-    <Tap
-      shrink={0.96}
-      haptic
-      onPress={onPress}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected }}
-    >
-      <Animated.View style={[styles.chip, fill]}>
-        <Animated.Text style={[styles.chipText, text]}>{label}</Animated.Text>
-      </Animated.View>
-    </Tap>
-  );
-}
-
 const styles = StyleSheet.create({
   scroll: { flexGrow: 0, flexShrink: 1 },
   content: { paddingHorizontal: space.xl, paddingBottom: space.sm, gap: space.lg },
@@ -210,14 +172,4 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   wrapLine: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   line: { flexDirection: 'row', gap: space.sm },
-  chip: {
-    minWidth: 52,
-    height: 36,
-    paddingHorizontal: space.md,
-    borderRadius: radius.pill,
-    backgroundColor: color.lifted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipText: { fontFamily: font.semibold, fontSize: 14, color: color.soft, fontVariant: ['tabular-nums'] },
 });
