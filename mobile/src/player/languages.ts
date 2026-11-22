@@ -118,3 +118,17 @@ export function sameLanguage(a: string | null | undefined, b: string | null | un
   const base = (tag: string) => tag.toLowerCase().split(/[-_]/)[0]!;
   return (NAMES[base(a)] ?? base(a)) === (NAMES[base(b)] ?? base(b));
 }
+
+/** The language a subtitle file's name gives, such as `en` in `film.en.srt` or `English` in `English.srt`. */
+export function languageInName(name: string): string | null {
+  const words = name
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+  for (const word of words.reverse()) {
+    if (word.length <= 3 && NAMES[word]) return word;
+    const code = Object.keys(NAMES).find((key) => NAMES[key]!.toLowerCase() === word);
+    if (code) return code;
+  }
+  return null;
+}

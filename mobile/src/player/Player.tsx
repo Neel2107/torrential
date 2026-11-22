@@ -56,7 +56,7 @@ import { usePlayerPreferences } from './preferences';
 import { RecoveryNotice, useStallRecovery, type Takeover } from './recovery';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
-import { sameLanguage } from './languages';
+import { languageInName, sameLanguage } from './languages';
 import { SettingsSheet, type Sleep } from './SettingsSheet';
 import { SwipeLevel, useSideSwipes } from './swipes';
 import { SubtitleLook } from './SubtitleLook';
@@ -707,6 +707,10 @@ export function Player({
                 setDrawn(choice);
                 if (choice) player.subtitleTrack = null;
                 if (choice?.kind === 'online') remember(choice.subtitle.language);
+                if (choice?.kind === 'file') {
+                  const language = languageInName(choice.name);
+                  if (language) remember(language);
+                }
               }}
               onLanguage={remember}
               onAudioLanguage={rememberAudio}
