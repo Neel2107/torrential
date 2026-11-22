@@ -46,6 +46,7 @@ import { MoreText } from '@/ui/MoreText';
 import { NavRow } from '@/ui/Row';
 import { ProgressRing } from '@/ui/ProgressRing';
 import { useGrowing } from '@/ui/growing';
+import { useLingered } from '@/ui/linger';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { TabStrip, usePagerPosition } from '@/ui/Pager';
@@ -181,7 +182,8 @@ function Body({ page }: { page: Page }) {
   const enter = (index: number) => (landed ? rise(index) : undefined);
   useEffect(() => lap('open', 'tap to title ready'), []);
   const target = page.play_target ?? page.next;
-  useSources(landed ? (target?.video ?? null) : null);
+  const staying = useLingered(landed, SEARCH_AFTER_MS);
+  useSources(staying ? (target?.video ?? null) : null);
   const targetEpisode = target ? findEpisode(page, target.video) : null;
   const watched = useMemo(() => new Map(page.watched.map((w) => [w.video, w])), [page.watched]);
   const resume = target?.resume_at ?? null;
@@ -571,6 +573,9 @@ function episodeFit(screenWidth: number, fontScale: number): EpisodeFit {
 
   return { width, height, number: Math.round(height * 0.52), titleLines: fontScale > 1.15 ? 3 : 2 };
 }
+
+/** How long a person stays on a title before its sources are searched ahead of Play: a glance and back searches nothing. */
+const SEARCH_AFTER_MS = 1500;
 
 const NEAR_STILLS = 6;
 
