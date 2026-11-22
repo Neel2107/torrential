@@ -1,18 +1,20 @@
 import { router } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { useState } from 'react';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
-import { bytes } from '@web/lib/format';
+import { ago, bytes } from '@web/lib/format';
 import { readable } from '@web/lib/release';
 import type { Release } from '@web/wire';
 
 import { qualityOf } from '@/engine/quality';
 import { Button } from '@/ui/Button';
+import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
 import { STAGE_DIFFERS, useStaged, useTone } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
-import { color as themedColor, font, space, stage, stageType, type as themedType, type Palette } from '@/theme';
+import { color as themedColor, font, motion, space, stage, stageType, type as themedType, type Palette } from '@/theme';
 
 import { useSources, type Sources } from './sources';
 
@@ -116,52 +118,81 @@ function SourceRow({
   const detail = name.tags || name.title;
   const seeds = release.seeders;
   const health = seeds === null ? color.pencil : seeds >= 20 ? color.action : seeds >= 5 ? color.soft : color.error;
+  const [open, setOpen] = useState(false);
+  const facts = [
+    seeds !== null ? `${seeds} seeds` : null,
+    release.leechers !== null ? `${release.leechers} peers` : null,
+    release.published ? `added ${ago(release.published)}` : null,
+    release.sources.length > 0 ? `from ${release.sources.join(', ')}` : null,
+  ].filter(Boolean);
 
   return (
-    <Animated.View entering={rise(index)}>
-      <Tap
-        shrink={1}
-        highlight
-        haptic={!playing}
-        disabled={playing}
-        accessibilityState={{ selected: playing }}
-        onPress={onPress}
-        accessibilityLabel={[
-          why ? why.replace('Best', 'Best match').replace(' · ', ', ') : null,
-          ...tags.map((tag) => tag.label),
-          release.size ? bytes(release.size) : null,
-          seeds !== null ? `${seeds} seeds` : null,
-          release.name,
-        ]
-          .filter(Boolean)
-          .join(', ')}
-        style={[styles.row, playing && styles.rowPlaying]}
-      >
-        <View style={styles.body}>
-          <View style={styles.tags}>
-            {why && !playing ? <Text style={[styles.tag, styles.best]}>{why}</Text> : null}
-            {playing ? <Text style={[styles.tag, styles.best]}>Playing</Text> : null}
-            {tags.map((tag) => (
-              <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
-                {tag.label}
-              </Text>
-            ))}
-            {tags.length === 0 ? <Text style={styles.unknown}>Unknown quality</Text> : null}
-          </View>
-          <Text style={styles.detail} numberOfLines={1}>
-            {detail}
-          </Text>
-        </View>
-        <View style={styles.side}>
-          {release.size ? <Text style={styles.size}>{bytes(release.size)}</Text> : null}
-          {seeds !== null ? (
-            <View style={styles.seeds}>
-              <View style={[styles.dot, { backgroundColor: health }]} />
-              <Text style={styles.seedText}>{seeds}</Text>
+    <Animated.View entering={rise(index)} layout={LinearTransition.duration(motion.standard)}>
+      <View style={styles.line}>
+        <Tap
+          shrink={1}
+          highlight
+          haptic={!playing}
+          disabled={playing}
+          accessibilityState={{ selected: playing }}
+          onPress={onPress}
+          accessibilityLabel={[
+            why ? why.replace('Best', 'Best match').replace(' · ', ', ') : null,
+            ...tags.map((tag) => tag.label),
+            release.size ? bytes(release.size) : null,
+            seeds !== null ? `${seeds} seeds` : null,
+            release.name,
+          ]
+            .filter(Boolean)
+            .join(', ')}
+          style={[styles.row, { flex: 1 }, playing && styles.rowPlaying]}
+        >
+          <View style={styles.body}>
+            <View style={styles.tags}>
+              {why && !playing ? <Text style={[styles.tag, styles.best]}>{why}</Text> : null}
+              {playing ? <Text style={[styles.tag, styles.best]}>Playing</Text> : null}
+              {tags.map((tag) => (
+                <Text key={tag.label} style={[styles.tag, tag.strong && styles.tagStrong]}>
+                  {tag.label}
+                </Text>
+              ))}
+              {tags.length === 0 ? <Text style={styles.unknown}>Unknown quality</Text> : null}
             </View>
-          ) : null}
-        </View>
-      </Tap>
+            <Text style={styles.detail} numberOfLines={1}>
+              {detail}
+            </Text>
+          </View>
+          <View style={styles.side}>
+            {release.size ? <Text style={styles.size}>{bytes(release.size)}</Text> : null}
+            {seeds !== null ? (
+              <View style={styles.seeds}>
+                <View style={[styles.dot, { backgroundColor: health }]} />
+                <Text style={styles.seedText}>{seeds}</Text>
+              </View>
+            ) : null}
+          </View>
+        </Tap>
+        <Tap
+          shrink={0.88}
+          haptic
+          onPress={() => setOpen((was) => !was)}
+          accessibilityLabel={open ? 'Hide details' : 'Show details'}
+          accessibilityState={{ expanded: open }}
+          style={styles.more}
+        >
+          <View style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }}>
+            <Icon name={icons.chevron} size={18} tint={color.pencil} />
+          </View>
+        </Tap>
+      </View>
+      {open ? (
+        <Animated.View entering={FadeIn.duration(motion.quick)} style={styles.details}>
+          <Text style={styles.fullName} selectable>
+            {release.name}
+          </Text>
+          {facts.length > 0 ? <Text style={styles.detail}>{facts.join(' · ')}</Text> : null}
+        </Animated.View>
+      ) : null}
     </Animated.View>
   );
 }
@@ -169,6 +200,10 @@ function SourceRow({
 const sheet = (c: Palette, t: typeof themedType) =>
   StyleSheet.create({
     head: { paddingHorizontal: space.xl, paddingBottom: space.md, gap: 2 },
+    line: { flexDirection: 'row', alignItems: 'center', paddingRight: space.sm },
+    more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    details: { paddingHorizontal: space.xl, paddingBottom: space.md, gap: 4 },
+    fullName: { ...t.caption, color: c.soft },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
