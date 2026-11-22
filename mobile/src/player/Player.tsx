@@ -205,7 +205,6 @@ export function Player({
   const client = useQueryClient();
   const [drawn, setDrawn] = useState<SubtitleChoice | null>(null);
   const cues = useSubtitleCues(play, drawn);
-  const online = useOnlineSubtitles(play.id, play.video.index);
   const show = video ? titleOf(video) : null;
 
   const remember = (language: string | null) => {
@@ -232,6 +231,11 @@ export function Player({
   const picked = useRef(false);
   const own = show ? preferences.shows?.[show] : undefined;
   const wanted = own && 'subtitles' in own ? own.subtitles : preferences.subtitles;
+  const carried = availableSubtitleTracks.some((track) => sameLanguage(track.language, wanted));
+  const lookOnline = sheet === 'tracks' || (Boolean(wanted) && status === 'readyToPlay' && !carried);
+
+  const online = useOnlineSubtitles(link, play.id, play.video.index, lookOnline);
+
   const wantedAudio = own?.audio;
 
   const { availableAudioTracks } = useEvent(player, 'availableAudioTracksChange', {

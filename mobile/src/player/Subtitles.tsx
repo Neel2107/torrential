@@ -6,7 +6,7 @@ import type { SubtitleStyle } from '@web/lib/storage';
 import { VttParser, type Cue } from '@web/player/vtt';
 import type { OnlineSubtitle, OnlineSubtitles, PlayInfo } from '@web/wire';
 
-import { authHeaders, get, url } from '@/engine/client';
+import { authHeaders, get, url, type Link } from '@/engine/client';
 import { useLink } from '@/engine/session';
 import { font } from '@/theme';
 
@@ -104,11 +104,15 @@ export type OnlineLookup =
   | { kind: 'nothing' }
   | { kind: 'failed'; retry: () => void };
 
-export function useOnlineSubtitles(id: string, file: number): OnlineLookup {
-  const link = useLink();
+/** The subtitles online for a file, looked up only once `needed` has been true: each lookup is a search the engine makes on the internet, and most plays never show online subtitles. */
+export function useOnlineSubtitles(link: Link, id: string, file: number, needed: boolean): OnlineLookup {
   const [lookup, setLookup] = useState<OnlineLookup>({ kind: 'looking' });
+  const [asked, setAsked] = useState(false);
+
+  if (needed && !asked) setAsked(true);
 
   useEffect(() => {
+    if (!asked) return;
     const stop = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -136,7 +140,7 @@ export function useOnlineSubtitles(id: string, file: number): OnlineLookup {
       stop.abort();
       clearTimeout(timer);
     };
-  }, [link, id, file]);
+  }, [link, id, file, asked]);
 
   return lookup;
 }
