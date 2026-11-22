@@ -567,6 +567,7 @@ export function Player({
                   buffered={timeline.base.current + time.bufferedPosition}
                   download={download}
                   downloaded={downloaded}
+                  chapters={media?.chapters}
                   onScrubbing={setScrubbing}
                   onSeek={(seconds) => {
                     if (duration <= 0) return;

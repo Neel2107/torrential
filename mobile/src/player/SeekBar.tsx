@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { clock } from '@web/lib/format';
-import { THUMBNAIL_EVERY } from '@web/wire';
+import { THUMBNAIL_EVERY, type Chapter } from '@web/wire';
 
 import { authHeaders, url } from '@/engine/client';
 import { useLink } from '@/engine/session';
@@ -31,6 +31,7 @@ export function SeekBar({
   buffered,
   download,
   downloaded,
+  chapters = [],
   onScrubbing,
   onSeek,
 }: {
@@ -39,6 +40,7 @@ export function SeekBar({
   buffered: number;
   download: { id: string; file: number };
   downloaded: Downloaded;
+  chapters?: Chapter[];
   onScrubbing: (scrubbing: boolean) => void;
   onSeek: (seconds: number) => void;
 }) {
@@ -63,6 +65,14 @@ export function SeekBar({
   const fraction = duration > 0 ? Math.min(1, position / duration) : 0;
   const shown = preview ?? position;
 
+  const marks = duration > 0 ? chapters.filter((chapter) => chapter.start > 1 && chapter.start < duration - 1) : [];
+  const chapterAt = (seconds: number) => {
+    let found: Chapter | null = null;
+    for (const chapter of chapters) if (chapter.start <= seconds) found = chapter;
+    return found;
+  };
+  const lastChapter = useRef<Chapter | null>(null);
+
   const pick = (px: number, final: boolean) => {
     if (duration <= 0) return onScrubbing(false);
     const seconds = Math.max(0, Math.min(duration, (px / Math.max(1, width)) * duration));
@@ -72,6 +82,11 @@ export function SeekBar({
       onSeek(seconds);
     } else {
       setPreview(seconds);
+      const chapter = chapterAt(seconds);
+      if (chapter !== lastChapter.current) {
+        if (lastChapter.current !== null && chapter !== null) Haptics.selectionAsync();
+        lastChapter.current = chapter;
+      }
     }
   };
 
@@ -130,6 +145,11 @@ export function SeekBar({
             onLoad={() => setLastFrame(frame)}
           />
           <Text style={styles.bubbleTime}>{clock(shown)}</Text>
+          {chapterAt(shown)?.title ? (
+            <Text style={styles.bubbleChapter} numberOfLines={1}>
+              {chapterAt(shown)?.title}
+            </Text>
+          ) : null}
         </Animated.View>
       ) : null}
       <View style={styles.row}>
@@ -167,6 +187,12 @@ export function SeekBar({
                 style={[styles.buffered, { width: `${duration > 0 ? Math.min(1, buffered / duration) * 100 : 0}%` }]}
               />
               <View style={[styles.played, { width: `${(preview !== null ? previewFraction : fraction) * 100}%` }]} />
+              {marks.map((chapter) => (
+                <View
+                  key={chapter.start}
+                  style={[styles.chapterGap, { left: `${(chapter.start / duration) * 100}%` }]}
+                />
+              ))}
             </Animated.View>
             <Animated.View
               style={[styles.knob, { left: (preview !== null ? previewFraction : fraction) * width - 8 }, knob]}
@@ -195,6 +221,7 @@ function Glow({ run }: { run: Run }) {
 
 const styles = StyleSheet.create({
   wrap: { width: '100%' },
+  chapterGap: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, backgroundColor: '#000' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   hit: { flex: 1, height: 36, justifyContent: 'center' },
   track: { width: '100%', backgroundColor: 'rgba(240, 233, 220, 0.14)', overflow: 'hidden' },
@@ -231,4 +258,5 @@ const styles = StyleSheet.create({
     borderColor: color.ink,
   },
   bubbleTime: { fontFamily: font.semibold, fontSize: 14, color: color.ink, fontVariant: ['tabular-nums'] },
+  bubbleChapter: { fontFamily: font.medium, fontSize: 12, color: color.soft, maxWidth: THUMB_WIDTH - 12 },
 });

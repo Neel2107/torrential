@@ -1,7 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { File, Paths } from 'expo-file-system';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
+import { titleOf } from '@web/lib/video';
 import type { PlayTitle, Viewer } from '@web/wire';
 
 import { useJobsSelect } from '@/engine/jobs';
@@ -9,7 +11,8 @@ import { save, type Label } from '@/offline/saved';
 import type { PlayMessage } from '@/player/start';
 import { useViewer } from '@/player/start';
 
-import { stream, type Link } from './client';
+import { post, stream, type Link } from './client';
+import { keys } from './queries';
 import { useLink, useSession } from './session';
 
 export type Fetching =
@@ -54,7 +57,7 @@ export async function startDownload(link: Link, viewer: Viewer, video: string): 
   throw new Error(failure ?? 'No source started.');
 }
 
-/** A Download button's state for `video`, and the press that starts it. On a computer's engine the copy comes to this phone once it finishes. */
+/** A Download button's state for `video`, and the press that starts it. The press saves the title first, so the engine keeps the download rather than pausing it as an idle play; on a computer's engine the copy comes to this phone once it finishes. */
 /** Whether a download already covers `video`: the film, the episode, or the season it is in. */
 export function useHeld(video: string | null): boolean {
   const [title, season, episode] = (video ?? '').split(':');
@@ -71,6 +74,7 @@ export function useDownload(video: string | null, label: Label) {
   const { session } = useSession();
   const onComputer = session.state === 'paired' && session.engine.kind !== 'phone';
   const [fetching, setFetching] = useState<Fetching>({ state: 'idle' });
+  const client = useQueryClient();
 
   useEffect(() => setFetching({ state: 'idle' }), [video]);
 
@@ -79,6 +83,10 @@ export function useDownload(video: string | null, label: Label) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setFetching({ state: 'finding' });
     try {
+      const title = titleOf(video);
+      await post(link, '/api/library', { title, saved: true });
+      client.invalidateQueries({ queryKey: keys.title(title) });
+      client.invalidateQueries({ queryKey: keys.home });
       const job = await startDownload(link, viewer, video);
       if (onComputer) writeWanted({ ...readWanted(), [job]: label });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
