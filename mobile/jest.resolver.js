@@ -28,6 +28,9 @@ const withoutNative = (options) => ({
  * (`react-native-reanimated@4.7.1_react-native-worklets@0.13.0…`) names Worklets too, which sends every
  * Reanimated file to its web build. This matches the package the file sits in. Recheck the list on a
  * Reanimated upgrade.
+ *
+ * Gesture Handler hands Worklets' UI runtime to its native module once it loads. Worklets' web build has
+ * no UI runtime and throws when asked for it, so Gesture Handler's binding resolves to its web build too.
  */
 module.exports = (request, options) => {
   const from = packageOf(options.basedir);
@@ -39,6 +42,10 @@ module.exports = (request, options) => {
     (REANIMATED_WEB_ONLY.has(basename) || request.endsWith('css/component/AnimatedComponent'));
 
   const worklets = from === 'react-native-worklets' || request.startsWith('react-native-worklets');
+
+  if (from === 'react-native-gesture-handler' && basename === 'installUIRuntimeBindings') {
+    return reactNativeResolver(`${request}.web`, options);
+  }
 
   return reactNativeResolver(request, reanimatedWebOnly || worklets ? withoutNative(options) : options);
 };
