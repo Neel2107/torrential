@@ -2,7 +2,7 @@ import { File, Paths } from 'expo-file-system';
 
 import type { Position } from '@web/wire';
 
-import { post, type Link } from './client';
+import { EngineError, post, type Link } from './client';
 import { readStored, unsentPositions } from './stored';
 
 type Unsent = Record<string, Record<string, Position>>;
@@ -48,8 +48,8 @@ async function flush(link: Link) {
   for (const position of Object.values(read()[link.base] ?? {})) {
     try {
       await post(link, '/api/watched', { ...position, starts: false });
-    } catch {
-      return;
+    } catch (error) {
+      if (!(error instanceof EngineError && error.final)) return;
     }
 
     const unsent = read();
@@ -62,7 +62,7 @@ async function flush(link: Link) {
   }
 }
 
-/** Sends where a video stopped, one report at a time. One the engine does not take is kept on the phone for that engine, the latest per video, and sent again later. */
+/** Sends where a video stopped, one report at a time. One that does not reach the engine is kept on the phone for that engine, the latest per video, and sent again later; one the engine refuses is dropped, since it would refuse it again. */
 export function report(link: Link, position: Position): Promise<void> {
   return queued(async () => {
     const unsent = read();
@@ -74,17 +74,19 @@ export function report(link: Link, position: Position): Promise<void> {
 
     try {
       await post(link, '/api/watched', position);
-    } catch {
-      hold(link.base, position);
+    } catch (error) {
+      if (!(error instanceof EngineError && error.final)) {
+        hold(link.base, position);
 
-      return;
+        return;
+      }
     }
 
     await flush(link);
   });
 }
 
-/** Sends the positions this engine missed, keeping any it still does not take. */
+/** Sends the positions this engine missed, keeping any that still do not reach it and dropping any it refuses. */
 export function resend(link: Link): Promise<void> {
   return queued(() => flush(link));
 }

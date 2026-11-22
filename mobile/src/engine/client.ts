@@ -38,6 +38,11 @@ export class EngineError extends Error {
   get unpaired(): boolean {
     return this.code === 'not_paired' || this.status === 303;
   }
+
+  /** The engine read the request and will refuse it again however often it is sent: a 4xx with its error envelope, other than not knowing this phone, which pairing again mends. */
+  get final(): boolean {
+    return this.code !== null && this.status >= 400 && this.status < 500 && !this.unpaired;
+  }
 }
 
 export function authHeaders(link: Link): Record<string, string> {
