@@ -39,6 +39,7 @@ type Flight = {
   to: Rect;
   phase: Phase;
   shown: boolean;
+  ready: boolean;
   source: () => Promise<Rect | null>;
 };
 
@@ -46,6 +47,7 @@ const OPEN = { duration: 340, easing: Easing.bezier(0.2, 0, 0, 1) };
 const CLOSE = { duration: 280, easing: Easing.bezier(0.3, 0, 0, 1) };
 const FADE = { duration: 200, easing: Easing.out(Easing.quad) };
 const DRAW_WITHIN = 80;
+const MOUNT_WITHIN = 300;
 const PAGE: [number, number] = [0.05, 0.7];
 
 const progress = makeMutable(0);
@@ -98,7 +100,7 @@ export function useHeroSource(id: string) {
       progress.value = 0;
       tokens += 1;
       const to = posterRect(Dimensions.get('window').width);
-      set({ token: tokens, id, from, to, phase: 'opening', shown: false, source });
+      set({ token: tokens, id, from, to, phase: 'opening', shown: false, ready: false, source });
     } else {
       set(null);
     }
@@ -142,7 +144,7 @@ export function useHeroPage(id: string) {
     Promise.all([measure(slot.current), current.source()]).then(([to, from]) => {
       if (flight?.token !== current.token || !onScreen(to) || !onScreen(from)) return fade();
       afterClose = go;
-      update(current.token, { from, to, phase: 'closing', shown: false });
+      update(current.token, { from, to, phase: 'closing', shown: false, ready: true });
     });
   });
 
@@ -159,7 +161,15 @@ export function HeroTarget({ id, children }: { id: string; children: ReactNode }
   const hidden =
     HERO && current?.id === id && (current.phase === 'opening' || (current.phase === 'closing' && current.shown));
   return (
-    <View ref={slot} collapsable={false} style={hidden ? styles.hidden : undefined}>
+    <View
+      ref={slot}
+      collapsable={false}
+      style={hidden ? styles.hidden : undefined}
+      onLayout={() => {
+        const now = flight;
+        if (now?.id === id && now.phase === 'opening' && !now.ready) update(now.token, { ready: true });
+      }}
+    >
       {children}
     </View>
   );
@@ -171,10 +181,11 @@ export function HeroLayer() {
   return <Flying key={`${current.token}:${current.phase}`} flight={current} />;
 }
 
-function Flying({ flight: { token, id, from, to, phase } }: { flight: Flight }) {
+function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Flight }) {
   const back = phase === 'closing';
   const visible = useSharedValue(0);
   const started = useRef(false);
+  const [drawn, setDrawn] = useState(false);
 
   const start = () => {
     if (started.current) return;
@@ -187,7 +198,11 @@ function Flying({ flight: { token, id, from, to, phase } }: { flight: Flight }) 
   };
 
   useEffect(() => {
-    const timer = setTimeout(start, DRAW_WITHIN);
+    if (ready && drawn) {
+      const frame = requestAnimationFrame(start);
+      return () => cancelAnimationFrame(frame);
+    }
+    const timer = setTimeout(start, ready ? DRAW_WITHIN : MOUNT_WITHIN);
     return () => clearTimeout(timer);
   });
 
@@ -211,7 +226,14 @@ function Flying({ flight: { token, id, from, to, phase } }: { flight: Flight }) 
       <Animated.View
         style={[{ position: 'absolute', left: to.x, top: to.y, width: to.width, height: to.height }, style]}
       >
-        <Art id={id} kind="poster" style={styles.poster} fade={false} placeholder={false} onDisplay={start} />
+        <Art
+          id={id}
+          kind="poster"
+          style={styles.poster}
+          fade={false}
+          placeholder={false}
+          onDisplay={() => setDrawn(true)}
+        />
       </Animated.View>
     </View>
   );
