@@ -47,6 +47,7 @@ import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
 import { PortalHost } from '@/ui/Portal';
 import { Tap } from '@/ui/Tap';
+import { leave } from '@/ui/leave';
 import { stage as color, font, motion, space } from '@/theme';
 
 import { useDownloaded, usePlayingJob } from './downloaded';
@@ -63,6 +64,7 @@ import { SubtitleLook } from './SubtitleLook';
 import { SourcesSheet } from './SourcesSheet';
 import { choiceKey, SubtitleOverlay, useOnlineSubtitles, useSubtitleCues, type SubtitleChoice } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
+import { chooseAudio, chooseSubtitles, setSpeed } from './control';
 
 const HIDE_AFTER_MS = 3200;
 const SKIP = 10;
@@ -220,7 +222,7 @@ export function Player({
     const track = availableAudioTracks.find((candidate) => sameLanguage(candidate.language, wantedAudio));
     if (!track) return;
     pickedAudio.current = true;
-    if (!sameLanguage(player.audioTrack?.language, wantedAudio)) player.audioTrack = track;
+    if (!sameLanguage(player.audioTrack?.language, wantedAudio)) chooseAudio(player, track);
   }, [availableAudioTracks, wantedAudio, player]);
 
   useEffect(() => {
@@ -228,7 +230,7 @@ export function Player({
     const own = availableSubtitleTracks.find((track) => sameLanguage(track.language, wanted));
     if (own) {
       picked.current = true;
-      player.subtitleTrack = own;
+      chooseSubtitles(player, own);
       return;
     }
     if (online.kind !== 'found' || status !== 'readyToPlay') return;
@@ -334,7 +336,7 @@ export function Player({
   }, [visible, isPlaying, scrubbing, sheet, touched]);
 
   useEffect(() => {
-    player.playbackRate = preferences.speed;
+    setSpeed(player, preferences.speed);
   }, [player, preferences.speed]);
 
   useEffect(() => {
@@ -395,7 +397,6 @@ export function Player({
     .runOnJS(true)
     .onEnd((event) => skip(event.x < width / 2 ? -SKIP : SKIP));
   const drop = useSharedValue(0);
-  const close = () => router.back();
   const sides = useSideSwipes({ width, height: screenHeight });
   const pullDown = Gesture.Pan()
     .hitSlop(sides.middle)
@@ -407,7 +408,7 @@ export function Player({
     .onEnd((event) => {
       if (event.translationY > 100 || event.velocityY > 800) {
         drop.set(withTiming(600, { duration: 180, easing: motion.out }));
-        scheduleOnRN(close);
+        scheduleOnRN(leave);
       } else {
         drop.set(withSpring(0, { ...motion.snap, velocity: event.velocityY }));
       }
@@ -514,12 +515,7 @@ export function Player({
                   },
                 ]}
               >
-                <Tap
-                  shrink={0.88}
-                  onPress={() => router.back()}
-                  accessibilityLabel="Close the player"
-                  style={styles.round}
-                >
+                <Tap shrink={0.88} onPress={leave} accessibilityLabel="Close the player" style={styles.round}>
                   <Glass interactive fallback="transparent" style={styles.disc}>
                     <Icon name={icons.back} size={24} tint={color.ink} />
                   </Glass>
@@ -687,7 +683,7 @@ export function Player({
                 timeline.seek(0);
                 player.play();
               }}
-              onBack={() => router.back()}
+              onBack={leave}
             />
           ) : null}
 
@@ -705,7 +701,7 @@ export function Player({
               drawn={drawn}
               onDraw={(choice) => {
                 setDrawn(choice);
-                if (choice) player.subtitleTrack = null;
+                if (choice) chooseSubtitles(player, null);
                 if (choice?.kind === 'online') remember(choice.subtitle.language);
                 if (choice?.kind === 'file') {
                   const language = languageInName(choice.name);

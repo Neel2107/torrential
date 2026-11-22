@@ -48,6 +48,7 @@ import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { TabStrip, usePagerPosition } from '@/ui/Pager';
 import { Tap } from '@/ui/Tap';
+import { leave } from '@/ui/leave';
 import { alpha, color, font, motion, radius, scheme, space, type } from '@/theme';
 
 export default function Title() {
@@ -140,7 +141,7 @@ export default function Title() {
 
         <View style={[styles.header, { paddingTop: insets.top }]} pointerEvents="box-none">
           <Animated.View style={[StyleSheet.absoluteFill, styles.headerShade, headerShade]} pointerEvents="none" />
-          <Tap shrink={0.88} haptic onPress={() => router.back()} accessibilityLabel="Back" style={styles.round}>
+          <Tap shrink={0.88} haptic onPress={leave} accessibilityLabel="Back" style={styles.round}>
             <Icon name={icons.back} size={22} tint={color.ink} />
           </Tap>
           <Animated.View style={[styles.headerTitle, headerName]} pointerEvents="none">

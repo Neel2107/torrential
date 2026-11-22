@@ -16,7 +16,9 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
+import { leave } from '@/ui/leave';
 import { stage as color, font, space, stageType as type } from '@/theme';
+import { jumpTo } from '@/player/control';
 
 const KEEP_EVERY_MS = 5000;
 const ENDING_SECONDS = 60;
@@ -36,7 +38,7 @@ function Offline() {
     return (
       <View style={[styles.screen, styles.gone]}>
         <Text style={type.title}>This film is no longer on the phone</Text>
-        <Button label="Close" kind="secondary" onPress={() => router.back()} />
+        <Button label="Close" kind="secondary" onPress={leave} />
       </View>
     );
   }
@@ -47,6 +49,7 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
   const insets = useSafeAreaInsets();
   const player = useVideoPlayer({ uri: copy.uri, metadata: { title: copy.label.title } }, (p) => {
     p.keepScreenOnWhilePlaying = true;
+    p.timeUpdateEventInterval = 0.25;
     p.play();
   });
 
@@ -58,10 +61,6 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
     currentOffsetFromLive: null,
     bufferedPosition: 0,
   });
-
-  useEffect(() => {
-    player.timeUpdateEventInterval = 0.25;
-  }, [player]);
 
   useEffect(() => {
     if (!copy.subtitles) return;
@@ -79,7 +78,7 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
     SecureStore.getItemAsync(key)
       .then((saved) => {
         const at = Number(saved);
-        if (!stopped && at > 5) player.currentTime = at;
+        if (!stopped && at > 5) jumpTo(player, at);
       })
       .catch(() => {})
       .finally(() => {
@@ -106,7 +105,7 @@ function SavedPlayer({ copy }: { copy: Extract<Copy, { state: 'saved' }> }) {
       <View
         style={[styles.bar, { paddingTop: insets.top, height: 48 + insets.top, paddingLeft: insets.left + space.sm }]}
       >
-        <Tap haptic shrink={0.88} onPress={() => router.back()} accessibilityLabel="Close" style={styles.close}>
+        <Tap haptic shrink={0.88} onPress={leave} accessibilityLabel="Close" style={styles.close}>
           <Icon name={icons.close} size={22} tint={color.ink} />
         </Tap>
         <Text style={styles.title} numberOfLines={1}>

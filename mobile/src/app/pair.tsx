@@ -24,6 +24,7 @@ import { useCopies } from '@/offline/saved';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { Mark } from '@/ui/Mark';
+import { leave } from '@/ui/leave';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
 
 type Mode = 'scan' | 'type';
@@ -115,7 +116,7 @@ export default function Pair() {
             label="Cancel"
             onPress={() => {
               Keyboard.dismiss();
-              router.back();
+              leave();
             }}
             style={{ alignSelf: 'flex-start' }}
           />

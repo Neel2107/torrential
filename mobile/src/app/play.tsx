@@ -12,7 +12,7 @@ import { CHECKS, episodeCode, episodeName } from '@web/titles/words';
 import { Player } from '@/player/Player';
 import { useTitlePlay, useTorrentPlay, type Start } from '@/player/start';
 import type { Takeover } from '@/player/recovery';
-import { FORCE_STREAM } from '@/player/timeline';
+import { forceStream } from '@/player/timeline';
 import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
@@ -23,6 +23,7 @@ import { Logo } from '@/ui/Logo';
 import { PortalHost } from '@/ui/Portal';
 import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
+import { leave } from '@/ui/leave';
 import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
 
 export default function PlayScreen() {
@@ -42,7 +43,7 @@ function Play() {
     at?: string;
     stream?: string;
   }>();
-  if (__DEV__) FORCE_STREAM.value = stream === '1';
+  if (__DEV__) forceStream(stream === '1');
   const [attempt, setAttempt] = useState(0);
   useEffect(() => mark('play'), []);
   return ref ? (
@@ -160,7 +161,7 @@ function Starting({
           style={StyleSheet.absoluteFill}
         />
         <View style={[styles.top, { paddingTop: Math.max(insets.top, space.lg), paddingLeft: insets.left + space.lg }]}>
-          <Tap shrink={0.88} onPress={() => router.back()} accessibilityLabel="Cancel" style={styles.round}>
+          <Tap shrink={0.88} onPress={leave} accessibilityLabel="Cancel" style={styles.round}>
             <Icon name={icons.close} size={24} tint={color.ink} />
           </Tap>
         </View>
@@ -199,7 +200,7 @@ function Starting({
                     onPress={onRetry}
                   />
                 )}
-                <Button label="Back" kind="quiet" onPress={() => router.back()} />
+                <Button label="Back" kind="quiet" onPress={leave} />
               </View>
             </Animated.View>
           ) : (

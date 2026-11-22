@@ -12,6 +12,7 @@ import { Button } from '@/ui/Button';
 import { Check } from '@/ui/Check';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
+import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';
 
 export default function Engine() {
@@ -43,7 +44,7 @@ export default function Engine() {
               onPress={async () => {
                 if (active) return;
                 await switchTo(engine.id);
-                router.back();
+                leave();
               }}
               accessibilityRole="radio"
               accessibilityState={{ selected: active }}
@@ -72,7 +73,7 @@ export default function Engine() {
               setStarting(true);
               try {
                 await usePhone();
-                router.back();
+                leave();
               } finally {
                 setStarting(false);
               }

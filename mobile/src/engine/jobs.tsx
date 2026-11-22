@@ -71,7 +71,8 @@ export function JobsProvider({ children }: { children: ReactNode }) {
     };
 
     const open = async () => {
-      const mine = ++generation;
+      generation += 1;
+      const mine = generation;
       while (!stopped && mine === generation && AppState.currentState === 'active') {
         controller = new AbortController();
         heard = Date.now();

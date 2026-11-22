@@ -28,6 +28,7 @@ import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
+import { leave } from '@/ui/leave';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
 
 const CONTAINERS: Record<string, string> = {
@@ -387,7 +388,7 @@ function Remote({ cast }: { cast: Cast }) {
           kind="secondary"
           icon={icons.stop}
           onPress={async () => {
-            if (await control({ action: 'stop' })) router.back();
+            if (await control({ action: 'stop' })) leave();
           }}
         />
       </View>

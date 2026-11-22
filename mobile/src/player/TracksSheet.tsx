@@ -15,6 +15,7 @@ import { Sheet } from '@/ui/Sheet';
 import { Check } from '@/ui/Check';
 import { Tap } from '@/ui/Tap';
 import { stage as color, font, motion, space, stageType as type } from '@/theme';
+import { chooseAudio, chooseSubtitles } from './control';
 
 type FileChoice = Extract<SubtitleChoice, { kind: 'file' }>;
 
@@ -65,7 +66,7 @@ export function TracksSheet({
           label="Off"
           selected={!subtitleTrack && !drawn}
           onPress={() => {
-            player.subtitleTrack = null;
+            chooseSubtitles(player, null);
             onDraw(null);
             onLanguage(null);
           }}
@@ -78,7 +79,7 @@ export function TracksSheet({
             selected={!drawn && subtitleTrack?.id === track.id && subtitleTrack?.label === track.label}
             onPress={() => {
               onDraw(null);
-              player.subtitleTrack = track;
+              chooseSubtitles(player, track);
               if (track.language) onLanguage(track.language);
             }}
           />
@@ -125,7 +126,7 @@ export function TracksSheet({
                   detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${channels(fromEngine.channels)}` : null}
                   selected={audioTrack?.id === track.id && audioTrack?.label === track.label}
                   onPress={() => {
-                    player.audioTrack = track;
+                    chooseAudio(player, track);
                     if (track.language) onAudioLanguage(track.language);
                   }}
                 />

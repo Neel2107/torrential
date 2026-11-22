@@ -8,6 +8,7 @@ import { sentence } from '@web/lib/format';
 import { EngineError } from '@/engine/client';
 import { parsePairing, useSession } from '@/engine/session';
 import { Button } from '@/ui/Button';
+import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';
 
 export default function Relocate() {
@@ -25,7 +26,7 @@ export default function Relocate() {
     setProblem(null);
     try {
       await relocate(found.base);
-      router.back();
+      leave();
     } catch (error) {
       setProblem(
         error instanceof EngineError && error.unpaired

@@ -645,16 +645,17 @@ function Recent({
   onForget: (query: string) => void;
   onClear: () => void;
 }) {
-  let order = 0;
+  const afterUnfinished = unfinished.length > 0 ? unfinished.length + 1 : 0;
+  const afterDownloads = afterUnfinished + (downloads.length > 0 ? downloads.length + 1 : 0);
   return (
     <View style={{ gap: space.md }}>
       {unfinished.length > 0 ? (
-        <Animated.View entering={rise(order++)}>
+        <Animated.View entering={rise(0)}>
           <SectionHead title="Continue watching" />
-          {unfinished.map((item) => (
+          {unfinished.map((item, index) => (
             <Animated.View
               key={item.video}
-              entering={rise(order++)}
+              entering={rise(index + 1)}
               exiting={FadeOut.duration(motion.quick)}
               layout={LinearTransition.duration(motion.standard)}
             >
@@ -664,25 +665,29 @@ function Recent({
         </Animated.View>
       ) : null}
       {downloads.length > 0 ? (
-        <Animated.View entering={rise(order++)}>
+        <Animated.View entering={rise(afterUnfinished)}>
           <SectionHead
             title="Downloads"
             action={more ? { label: 'See all', onPress: () => router.navigate('/downloads') } : undefined}
           />
-          {downloads.map((id) => (
-            <Animated.View key={id} entering={rise(order++)} layout={LinearTransition.duration(motion.standard)}>
+          {downloads.map((id, index) => (
+            <Animated.View
+              key={id}
+              entering={rise(afterUnfinished + index + 1)}
+              layout={LinearTransition.duration(motion.standard)}
+            >
               <DownloadRow id={id} />
             </Animated.View>
           ))}
         </Animated.View>
       ) : null}
       {searches.length > 0 ? (
-        <Animated.View entering={rise(order++)}>
+        <Animated.View entering={rise(afterDownloads)}>
           <SectionHead title="Recent searches" action={{ label: 'Clear all', onPress: onClear }} />
-          {searches.map((item) => (
+          {searches.map((item, index) => (
             <Animated.View
               key={item}
-              entering={rise(order++)}
+              entering={rise(afterDownloads + index + 1)}
               exiting={FadeOut.duration(motion.quick)}
               layout={LinearTransition.duration(motion.standard)}
             >

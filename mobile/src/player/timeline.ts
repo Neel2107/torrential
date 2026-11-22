@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import type { FfmpegMessage, MediaInfo, PlayInfo } from '@web/wire';
 
 import { authHeaders, stream, url, type Link } from '@/engine/client';
+import { jumpTo } from './control';
 
 type Reason = 'audio' | 'container' | 'failed';
 
@@ -14,7 +15,11 @@ export type Mode =
   | { kind: 'direct' }
   | { kind: 'stream'; video: 'copy' | 'h264'; from: number; audio: number | null; reason: Reason };
 
-export const FORCE_STREAM = { value: false };
+const FORCE_STREAM = { value: false };
+
+export function forceStream(on: boolean) {
+  FORCE_STREAM.value = on;
+}
 
 const SILENT = /^(dts|truehd|mlp)/i;
 const APPLE_CONTAINER = /mp4|mov|m4v/i;
@@ -130,7 +135,7 @@ export function useTimeline({
         return;
       }
       if (!alive.current) return;
-      if (next.kind === 'direct' && at > 0) player.currentTime = at;
+      if (next.kind === 'direct' && at > 0) jumpTo(player, at);
       if (resume) player.play();
     },
     [link, media, metadata, play, player],
@@ -184,7 +189,7 @@ export function useTimeline({
       const current = modeRef.current;
       const target = Math.max(0, seconds);
       if (current.kind === 'stream') switchTo({ ...current, from: target }, target, player.playing);
-      else player.currentTime = target;
+      else jumpTo(player, target);
     },
     [player, switchTo],
   );

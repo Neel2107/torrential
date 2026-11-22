@@ -13,6 +13,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { rise } from '@/ui/rise';
 import { Tap } from '@/ui/Tap';
 import { ThemePicker } from '@/ui/ThemePicker';
+import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';
 
 export default function Settings() {
@@ -31,7 +32,7 @@ export default function Settings() {
   return (
     <View style={styles.screen}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <Tap haptic shrink={0.9} onPress={() => router.back()} accessibilityLabel="Back" style={styles.back}>
+        <Tap haptic shrink={0.9} onPress={leave} accessibilityLabel="Back" style={styles.back}>
           <Icon name={icons.back} size={22} tint={color.ink} />
         </Tap>
         <Text style={styles.title} accessibilityRole="header">
