@@ -25,6 +25,7 @@ import { Logo } from '@/ui/Logo';
 import { PullMark, usePullToRefresh } from '@/ui/pull';
 import { Meter } from '@/ui/Meter';
 import { PosterGrid } from '@/ui/PosterGrid';
+import { SectionHeading } from '@/ui/SectionHeading';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { Stage } from '@/ui/stage';
@@ -81,7 +82,7 @@ export default function Home() {
               <NewEpisodes saved={home.data.saved} index={1} />
               {home.data.saved.length > 0 ? (
                 <Animated.View entering={rise(2)} style={styles.section}>
-                  <SectionTitle>Saved</SectionTitle>
+                  <SectionHeading title="Saved" />
                   <PosterGrid titles={home.data.saved} />
                 </Animated.View>
               ) : null}
@@ -111,14 +112,6 @@ export default function Home() {
 const NONE: ReadonlySet<string> = new Set();
 const TIGHT_FONT_SCALE = 1.15;
 
-function SectionTitle({ children }: { children: string }) {
-  return (
-    <Text style={[type.title, styles.sectionTitle]} accessibilityRole="header">
-      {children}
-    </Text>
-  );
-}
-
 function ContinueCarousel({ items }: { items: Continue[] }) {
   const { width } = useWindowDimensions();
   const cardWidth = items.length > 1 ? width - space.page * 2 - 28 : width - space.page * 2;
@@ -132,7 +125,7 @@ function ContinueCarousel({ items }: { items: Continue[] }) {
 
   return (
     <Animated.View entering={rise(0)} style={styles.carousel}>
-      <SectionTitle>Continue watching</SectionTitle>
+      <SectionHeading title="Continue watching" />
       <Animated.ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -259,9 +252,8 @@ function Loading() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.paper },
-  carousel: { gap: space.md },
-  section: { marginTop: space.xxl, gap: space.md },
-  sectionTitle: { paddingHorizontal: space.page },
+  carousel: { gap: space.xs },
+  section: { marginTop: space.lg, gap: space.xs },
   still: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: color.raised, justifyContent: 'flex-end' },
   stillBody: {
     flexDirection: 'row',

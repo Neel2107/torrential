@@ -16,6 +16,7 @@ import { color, radius, space, type, stage } from '@/theme';
 
 import { Art } from './Art';
 import { rise } from './rise';
+import { SectionHeading } from './SectionHeading';
 import { Tap } from './Tap';
 
 const RECENT_DAYS = 14;
@@ -73,9 +74,7 @@ export function NewEpisodes({ saved, index }: { saved: TitleCard[]; index: numbe
 
   return (
     <Animated.View entering={rise(index)} style={styles.section}>
-      <Text style={[type.title, styles.title]} accessibilityRole="header">
-        New episodes
-      </Text>
+      <SectionHeading title="New episodes" />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {fresh.map(({ page, episode }) => (
           <Tap
@@ -118,8 +117,7 @@ export function NewEpisodes({ saved, index }: { saved: TitleCard[]; index: numbe
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: space.xl, gap: space.md },
-  title: { paddingHorizontal: space.page },
+  section: { marginTop: space.lg, gap: space.xs },
   row: { paddingHorizontal: space.page, gap: space.md },
   still: {
     width: CARD,

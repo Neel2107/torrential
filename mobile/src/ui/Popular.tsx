@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import type { TitleCard } from '@web/wire';
 
 import { usePopular } from '@/engine/queries';
-import { space, type } from '@/theme';
+import { space } from '@/theme';
 
 import { Poster } from './PosterGrid';
 import { rise } from './rise';
+import { SectionHeading } from './SectionHeading';
 
 const POSTER = 118;
 const SHOWN = 20;
@@ -39,9 +40,7 @@ export function PopularRow({
 
   return (
     <Animated.View entering={rise(index)} style={styles.section}>
-      <Text style={[type.title, styles.title]} accessibilityRole="header">
-        {title}
-      </Text>
+      <SectionHeading title={title} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {titles.map((card) => (
           <Poster key={card.id} title={card} width={POSTER} />
@@ -52,7 +51,6 @@ export function PopularRow({
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: space.xl, gap: space.md },
-  title: { paddingHorizontal: space.page },
+  section: { marginTop: space.lg, gap: space.xs },
   row: { paddingHorizontal: space.page, gap: space.md },
 });
