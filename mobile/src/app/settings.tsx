@@ -1,6 +1,5 @@
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
-import HardDrive from 'lucide-react-native/icons/hard-drive';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -52,7 +51,7 @@ export default function Settings() {
             style={styles.row}
           >
             <View style={styles.badge}>
-              <Icon name={engine?.kind === 'phone' ? icons.phone : HardDrive} size={18} tint={color.soft} />
+              <Icon name={engine?.kind === 'phone' ? icons.phone : icons.drive} size={18} tint={color.soft} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.value}>{engine?.name ?? 'No engine'}</Text>

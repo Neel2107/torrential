@@ -1,4 +1,3 @@
-import type { LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -7,10 +6,10 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { motion, space } from '@/theme';
 
-import { icons } from './Icon';
+import { icons, type Glyph } from './Icon';
 import { Panel, PanelHeading, PanelRow, PanelRule, surface } from './Panel';
 
-export type Question = { title: string; message: string; confirm: string; danger?: boolean; icon?: LucideIcon };
+export type Question = { title: string; message: string; confirm: string; danger?: boolean; icon?: Glyph };
 
 type Asking = Question & { id: number; answer: (yes: boolean) => void };
 

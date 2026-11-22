@@ -1,0 +1,9 @@
+expo.modules.glyphandroid.glyph-android-pngs-0 /Users/neel/Desktop/experiments/torrential/mobile/modules/glyph-android/android/build/generated/res/pngs/release
+expo.modules.glyphandroid.glyph-android-updated_navigation_xml-1 /Users/neel/Desktop/experiments/torrential/mobile/modules/glyph-android/android/build/generated/updated_navigation_xml/release
+expo.modules.glyphandroid.glyph-android-mergeReleaseResources-2 /Users/neel/Desktop/experiments/torrential/mobile/modules/glyph-android/android/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
+expo.modules.glyphandroid.glyph-android-mergeReleaseResources-3 /Users/neel/Desktop/experiments/torrential/mobile/modules/glyph-android/android/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
+expo.modules.glyphandroid.glyph-android-release-4 /Users/neel/Desktop/experiments/torrential/mobile/modules/glyph-android/android/build/intermediates/merged_res/release/mergeReleaseResources
+expo.modules.glyphandroid.glyph-android-release-5 /Users/neel/Desktop/experiments/torrential/mobile/modules/glyph-android/android/build/intermediates/packaged_res/release/packageReleaseResources
+expo.modules.glyphandroid.glyph-android-main-6 /Users/neel/Desktop/experiments/torrential/mobile/modules/glyph-android/android/src/main/res
+expo.modules.glyphandroid.glyph-android-release-7 /Users/neel/Desktop/experiments/torrential/mobile/modules/glyph-android/android/src/release/res
+gradleHome-0 /Users/neel/.gradle

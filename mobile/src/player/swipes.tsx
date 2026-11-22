@@ -1,14 +1,11 @@
 import * as Brightness from 'expo-brightness';
-import Sun from 'lucide-react-native/icons/sun';
-import Volume2 from 'lucide-react-native/icons/volume-2';
-import VolumeX from 'lucide-react-native/icons/volume-x';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { VolumeManager } from 'react-native-volume-manager';
 
-import { Icon } from '@/ui/Icon';
+import { Icon, icons } from '@/ui/Icon';
 import { alpha, stage as color, font, motion, radius, space } from '@/theme';
 
 const SIDE = 0.4;
@@ -120,7 +117,7 @@ export function SwipeLevel({
   const pill = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ scale: 0.92 + shown.get() * 0.08 }] }));
 
   const percent = useSyncExternalStore(readout.subscribe, readout.get);
-  const icon = kind === 'brightness' ? Sun : percent === 0 ? VolumeX : Volume2;
+  const icon = kind === 'brightness' ? icons.brightness : percent === 0 ? icons.muted : icons.volumeUp;
 
   return (
     <View pointerEvents="none" style={[styles.wrap, kind === 'brightness' ? styles.left : styles.right]}>

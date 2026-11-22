@@ -1,11 +1,10 @@
-import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 
 import { font, scheme } from '@/theme';
 
-import { Icon } from './Icon';
+import { Icon, type Glyph } from './Icon';
 import { Tap } from './Tap';
 
 /** The look of the Android glass menu (modules/glass-menu-android), for what React Native draws beside it. */
@@ -69,7 +68,7 @@ export function PanelRow({
   destructive = false,
   onPress,
 }: {
-  icon: LucideIcon;
+  icon: Glyph;
   label: string;
   destructive?: boolean;
   onPress: () => void;

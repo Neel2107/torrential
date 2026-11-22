@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import HardDrive from 'lucide-react-native/icons/hard-drive';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,7 +52,7 @@ export default function Engine() {
               style={[styles.engine, styles.rowRule]}
             >
               <View style={styles.engineIcon}>
-                <Icon name={engine.kind === 'phone' ? icons.phone : HardDrive} size={18} tint={color.soft} />
+                <Icon name={engine.kind === 'phone' ? icons.phone : icons.drive} size={18} tint={color.soft} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.value}>{engine.name}</Text>

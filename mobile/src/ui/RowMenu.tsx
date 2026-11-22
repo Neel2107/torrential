@@ -1,6 +1,5 @@
 import { Button as NativeButton, Host, Image as SwiftImage, Menu as NativeMenu } from '@expo/ui/swift-ui';
 import * as modifiers from '@expo/ui/swift-ui/modifiers';
-import type { LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
@@ -10,7 +9,7 @@ import { Menu } from '../../modules/glass-menu-android';
 import { color, scheme, space, type } from '@/theme';
 
 import { ask, type Question } from './Ask';
-import { Icon, icons } from './Icon';
+import { Icon, icons, type Glyph } from './Icon';
 import { ActionRow } from './Row';
 import { Sheet } from './Sheet';
 
@@ -18,7 +17,7 @@ import { Sheet } from './Sheet';
 export type RowAction = {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: Glyph;
   symbol: SFSymbol;
   danger?: boolean;
   ask?: Question;

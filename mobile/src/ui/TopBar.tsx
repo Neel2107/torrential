@@ -3,15 +3,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { LucideIcon } from 'lucide-react-native';
-
 import { alpha, color, font, space } from '@/theme';
 
 import { useChrome } from './chrome';
 import { TabStrip } from './Pager';
 import { usePullHeight } from './pull';
 import { Glass, LIQUID_GLASS } from './Glass';
-import { Icon } from './Icon';
+import { Icon, type Glyph } from './Icon';
 import { Tap } from './Tap';
 
 export const BAR_HEIGHT = 52;
@@ -68,7 +66,7 @@ export function TopBar({
   );
 }
 
-export type Action = { icon: LucideIcon; label: string; onPress: () => void };
+export type Action = { icon: Glyph; label: string; onPress: () => void };
 
 export function Actions({ actions }: { actions: Action[] }) {
   return (

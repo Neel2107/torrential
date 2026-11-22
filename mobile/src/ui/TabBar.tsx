@@ -1,13 +1,12 @@
 import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 import { alpha, color, motion } from '@/theme';
 
 import { useChrome } from './chrome';
-import { Icon, icons } from './Icon';
+import { Icon, icons, type Glyph } from './Icon';
 
 export const TAB_BAR_HEIGHT = 56;
 
@@ -75,7 +74,7 @@ function TabButton({
   onPress,
   onLongPress,
 }: {
-  icon: LucideIcon;
+  icon: Glyph;
   label: string;
   focused: boolean;
   badge: boolean;

@@ -1,11 +1,10 @@
-import type { LucideIcon } from 'lucide-react-native';
 import { Platform, StyleSheet } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle } from 'react-native-reanimated';
 
 import { color, space } from '@/theme';
 
 import { useChrome } from './chrome';
-import { Icon } from './Icon';
+import { Icon, type Glyph } from './Icon';
 import { TAB_BAR_HEIGHT } from './TabBar';
 import { Tap } from './Tap';
 import { reflow } from '@/ui/presets';
@@ -15,7 +14,7 @@ export const ADD_IN_TOP_BAR = Platform.OS === 'ios';
 
 export const FAB_ROOM = ADD_IN_TOP_BAR ? space.xl : 96;
 
-export function Fab({ icon, label, onPress }: { icon: LucideIcon; label: string; onPress: () => void }) {
+export function Fab({ icon, label, onPress }: { icon: Glyph; label: string; onPress: () => void }) {
   const { hidden, bottom } = useChrome();
 
   const fade = useAnimatedStyle(() => ({

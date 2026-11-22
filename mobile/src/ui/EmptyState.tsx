@@ -1,11 +1,10 @@
-import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { color, space, type } from '@/theme';
 
-import { Icon } from './Icon';
+import { Icon, type Glyph } from './Icon';
 import { rise } from './rise';
 
 /** What a copy saved on this phone is for, said the same wherever the list is empty. */
@@ -18,7 +17,7 @@ export function EmptyState({
   body,
   children,
 }: {
-  icon: LucideIcon;
+  icon: Glyph;
   title: string;
   body: string;
   children?: ReactNode;
