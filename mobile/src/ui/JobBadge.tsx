@@ -1,5 +1,15 @@
 import { useEffect } from 'react';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
+import { StyleSheet, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import type { Job } from '@web/wire';
 
@@ -10,7 +20,8 @@ import { Icon, icons } from './Icon';
 
 /**
  * A download's state at the start of its status line: the mark filling a band a third while pieces
- * arrive, a pause, or the check, which springs in when the download finished a moment ago.
+ * arrive, a pause, or the check, which springs in when the download finished a moment ago and pings
+ * while others download it from this engine.
  */
 export function JobBadge({ job, landed }: { job: Job; landed: boolean }) {
   const share = job.progress.size ? job.progress.verified / job.progress.size : 0;
@@ -31,11 +42,13 @@ export function JobBadge({ job, landed }: { job: Job; landed: boolean }) {
   const middle = useAnimatedStyle(() => ({ opacity: fill(progress.value, 1) }));
   const last = useAnimatedStyle(() => ({ opacity: fill(progress.value, 2) }));
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const seeding = job.state === 'done' && job.progress.up_rate > 0;
 
   if (filling)
     return <BandsMark size={15} bands={[top, middle, last]} label={`${Math.round(share * 100)}% downloaded`} />;
   return (
     <Animated.View style={popStyle}>
+      {seeding ? <Ping /> : null}
       <Icon
         name={job.state === 'done' ? icons.check : job.state === 'paused' ? icons.pause : icons.warning}
         size={14}
@@ -46,3 +59,28 @@ export function JobBadge({ job, landed }: { job: Job; landed: boolean }) {
     </Animated.View>
   );
 }
+
+function Ping() {
+  const reduced = useReducedMotion();
+  const t = useSharedValue(0);
+  useEffect(() => {
+    if (reduced) return;
+    t.value = withRepeat(withTiming(1, { duration: PING_MS, easing: Easing.out(Easing.quad) }), -1, false);
+  }, [reduced, t]);
+  const ring = useAnimatedStyle(() => ({
+    opacity: reduced ? 0.25 : 0.45 * (1 - t.value),
+    transform: [{ scale: reduced ? 1.2 : 1 + t.value * 1.2 }],
+  }));
+  return (
+    <View pointerEvents="none" style={styles.ping}>
+      <Animated.View style={[styles.ring, ring]} />
+    </View>
+  );
+}
+
+const PING_MS = 2000;
+
+const styles = StyleSheet.create({
+  ping: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  ring: { width: 16, height: 16, borderRadius: 8, backgroundColor: color.action },
+});

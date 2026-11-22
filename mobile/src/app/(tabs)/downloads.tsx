@@ -220,15 +220,17 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
             ? `${STATE[job.state]} ${percent(fraction)}`
             : STATE[job.state];
   const numbers =
-    job.state === 'done' || job.state === 'error'
-      ? null
-      : moving && job.progress.down_rate > 0
-        ? [rate(job.progress.down_rate), job.progress.eta ? roughly(job.progress.eta) : null]
-            .filter(Boolean)
-            .join(' · ')
-        : size
-          ? `${bytes(job.progress.verified)} of ${bytes(size)}`
-          : null;
+    job.state === 'done' && job.progress.up_rate > 0
+      ? `${rate(job.progress.up_rate)} up`
+      : job.state === 'done' || job.state === 'error'
+        ? null
+        : moving && job.progress.down_rate > 0
+          ? [rate(job.progress.down_rate), job.progress.eta ? roughly(job.progress.eta) : null]
+              .filter(Boolean)
+              .join(' · ')
+          : size
+            ? `${bytes(job.progress.verified)} of ${bytes(size)}`
+            : null;
 
   const press = {
     shrink: 1,
