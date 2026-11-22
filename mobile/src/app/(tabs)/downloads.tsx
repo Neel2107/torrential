@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, useIsFocused } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useDerivedValue, withTiming } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { ago, bytes, percent, rate, sentence } from '@web/lib/format';
 import type { Job } from '@web/wire';
@@ -18,13 +18,14 @@ import { EngineAvatar } from '@/ui/EngineAvatar';
 import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { JobBadge } from '@/ui/JobBadge';
+import { Meter } from '@/ui/Meter';
 import { ActionSheet, MoreMenu, type RowAction } from '@/ui/RowMenu';
 import { Pager, usePagerPosition } from '@/ui/Pager';
 import { Connecting } from '@/ui/Connecting';
 import { Tap } from '@/ui/Tap';
 import { TitlePoster, TitleTap } from '@/ui/TitleTap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
-import { alpha, color, font, motion, space, type } from '@/theme';
+import { color, font, space, type } from '@/theme';
 import { reflow } from '@/ui/presets';
 import { EmptyState, NOTHING_SAVED } from '@/ui/EmptyState';
 
@@ -245,7 +246,12 @@ function JobRow({ job, onMenu, landed }: { job: Job; onMenu: () => void; landed:
           {size ? <Text style={styles.size}>{bytes(size)}</Text> : null}
         </View>
         {job.state !== 'done' && job.state !== 'error' ? (
-          <Progress fraction={fraction} paused={job.state === 'paused'} />
+          <Meter
+            animated
+            fraction={fraction}
+            tint={job.state === 'paused' ? color.pencil : undefined}
+            valueText={percent(fraction)}
+          />
         ) : null}
         <View style={styles.status}>
           <JobBadge job={job} landed={landed} />
@@ -281,20 +287,6 @@ function JobRow({ job, onMenu, landed }: { job: Job; onMenu: () => void; landed:
         <JobMore job={job} />
       </View>
     </Animated.View>
-  );
-}
-
-function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
-  const value = useDerivedValue(() =>
-    withTiming(Math.min(1, Math.max(0, fraction)), { duration: motion.tick, easing: Easing.linear }),
-  );
-
-  const fill = useAnimatedStyle(() => ({ transform: [{ scaleX: value.get() }] }));
-
-  return (
-    <View style={styles.track} accessibilityRole="progressbar" accessibilityValue={{ text: percent(fraction) }}>
-      <Animated.View style={[styles.fill, { backgroundColor: paused ? color.pencil : color.action }, fill]} />
-    </View>
   );
 }
 
@@ -421,7 +413,11 @@ function CopyState({ copy }: { copy: Copy }) {
   if (copy.state === 'saving') {
     return (
       <View style={{ gap: 6 }}>
-        <Progress fraction={copy.size ? copy.written / copy.size : 0} paused={false} />
+        <Meter
+          animated
+          fraction={copy.size ? copy.written / copy.size : 0}
+          valueText={percent(copy.size ? copy.written / copy.size : 0)}
+        />
         <Text style={type.numeric}>
           Saving to phone · {bytes(copy.written)} of {bytes(copy.size)}
         </Text>
@@ -490,7 +486,11 @@ function CopyRow({ copy, onMenu }: { copy: Copy; onMenu: () => void }) {
             {copy.label.title} <Text style={{ color: color.pencil, fontFamily: font.regular }}>{copy.label.tags}</Text>
           </Text>
           {copy.state === 'saving' ? (
-            <Progress fraction={copy.size ? copy.written / copy.size : 0} paused={false} />
+            <Meter
+              animated
+              fraction={copy.size ? copy.written / copy.size : 0}
+              valueText={percent(copy.size ? copy.written / copy.size : 0)}
+            />
           ) : null}
           <Text style={[type.numeric, copy.state === 'failed' && { color: color.error }]} numberOfLines={2}>
             {facts}
@@ -641,6 +641,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   moreTarget: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  track: { height: 4, borderRadius: 2, backgroundColor: alpha(color.ink, 0.12), overflow: 'hidden' },
-  fill: { height: 4, borderRadius: 2, width: '100%', transformOrigin: 'left' },
 });
