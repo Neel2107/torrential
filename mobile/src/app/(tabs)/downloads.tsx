@@ -34,6 +34,7 @@ import { MenuRow } from '@/ui/MenuRow';
 import { rise } from '@/ui/rise';
 import { Pager, usePagerPosition } from '@/ui/Pager';
 import { Sheet } from '@/ui/Sheet';
+import { Connecting } from '@/ui/Connecting';
 import { Tap } from '@/ui/Tap';
 import { TitlePoster, TitleTap } from '@/ui/TitleTap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
@@ -154,7 +155,7 @@ function JobList({
             <Text style={[type.body, { textAlign: 'center' }]}>{body}</Text>
           </Animated.View>
         ) : (
-          <Text style={[type.caption, { textAlign: 'center', marginTop: space.xxl }]}>Connecting…</Text>
+          <Connecting />
         )
       }
       renderItem={({ item, index }) => (
