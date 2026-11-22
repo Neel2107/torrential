@@ -69,6 +69,9 @@ const CATEGORIES: Record<Category, string> = {
   other: 'Other',
 };
 
+/** How long typing must pause before a new search is sent. The engine drops a search whose request is cancelled, so a short pause costs little. */
+const SETTLE_MS = 100;
+
 const ignore = () => {};
 const NOTHING: ReadonlySet<string> = new Set();
 
@@ -104,7 +107,7 @@ export default function Search() {
   const position = usePagerPosition(0);
   const [everything, setEverything] = useState(false);
   const typed = text.trim();
-  const settled = useDebounced(typed, 280);
+  const settled = useDebounced(typed, SETTLE_MS);
   const known = useKnownSearch();
   const query = typed !== settled && known(typed) ? typed : settled;
   const top = insets.top + BAR_HEIGHT + TABS_HEIGHT;
