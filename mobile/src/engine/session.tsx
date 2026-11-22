@@ -91,10 +91,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return { engines, engine, session };
   }, [saved]);
 
+  const loaded = saved !== null;
+
   useEffect(() => {
     const local = LocalEngine;
 
-    if (engine?.kind !== 'phone' || !local) return;
+    if (!local) return;
+
+    if (engine?.kind !== 'phone') {
+      if (loaded) local.startAtLaunch?.(false);
+
+      return;
+    }
 
     const start = () =>
       local
@@ -118,7 +126,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.remove();
-  }, [engine, change]);
+  }, [engine, change, loaded]);
 
   const api = useMemo<SessionApi>(() => {
     const add = (next: Engine) =>
