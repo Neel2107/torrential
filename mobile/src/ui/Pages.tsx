@@ -133,6 +133,8 @@ function Page({
   return (
     <Animated.View
       pointerEvents={active ? 'auto' : 'none'}
+      importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
+      accessibilityElementsHidden={!active}
       onLayout={(event) => onHeight(event.nativeEvent.layout.height)}
       style={[styles.layer, { maxHeight: room }, look]}
     >

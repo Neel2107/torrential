@@ -21,7 +21,13 @@ export function PortalHost({ children }: { children: ReactNode }) {
 
   return (
     <Context value={host}>
-      {children}
+      <View
+        style={StyleSheet.absoluteFill}
+        importantForAccessibility={nodes.size > 0 ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={nodes.size > 0}
+      >
+        {children}
+      </View>
       {nodes.size > 0 ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           {[...nodes.entries()].map(([id, node]) => (

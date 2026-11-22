@@ -103,7 +103,12 @@ export function Sheet({
 
   return (
     <Portal>
-      <View style={StyleSheet.absoluteFill} accessibilityViewIsModal pointerEvents={closing ? 'none' : 'auto'}>
+      <View
+        style={StyleSheet.absoluteFill}
+        accessibilityViewIsModal
+        onAccessibilityEscape={() => close()}
+        pointerEvents={closing ? 'none' : 'auto'}
+      >
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdrop]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} accessibilityLabel="Close" />
         </Animated.View>
@@ -124,7 +129,14 @@ export function Sheet({
           ]}
         >
           <GestureDetector gesture={drag}>
-            <View style={styles.handle}>
+            <View
+              style={styles.handle}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              accessibilityActions={[{ name: 'activate' }]}
+              onAccessibilityAction={() => close()}
+            >
               <View style={styles.grabber} />
             </View>
           </GestureDetector>

@@ -11,7 +11,7 @@ import { Tap } from './Tap';
 /** The look of the Android glass menu (modules/glass-menu-android), for what React Native draws beside it. */
 export function surfaceFor(dark: boolean) {
   return {
-    fill: dark ? 'rgba(24, 24, 27, 0.97)' : 'rgba(250, 250, 252, 0.97)',
+    fill: dark ? 'rgb(24, 24, 27)' : 'rgb(250, 250, 252)',
     rim: dark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.08)',
     rule: dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
     grabber: dark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.18)',
