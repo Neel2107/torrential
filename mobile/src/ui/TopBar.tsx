@@ -1,14 +1,14 @@
-import * as Haptics from 'expo-haptics';
-import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import type { ReactNode } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { interpolate, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { LucideIcon } from 'lucide-react-native';
 
-import { color, font, motion, space } from '@/theme';
+import { color, font, space } from '@/theme';
 
 import { useChrome } from './chrome';
+import { TabStrip } from './Pager';
 import { usePullHeight } from './pull';
 import { Glass, LIQUID_GLASS } from './Glass';
 import { Icon } from './Icon';
@@ -31,7 +31,7 @@ export function TopBar({
   left?: ReactNode;
   title: ReactNode;
   right?: ReactNode;
-  tabs?: { labels: string[]; index: number; onChange: (index: number) => void };
+  tabs?: { labels: string[]; index: number; position: SharedValue<number>; onChange: (index: number) => void };
 }) {
   const insets = useSafeAreaInsets();
   const { hidden } = useChrome();
@@ -57,7 +57,7 @@ export function TopBar({
           </View>
           <View style={[styles.side, styles.end]}>{right}</View>
         </Animated.View>
-        {tabs ? <TopTabs {...tabs} /> : <View style={styles.rule} />}
+        {tabs ? <TabStrip {...tabs} /> : <View style={styles.rule} />}
       </Animated.View>
       <View style={[styles.statusShade, { height: insets.top }]} pointerEvents="none" />
     </>
@@ -85,57 +85,6 @@ export function Actions({ actions }: { actions: Action[] }) {
   );
 }
 
-function TopTabs({ labels, index, onChange }: { labels: string[]; index: number; onChange: (index: number) => void }) {
-  const [widths, setWidths] = useState<{ x: number; width: number }[]>([]);
-  const position = useSharedValue(index);
-
-  useEffect(() => {
-    position.value = withSpring(index, motion.settle);
-  }, [index, position]);
-
-  const ready = widths.length === labels.length && widths.every(Boolean);
-  const inputs = labels.map((_, i) => i);
-  const lefts = ready ? widths.map((w) => w.x) : inputs.map(() => 0);
-  const sizes = ready ? widths.map((w) => w.width) : inputs.map(() => 0);
-
-  const underline = useAnimatedStyle(() => ({
-    opacity: ready ? 1 : 0,
-    left: interpolate(position.value, inputs, lefts),
-    width: interpolate(position.value, inputs, sizes),
-  }));
-
-  return (
-    <View style={styles.tabs} accessibilityRole="tablist">
-      {labels.map((label, i) => {
-        const selected = i === index;
-        return (
-          <Pressable
-            key={label}
-            style={styles.tab}
-            onPress={() => {
-              if (!selected) Haptics.selectionAsync();
-              onChange(i);
-            }}
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}
-            onLayout={(event) => {
-              const { x, width } = event.nativeEvent.layout;
-              setWidths((previous) => {
-                const next = [...previous];
-                next[i] = { x: x + width / 2 - Math.min(width - 32, 64) / 2, width: Math.min(width - 32, 64) };
-                return next;
-              });
-            }}
-          >
-            <Text style={[styles.tabLabel, selected && styles.tabLabelSelected]}>{label}</Text>
-          </Pressable>
-        );
-      })}
-      <Animated.View style={[styles.underline, underline]} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
@@ -154,14 +103,4 @@ const styles = StyleSheet.create({
   middle: { flex: 1, alignItems: 'center' },
   title: { fontFamily: font.bold, fontSize: 19, letterSpacing: -0.4, color: color.ink },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.rule },
-  tabs: {
-    height: TABS_HEIGHT,
-    flexDirection: 'row',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.rule,
-  },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  tabLabel: { fontFamily: font.medium, fontSize: 15, color: color.pencil },
-  tabLabelSelected: { fontFamily: font.bold, color: color.ink },
-  underline: { position: 'absolute', bottom: 0, height: 4, borderRadius: 2, backgroundColor: color.action },
 });

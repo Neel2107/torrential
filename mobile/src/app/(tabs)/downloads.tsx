@@ -11,6 +11,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Button as NativeButton, Host, Image as SwiftImage, Menu as NativeMenu } from '@expo/ui/swift-ui';
+import type { SFSymbol } from 'sf-symbols-typescript';
+
 import { Menu } from '../../../modules/glass-menu-android';
 
 import { ago, bytes, percent, rate, sentence } from '@web/lib/format';
@@ -29,6 +32,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { JobBadge } from '@/ui/JobBadge';
 import { MenuRow } from '@/ui/MenuRow';
 import { rise } from '@/ui/rise';
+import { Pager, usePagerPosition } from '@/ui/Pager';
 import { Sheet } from '@/ui/Sheet';
 import { Tap } from '@/ui/Tap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
@@ -43,20 +47,30 @@ export default function Downloads() {
   const onScroll = useChromeScroll();
   const { bottom: chromeBottom } = useChrome();
   const [tab, setTab] = useState(0);
+  const position = usePagerPosition(0);
   const [menu, setMenu] = useState<Job | null>(null);
   const [copyMenu, setCopyMenu] = useState<string | null>(null);
   const copies = useCopies();
 
   const active = jobs.filter((job) => ACTIVE.has(job.state));
   const finished = jobs.filter((job) => !ACTIVE.has(job.state));
-  const shown = tab === 0 ? active : finished;
   const bottom = chromeBottom + FAB_ROOM;
+  const list = { onScroll, top, bottom, live, landed, onMenu: setMenu };
 
   return (
     <View style={styles.screen}>
-      {tab === 2 ? (
+      <Pager index={tab} onIndex={setTab} position={position}>
+        <JobList
+          {...list}
+          jobs={active}
+          empty={['Nothing downloading', 'What you play or add shows up here while it downloads.']}
+        />
+        <JobList
+          {...list}
+          jobs={finished}
+          empty={['Nothing finished yet', 'Finished downloads stay here until you remove them.']}
+        />
         <Animated.FlatList
-          key="phone"
           data={copies}
           keyExtractor={(copy) => copy.job}
           onScroll={onScroll}
@@ -77,39 +91,7 @@ export default function Downloads() {
           }
           renderItem={({ item, index }) => <CopyRow copy={item} index={index} onMenu={() => setCopyMenu(item.job)} />}
         />
-      ) : (
-        <Animated.FlatList
-          key="engine"
-          data={shown}
-          keyExtractor={(job) => job.id}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          itemLayoutAnimation={LinearTransition.duration(motion.standard)}
-          contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
-          ListEmptyComponent={
-            live ? (
-              <Animated.View entering={rise(0)} style={styles.empty}>
-                <View style={styles.emptyIcon}>
-                  <Icon name={icons.downloads} size={26} tint={color.soft} />
-                </View>
-                <Text style={[type.title, { textAlign: 'center' }]}>
-                  {tab === 0 ? 'Nothing downloading' : 'Nothing finished yet'}
-                </Text>
-                <Text style={[type.body, { textAlign: 'center' }]}>
-                  {tab === 0
-                    ? 'What you play or add shows up here while it downloads.'
-                    : 'Finished downloads stay here until you remove them.'}
-                </Text>
-              </Animated.View>
-            ) : (
-              <Text style={[type.caption, { textAlign: 'center', marginTop: space.xxl }]}>Connecting…</Text>
-            )
-          }
-          renderItem={({ item, index }) => (
-            <JobRow job={item} index={index} onMenu={() => setMenu(item)} landed={landed.has(item.id)} />
-          )}
-        />
-      )}
+      </Pager>
       <TopBar
         left={<EngineAvatar />}
         title="Downloads"
@@ -121,6 +103,7 @@ export default function Downloads() {
         tabs={{
           labels: [`Active${active.length ? ` · ${active.length}` : ''}`, 'Finished', 'On this phone'],
           index: tab,
+          position,
           onChange: setTab,
         }}
       />
@@ -128,6 +111,53 @@ export default function Downloads() {
       {menu ? <JobMenu job={menu} onClose={() => setMenu(null)} /> : null}
       {copyMenu ? <CopyMenu job={copyMenu} onClose={() => setCopyMenu(null)} /> : null}
     </View>
+  );
+}
+
+function JobList({
+  jobs,
+  onScroll,
+  top,
+  bottom,
+  live,
+  landed,
+  onMenu,
+  empty: [title, body],
+}: {
+  jobs: Job[];
+  onScroll: ReturnType<typeof useChromeScroll>;
+  top: number;
+  bottom: number;
+  live: boolean;
+  landed: ReadonlySet<string>;
+  onMenu: (job: Job) => void;
+  empty: [string, string];
+}) {
+  return (
+    <Animated.FlatList
+      data={jobs}
+      keyExtractor={(job) => job.id}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      itemLayoutAnimation={LinearTransition.duration(motion.standard)}
+      contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
+      ListEmptyComponent={
+        live ? (
+          <Animated.View entering={rise(0)} style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Icon name={icons.downloads} size={26} tint={color.soft} />
+            </View>
+            <Text style={[type.title, { textAlign: 'center' }]}>{title}</Text>
+            <Text style={[type.body, { textAlign: 'center' }]}>{body}</Text>
+          </Animated.View>
+        ) : (
+          <Text style={[type.caption, { textAlign: 'center', marginTop: space.xxl }]}>Connecting…</Text>
+        )
+      }
+      renderItem={({ item, index }) => (
+        <JobRow job={item} index={index} onMenu={() => onMenu(item)} landed={landed.has(item.id)} />
+      )}
+    />
   );
 }
 
@@ -215,7 +245,7 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
             <Text style={[type.callout, { flex: 1 }]} numberOfLines={1}>
               {name.title} <Text style={styles.titleTags}>{name.tags}</Text>
             </Text>
-            <MoreButton job={job} onMenu={onMenu} />
+            <View style={styles.more} />
           </View>
           <View style={styles.tags}>
             {tags.map((tag) => (
@@ -245,6 +275,9 @@ function JobRow({ job, index, onMenu, landed }: { job: Job; index: number; onMen
           {copy ? <CopyState copy={copy} /> : null}
         </View>
       </Tap>
+      <View style={styles.moreSpot}>
+        <MoreButton job={job} onMenu={onMenu} />
+      </View>
     </Animated.View>
   );
 }
@@ -266,6 +299,8 @@ type JobAction = {
   id: string;
   label: string;
   icon: LucideIcon;
+  /** The SF Symbol for the iOS menu. */
+  symbol: SFSymbol;
   danger?: boolean;
   confirm?: string;
   run: () => void | Promise<void>;
@@ -289,6 +324,7 @@ function useJobActions(job: Job): JobAction[] {
   const actions: JobAction[] = [
     {
       id: 'play',
+      symbol: 'play',
       label: 'Play',
       icon: icons.play,
       run: () => router.push({ pathname: '/play', params: { ref: job.id } }),
@@ -297,6 +333,7 @@ function useJobActions(job: Job): JobAction[] {
   if (copy?.state === 'saved') {
     actions.push({
       id: 'offline',
+      symbol: 'iphone',
       label: 'Play from this phone',
       icon: icons.phone,
       run: () => router.push({ pathname: '/offline', params: { job: job.id } }),
@@ -304,6 +341,7 @@ function useJobActions(job: Job): JobAction[] {
   } else if (copy?.state === 'saving') {
     actions.push({
       id: 'stop-saving',
+      symbol: 'xmark',
       label: 'Stop saving to phone',
       icon: icons.close,
       run: () => cancel(job.id),
@@ -311,6 +349,7 @@ function useJobActions(job: Job): JobAction[] {
   } else if (job.state === 'done' && !onPhone) {
     actions.push({
       id: 'save',
+      symbol: 'iphone.and.arrow.forward',
       label: 'Save to phone',
       icon: icons.phone,
       run: () => {
@@ -322,6 +361,7 @@ function useJobActions(job: Job): JobAction[] {
   if (running)
     actions.push({
       id: 'pause',
+      symbol: 'pause',
       label: 'Pause',
       icon: icons.pause,
       run: () => send('/api/pause'),
@@ -329,6 +369,7 @@ function useJobActions(job: Job): JobAction[] {
   if (job.state === 'paused' || job.state === 'error') {
     actions.push({
       id: 'resume',
+      symbol: 'arrow.clockwise',
       label: 'Resume',
       icon: icons.refresh,
       run: () => send('/api/resume'),
@@ -336,6 +377,7 @@ function useJobActions(job: Job): JobAction[] {
   }
   actions.push({
     id: 'remove',
+    symbol: 'trash',
     label: 'Remove',
     icon: icons.trash,
     danger: true,
@@ -380,9 +422,26 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   );
 }
 
-/** The glass menu is itself the deliberate second tap, so its Remove acts without the sheet's confirm. */
+/** A menu is itself the deliberate second tap, so its Remove acts without the sheet's confirm. */
 function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
   const actions = useJobActions(job);
+  if (Platform.OS === 'ios') {
+    return (
+      <Host matchContents>
+        <NativeMenu label={<SwiftImage systemName="ellipsis" size={18} color={color.pencil} />}>
+          {actions.map((action) => (
+            <NativeButton
+              key={action.id}
+              label={action.confirm ?? action.label}
+              systemImage={action.symbol}
+              role={action.danger ? 'destructive' : 'default'}
+              onPress={() => action.run()}
+            />
+          ))}
+        </NativeMenu>
+      </Host>
+    );
+  }
   if (Platform.OS !== 'android') {
     return (
       <Tap shrink={0.85} onPress={onMenu} accessibilityLabel="More" style={styles.more}>
@@ -591,6 +650,15 @@ const styles = StyleSheet.create({
   onPhone: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   free: { ...type.caption, paddingHorizontal: space.page, paddingTop: space.md, paddingBottom: space.xs },
   more: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginRight: -6 },
+  moreSpot: {
+    position: 'absolute',
+    top: space.lg - 4,
+    right: space.page - 6,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(240,233,220,0.12)', overflow: 'hidden' },
   fill: { height: 4, borderRadius: 2 },
   empty: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 80 },
