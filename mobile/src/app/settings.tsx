@@ -2,10 +2,11 @@ import * as Application from 'expo-application';
 import { router } from 'expo-router';
 import { HardDrive } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useDataSaver } from '@/engine/dataSaver';
 import { useVersion } from '@/engine/queries';
 import { useSession } from '@/engine/session';
 import { Icon, icons } from '@/ui/Icon';
@@ -18,6 +19,7 @@ export default function Settings() {
   const insets = useSafeAreaInsets();
   const { session } = useSession();
   const version = useVersion();
+  const [saver, setSaver] = useDataSaver();
   const engine = session.state === 'paired' ? session.engine : null;
   const status = version.isSuccess
     ? `Online · torrential ${version.data.version}`
@@ -62,7 +64,21 @@ export default function Settings() {
         <Group title="Theme" index={1} bare>
           <ThemePicker />
         </Group>
-        <Group title="About" index={2}>
+        <Group title="Playback" index={2}>
+          <View style={styles.toggle}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.value}>Smaller videos on mobile data</Text>
+              <Text style={type.caption}>Picks 720p sources when you are not on Wi-Fi.</Text>
+            </View>
+            <Switch
+              value={saver}
+              onValueChange={setSaver}
+              trackColor={{ true: color.action, false: color.lifted }}
+              accessibilityLabel="Smaller videos on mobile data"
+            />
+          </View>
+        </Group>
+        <Group title="About" index={3}>
           <Line
             label="App"
             value={`${Application.nativeApplicationVersion ?? ''} (${Application.nativeBuildVersion ?? ''})`}
@@ -116,6 +132,7 @@ const styles = StyleSheet.create({
   groupTitle: { ...type.label, color: color.pencil, paddingHorizontal: space.xs },
   card: { borderRadius: radius.lg, backgroundColor: color.raised, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
   badge: {
     width: 36,
     height: 36,

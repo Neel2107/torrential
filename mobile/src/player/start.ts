@@ -1,3 +1,4 @@
+import * as Network from 'expo-network';
 import { useEffect, useState } from 'react';
 import { PixelRatio, useWindowDimensions } from 'react-native';
 
@@ -14,6 +15,7 @@ import type {
 } from '@web/wire';
 
 import { EngineError, post, stream, type Link } from '@/engine/client';
+import { useDataSaver } from '@/engine/dataSaver';
 import { useLink } from '@/engine/session';
 import { lap } from '@/perf';
 
@@ -55,12 +57,21 @@ export type Start =
       tried: number;
     };
 
+const SAVER_WIDTH = 1280;
+const SAVER_HEIGHT = 720;
+
+/** The screen and decoders the engine ranks sources for. On mobile data with the data saver on, it says 720p, so smaller sources lead. */
 export function useViewer(): Viewer {
   const { width, height } = useWindowDimensions();
   const scale = PixelRatio.get();
+  const network = Network.useNetworkState();
+  const [saver] = useDataSaver();
+  const small = saver && network.type === Network.NetworkStateType.CELLULAR;
+  const long = Math.round(Math.max(width, height) * scale);
+  const short = Math.round(Math.min(width, height) * scale);
   return {
-    width: Math.round(Math.max(width, height) * scale),
-    height: Math.round(Math.min(width, height) * scale),
+    width: small ? Math.min(long, SAVER_WIDTH) : long,
+    height: small ? Math.min(short, SAVER_HEIGHT) : short,
     scale,
     playback: 'hevc',
     decoders: { h264: 'hardware', hevc: 'hardware', av1: 'no' },
