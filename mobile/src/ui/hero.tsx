@@ -44,6 +44,7 @@ type Flight = {
   shown: boolean;
   ready: boolean;
   source: () => Promise<Rect | null>;
+  clip: Covered;
 };
 
 const OPEN = { duration: 340, easing: Easing.bezier(0.2, 0, 0, 1) };
@@ -101,17 +102,20 @@ function onScreen(rect: Rect | null): rect is Rect {
 /** How far the bars over a screen reach in from its top and bottom edges. */
 export type Covered = { top: number; bottom: number };
 
-/** Whether `rect` lies wholly in the part of the window no bar covers, so its poster can fly from where it shows. */
-function inView(rect: Rect, covered: Covered): boolean {
+/** The edges a flight is drawn inside: the bars' reach, never so far that it cuts into the title page's poster and ring. */
+function clipFor(covered: Covered, to: Rect): Covered {
   const { height } = Dimensions.get('window');
 
-  return rect.y >= covered.top && rect.y + rect.height <= height - covered.bottom;
+  return {
+    top: Math.max(0, Math.min(covered.top, to.y - RING)),
+    bottom: Math.max(0, Math.min(covered.bottom, height - (to.y + to.height + RING))),
+  };
 }
 
 export function useHeroSource(id: string) {
   const ref = useRef<Measurable>(null);
 
-  /** Opens the title, flying its poster from where it shows unless a bar covers part of it; then the page fades in. */
+  /** Opens the title, flying its poster from where it shows; a poster partly under a bar slides out from under it. */
   const open = async (navigate: () => void, covered: Covered = { top: 0, bottom: 0 }) => {
     if (!HERO) return navigate();
 
@@ -119,11 +123,21 @@ export function useHeroSource(id: string) {
     const source = () => measure(ref.current);
     const from = await source();
 
-    if (from && inView(from, covered)) {
+    if (onScreen(from)) {
       progress.set(0);
       tokens += 1;
       const to = posterRect(Dimensions.get('window').width);
-      set({ token: tokens, id, from, to, phase: 'opening', shown: false, ready: false, source });
+      set({
+        token: tokens,
+        id,
+        from,
+        to,
+        phase: 'opening',
+        shown: false,
+        ready: false,
+        source,
+        clip: clipFor(covered, to),
+      });
     } else {
       set(null);
     }
@@ -236,7 +250,7 @@ export function HeroLayer() {
   return <Flying key={`${current.token}:${current.phase}`} flight={current} />;
 }
 
-function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Flight }) {
+function Flying({ flight: { token, id, from, to, phase, ready, clip } }: { flight: Flight }) {
   const back = phase === 'closing';
   const visible = useSharedValue(0);
   const started = useRef(false);
@@ -291,9 +305,9 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
   }));
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[styles.clip, { top: clip.top, bottom: clip.bottom }]} pointerEvents="none">
       <Animated.View
-        style={[{ position: 'absolute', left: to.x, top: to.y, width: to.width, height: to.height }, style]}
+        style={[{ position: 'absolute', left: to.x, top: to.y - clip.top, width: to.width, height: to.height }, style]}
       >
         <Animated.View style={[styles.ring, ring]} />
         <Art
@@ -322,6 +336,7 @@ function land(token: number, back: boolean) {
 
 const styles = StyleSheet.create({
   hidden: { opacity: 0 },
+  clip: { position: 'absolute', left: 0, right: 0, overflow: 'hidden' },
   ring: { ...posterRing, position: 'absolute', top: -RING, left: -RING, right: -RING, bottom: -RING },
   poster: { flex: 1, borderRadius: radius.md, overflow: 'hidden' },
 });
