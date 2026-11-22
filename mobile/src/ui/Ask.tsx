@@ -1,14 +1,13 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { font, motion, space } from '@/theme';
+import { motion, space } from '@/theme';
 
-import { Icon, icons } from './Icon';
-import { surface, surfaceStyles } from './surface';
-import { Tap } from './Tap';
+import { icons } from './Icon';
+import { Panel, PanelHeading, PanelRow, PanelRule, surface } from './Panel';
 
 export type Question = { title: string; message: string; confirm: string; danger?: boolean; icon?: LucideIcon };
 
@@ -103,56 +102,25 @@ function Dialog({ asking: question }: { asking: Asking }) {
           <Pressable style={StyleSheet.absoluteFill} onPress={() => close(false)} accessibilityLabel="Cancel" />
         </Animated.View>
         <View style={styles.center} pointerEvents="box-none">
-          <Animated.View style={[surfaceStyles.panel, styles.card, card]} accessibilityRole="alert">
-            <View style={styles.words}>
-              <Text style={styles.title} accessibilityRole="header">
-                {question.title}
-              </Text>
-              <Text style={styles.message}>{question.message}</Text>
-            </View>
-            <View style={styles.rule} />
-            <View style={styles.actions}>
-              <Choice
-                icon={question.icon ?? icons.check}
-                label={question.confirm}
-                tint={question.danger ? surface.destructive : surface.ink}
-                onPress={() => close(true)}
-              />
-              <Choice icon={icons.close} label="Cancel" tint={surface.ink} onPress={() => close(false)} />
-            </View>
-          </Animated.View>
+          <Panel style={[styles.card, card]} accessibilityRole="alert">
+            <PanelHeading title={question.title} message={question.message} />
+            <PanelRule />
+            <PanelRow
+              icon={question.icon ?? icons.check}
+              label={question.confirm}
+              destructive={question.danger}
+              onPress={() => close(true)}
+            />
+            <PanelRow icon={icons.close} label="Cancel" onPress={() => close(false)} />
+          </Panel>
         </View>
       </View>
     </Modal>
   );
 }
 
-function Choice({
-  icon,
-  label,
-  tint,
-  onPress,
-}: {
-  icon: LucideIcon;
-  label: string;
-  tint: string;
-  onPress: () => void;
-}) {
-  return (
-    <Tap shrink={1} highlight haptic onPress={onPress} accessibilityLabel={label} style={surfaceStyles.row}>
-      <Icon name={icon} size={20} tint={tint} />
-      <Text style={[surfaceStyles.rowLabel, { color: tint }]}>{label}</Text>
-    </Tap>
-  );
-}
-
 const styles = StyleSheet.create({
-  backdrop: { backgroundColor: 'rgba(0, 0, 0, 0.45)' },
+  backdrop: { backgroundColor: surface.backdrop },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl },
-  card: { width: '100%', maxWidth: 320, paddingBottom: 8 },
-  words: { paddingHorizontal: 24, paddingTop: 22, paddingBottom: 18, gap: 6 },
-  title: { fontFamily: font.semibold, fontSize: 18, lineHeight: 23, color: surface.ink },
-  message: { fontFamily: font.regular, fontSize: 15, lineHeight: 21, color: surface.muted },
-  rule: { height: StyleSheet.hairlineWidth, backgroundColor: surface.rule, marginHorizontal: 24 },
-  actions: { paddingTop: 8 },
+  card: { width: '100%', maxWidth: 320 },
 });

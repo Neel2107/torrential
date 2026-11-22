@@ -1,15 +1,8 @@
 import * as Haptics from 'expo-haptics';
-import type { LucideIcon } from 'lucide-react-native';
 import { router, useIsFocused } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useDerivedValue, withTiming } from 'react-native-reanimated';
-
-import { Button as NativeButton, Host, Image as SwiftImage, Menu as NativeMenu } from '@expo/ui/swift-ui';
-import * as modifiers from '@expo/ui/swift-ui/modifiers';
-import type { SFSymbol } from 'sf-symbols-typescript';
-
-import { Menu } from '../../../modules/glass-menu-android';
 
 import { ago, bytes, percent, rate, sentence } from '@web/lib/format';
 import type { Job } from '@web/wire';
@@ -18,7 +11,6 @@ import { post } from '@/engine/client';
 import { openJob, STATE, useJobName, useJobs } from '@/engine/jobs';
 import { qualityOf } from '@/engine/quality';
 import { Art } from '@/ui/Art';
-import { ask, type Question } from '@/ui/Ask';
 import { useLink, useSession } from '@/engine/session';
 import { cancel, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
@@ -26,15 +18,14 @@ import { EngineAvatar } from '@/ui/EngineAvatar';
 import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { JobBadge } from '@/ui/JobBadge';
-import { ActionRow } from '@/ui/Row';
+import { ActionSheet, MoreMenu, type RowAction } from '@/ui/RowMenu';
 import { rise } from '@/ui/rise';
 import { Pager, usePagerPosition } from '@/ui/Pager';
-import { Sheet } from '@/ui/Sheet';
 import { Connecting } from '@/ui/Connecting';
 import { Tap } from '@/ui/Tap';
 import { TitlePoster, TitleTap } from '@/ui/TitleTap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
-import { alpha, color, font, motion, scheme, space, type } from '@/theme';
+import { alpha, color, font, motion, space, type } from '@/theme';
 import { reflow } from '@/ui/presets';
 
 const enter = (index: number) => (Platform.OS === 'android' ? undefined : rise(index));
@@ -311,7 +302,7 @@ function JobRow({ job, onMenu, landed }: { job: Job; onMenu: () => void; landed:
         </Tap>
       )}
       <View style={styles.moreSpot}>
-        <MoreButton job={job} onMenu={onMenu} />
+        <JobMore job={job} />
       </View>
     </Animated.View>
   );
@@ -331,22 +322,7 @@ function Progress({ fraction, paused }: { fraction: number; paused: boolean }) {
   );
 }
 
-type JobAction = {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  /** The SF Symbol for the iOS menu. */
-  symbol: SFSymbol;
-  danger?: boolean;
-  ask?: Question;
-  run: () => void | Promise<void>;
-};
-
-async function runAsked(action: JobAction) {
-  if (!action.ask || (await ask(action.ask))) return action.run();
-}
-
-function useJobActions(job: Job): JobAction[] {
+function useJobActions(job: Job): RowAction[] {
   const link = useLink();
   const { session } = useSession();
   const name = useJobName(job);
@@ -363,7 +339,7 @@ function useJobActions(job: Job): JobAction[] {
     await post(link, path, body).catch(() => {});
   };
 
-  const actions: JobAction[] = [
+  const actions: RowAction[] = [
     {
       id: 'play',
       symbol: 'play',
@@ -450,107 +426,18 @@ function useJobActions(job: Job): JobAction[] {
   return actions;
 }
 
+function JobMore({ job }: { job: Job }) {
+  const actions = useJobActions(job);
+  const name = useJobName(job);
+
+  return <MoreMenu actions={actions} label={`More options for ${name.title}`} />;
+}
+
 function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
   const name = useJobName(job);
   const actions = useJobActions(job);
-  const [busy, setBusy] = useState(false);
 
-  return (
-    <Sheet
-      onClose={onClose}
-      render={(close) => (
-        <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
-          <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
-            {name.title}
-          </Text>
-          {actions.map((action) => (
-            <ActionRow
-              key={action.id}
-              icon={action.icon}
-              label={action.label}
-              danger={action.danger}
-              disabled={busy}
-              onPress={() => {
-                setBusy(true);
-                close(() => runAsked(action));
-              }}
-            />
-          ))}
-        </View>
-      )}
-    />
-  );
-}
-
-function MoreButton({ job, onMenu }: { job: Job; onMenu: () => void }) {
-  const actions = useJobActions(job);
-  const name = useJobName(job);
-
-  if (Platform.OS === 'ios') {
-    return (
-      <Host matchContents>
-        <NativeMenu
-          label={
-            <SwiftImage
-              systemName="ellipsis"
-              size={18}
-              color={color.pencil}
-              modifiers={[
-                modifiers.frame({ width: 44, height: 44 }),
-                modifiers.contentShape(modifiers.shapes.rectangle()),
-              ]}
-            />
-          }
-        >
-          {actions.map((action) => (
-            <NativeButton
-              key={action.id}
-              label={action.label}
-              systemImage={action.symbol}
-              role={action.danger ? 'destructive' : 'default'}
-              onPress={() => runAsked(action)}
-            />
-          ))}
-        </NativeMenu>
-      </Host>
-    );
-  }
-
-  if (Platform.OS !== 'android') {
-    return (
-      <Tap
-        shrink={0.85}
-        onPress={onMenu}
-        accessibilityLabel={`More options for ${name.title}`}
-        style={styles.moreTarget}
-      >
-        <Icon name={icons.more} size={20} tint={color.pencil} />
-      </Tap>
-    );
-  }
-
-  return (
-    <Menu
-      colorScheme={scheme}
-      onSelect={({ id }) => {
-        const action = actions.find((candidate) => candidate.id === id);
-
-        if (action) runAsked(action);
-      }}
-    >
-      <Menu.Trigger glass={false} accessibilityLabel={`More options for ${name.title}`} style={styles.moreTarget}>
-        <Icon name={icons.more} size={20} tint={color.pencil} />
-      </Menu.Trigger>
-      <Menu.Content fontFamily="Inter_500Medium">
-        {actions.map((action) => (
-          <Menu.Item key={action.id} id={action.id} destructive={action.danger}>
-            <Menu.Item.Icon>{({ color: tint }) => <Icon name={action.icon} size={20} tint={tint} />}</Menu.Item.Icon>
-            <Menu.Item.Title>{action.label}</Menu.Item.Title>
-          </Menu.Item>
-        ))}
-      </Menu.Content>
-    </Menu>
-  );
+  return <ActionSheet title={name.title} actions={actions} onClose={onClose} />;
 }
 
 function CopyState({ copy }: { copy: Copy }) {
@@ -632,74 +519,80 @@ function CopyRow({ copy, onMenu }: { copy: Copy; onMenu: () => void }) {
             {facts}
           </Text>
         </View>
-        <Tap shrink={0.85} onPress={onMenu} accessibilityLabel="More" style={styles.more}>
-          <Icon name={icons.more} size={20} tint={color.pencil} />
-        </Tap>
+        <View style={styles.more} />
       </Tap>
+      <View style={styles.moreSpot}>
+        <CopyMore copy={copy} />
+      </View>
     </Animated.View>
   );
 }
 
-function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
+function useCopyActions(copy: Copy): RowAction[] {
   const link = useLink();
+
+  const drop = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    remove(copy.job);
+  };
+
+  if (copy.state === 'saving')
+    return [{ id: 'stop', label: 'Stop saving', icon: icons.close, symbol: 'xmark', run: drop }];
+
+  if (copy.state === 'failed')
+    return [
+      {
+        id: 'retry',
+        label: 'Try again',
+        icon: icons.refresh,
+        symbol: 'arrow.clockwise',
+        run: () => save(link, copy.job, copy.label),
+      },
+      { id: 'dismiss', label: 'Dismiss', icon: icons.close, symbol: 'xmark', run: drop },
+    ];
+
+  return [
+    {
+      id: 'play',
+      label: 'Play',
+      icon: icons.play,
+      symbol: 'play',
+      run: () => router.push({ pathname: '/offline', params: { job: copy.job } }),
+    },
+    {
+      id: 'delete',
+      label: 'Delete from this phone',
+      icon: icons.trash,
+      symbol: 'trash',
+      danger: true,
+      ask: {
+        title: `Delete ${copy.label.title}?`,
+        message: `This frees ${bytes(copy.size)} on this phone.`,
+        confirm: 'Delete',
+        danger: true,
+        icon: icons.trash,
+      },
+      run: drop,
+    },
+  ];
+}
+
+function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
   const copy = useCopy(job);
   const gone = !copy;
   useEffect(() => {
     if (gone) onClose();
   }, [gone, onClose]);
 
-  if (!copy) return null;
+  return copy ? <CopySheet copy={copy} onClose={onClose} /> : null;
+}
 
-  return (
-    <Sheet
-      onClose={onClose}
-      render={(close) => (
-        <View style={{ paddingHorizontal: space.xl, gap: space.xs }}>
-          <Text style={[type.headline, { marginBottom: space.md }]} numberOfLines={2}>
-            {copy.label.title}
-          </Text>
-          {copy.state === 'saved' ? (
-            <ActionRow
-              icon={icons.play}
-              label="Play"
-              onPress={() => close(() => router.push({ pathname: '/offline', params: { job } }))}
-            />
-          ) : null}
-          {copy.state === 'failed' ? (
-            <ActionRow
-              icon={icons.refresh}
-              label="Try again"
-              onPress={() => close(() => save(link, job, copy.label))}
-            />
-          ) : null}
-          <ActionRow
-            icon={copy.state === 'saving' ? icons.close : icons.trash}
-            label={
-              copy.state === 'saving' ? 'Stop saving' : copy.state === 'failed' ? 'Dismiss' : 'Delete from this phone'
-            }
-            danger={copy.state === 'saved'}
-            onPress={() => {
-              const drop = () => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                remove(job);
-              };
+function CopySheet({ copy, onClose }: { copy: Copy; onClose: () => void }) {
+  return <ActionSheet title={copy.label.title} actions={useCopyActions(copy)} onClose={onClose} />;
+}
 
-              if (copy.state !== 'saved') return close(drop);
-              close(() =>
-                ask({
-                  title: `Delete ${copy.label.title}?`,
-                  message: `This frees ${bytes(copy.size)} on this phone.`,
-                  confirm: 'Delete',
-                  danger: true,
-                  icon: icons.trash,
-                }).then((yes) => yes && drop()),
-              );
-            }}
-          />
-        </View>
-      )}
-    />
-  );
+function CopyMore({ copy }: { copy: Copy }) {
+  return <MoreMenu actions={useCopyActions(copy)} label={`More options for ${copy.label.title}`} />;
 }
 
 const styles = StyleSheet.create({

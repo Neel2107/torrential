@@ -12,8 +12,9 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { color, motion, radius, space, stage, type Palette } from '@/theme';
+import { motion, scheme, space } from '@/theme';
 
+import { surface, surfaceFor } from './Panel';
 import { Portal } from './Portal';
 import { STAGE_DIFFERS, useStaged } from './stage';
 
@@ -56,7 +57,11 @@ export function Sheet({
     leaving.set(true);
     setClosing(true);
     offset.set(
-      withTiming(height.get(), { duration: 200, easing: motion.out }, (done) => done && scheduleOnRN(finish, after)),
+      withTiming(
+        height.get() + insets.bottom + surface.gap * 4,
+        { duration: 200, easing: motion.out },
+        (done) => done && scheduleOnRN(finish, after),
+      ),
     );
   };
 
@@ -111,9 +116,9 @@ export function Sheet({
           style={[
             styles.sheet,
             {
-              paddingBottom: insets.bottom + space.lg,
-              width,
-              left: (screenWidth - width) / 2,
+              bottom: insets.bottom + surface.gap,
+              width: width - surface.gap * 2,
+              left: (screenWidth - width) / 2 + surface.gap,
             },
             sheet,
           ]}
@@ -130,21 +135,31 @@ export function Sheet({
   );
 }
 
-const sheet = (c: Palette) =>
-  StyleSheet.create({
-    backdrop: { backgroundColor: 'rgba(0,0,0,0.55)' },
+const sheet = (dark: boolean) => {
+  const look = surfaceFor(dark);
+
+  return StyleSheet.create({
+    backdrop: { backgroundColor: look.backdrop },
     sheet: {
       position: 'absolute',
-      bottom: 0,
       maxHeight: `${SHEET_SHARE * 100}%`,
-      backgroundColor: c.raised,
-      borderTopLeftRadius: radius.xl,
-      borderTopRightRadius: radius.xl,
+      backgroundColor: look.fill,
+      borderRadius: look.radius,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: look.rim,
+      shadowColor: '#000',
+      shadowOpacity: look.shadow,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 14 },
+      elevation: 24,
+      paddingBottom: space.md,
+      overflow: 'hidden',
     },
     handle: { height: SHEET_CHROME - space.xs, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
     body: { flexShrink: 1 },
-    grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: c.rule },
+    grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: look.grabber },
   });
+};
 
-const themed = sheet(color);
-const staged = STAGE_DIFFERS ? sheet(stage) : themed;
+const themed = sheet(scheme === 'dark');
+const staged = STAGE_DIFFERS ? sheet(true) : themed;
