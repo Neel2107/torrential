@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -10,6 +10,7 @@ import Animated, {
   interpolate,
   LinearTransition,
   runOnJS,
+  useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -46,7 +47,7 @@ import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { TabStrip, usePagerPosition } from '@/ui/Pager';
 import { Tap } from '@/ui/Tap';
-import { alpha, color, font, motion, radius, space, type } from '@/theme';
+import { alpha, color, font, motion, radius, scheme, space, type } from '@/theme';
 
 export default function Title() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -78,6 +79,18 @@ export default function Title() {
   const headerShade = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [bannerHeight - 120, bannerHeight - 40], [0, 1], Extrapolation.CLAMP),
   }));
+
+  const navigation = useNavigation();
+  const [overArt, setOverArt] = useState(true);
+  useAnimatedReaction(
+    () => scrollY.value < bannerHeight - 80,
+    (now, before) => {
+      if (scheme === 'light' && now !== before) runOnJS(setOverArt)(now);
+    },
+  );
+  useEffect(() => {
+    if (scheme === 'light') navigation.setOptions({ statusBarStyle: overArt ? 'light' : 'dark' });
+  }, [navigation, overArt]);
 
   return (
     <hero.Provider value={hero.slot}>
