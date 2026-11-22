@@ -9,7 +9,7 @@
 #   mobile/scripts/perf-f6.sh tabs [runs]     Home to Downloads and back; frames
 #   mobile/scripts/perf-f6.sh net [runs]      engine requests and characters received in the 8 s after launch
 #   mobile/scripts/perf-f6.sh browse [runs]   open a title, stay STAY seconds (default 1.2), go back; requests and characters
-#   mobile/scripts/perf-f6.sh search [passes] type each of a few public-domain titles; last keystroke to results, per pass
+#   mobile/scripts/perf-f6.sh search [passes] type each of a few public-domain titles; last keystroke to results, per pass. SEARCH_QUERIES='a b%sc' types others, for searches the phone has never answered
 #
 # Taps go through f6-tap.sh, so nothing lands outside the app. Media volume is set to 0 first. Targets are found
 # before the frame counter resets: a uiautomator dump makes the app build its accessibility tree, which costs frames.
@@ -160,7 +160,7 @@ case $scenario in
     sleep 1.5
     for pass in $(seq "$runs"); do
       took=()
-      for query in sintel big%sbuck%sbunny tears%sof%ssteel nosferatu night%sof%sthe%sliving%sdead; do
+      for query in ${SEARCH_QUERIES:-sintel big%sbuck%sbunny tears%sof%ssteel nosferatu night%sof%sthe%sliving%sdead}; do
         $A logcat -c
         $A shell input text "$query"
         line=$(perf_line "search results" 10)
