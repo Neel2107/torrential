@@ -17,7 +17,9 @@ import { Art } from '@/ui/Art';
 import { Button } from '@/ui/Button';
 import { Icon, icons } from '@/ui/Icon';
 import { LoadingMark } from '@/ui/Bands';
+import { SourcesSheet } from '@/player/SourcesSheet';
 import { Logo } from '@/ui/Logo';
+import { PortalHost } from '@/ui/Portal';
 import { Stage } from '@/ui/stage';
 import { Tap } from '@/ui/Tap';
 import { stage as color, font, motion, radius, space, stageType as type } from '@/theme';
@@ -110,7 +112,7 @@ function ByTitle({
       />
     );
   }
-  return <Starting video={video} start={start} onRetry={retry} />;
+  return <Starting video={video} pinned={Boolean(source)} start={start} onRetry={retry} />;
 }
 
 function stepOf(start: Start): string {
@@ -126,14 +128,17 @@ function stepOf(start: Start): string {
 
 function Starting({
   video,
+  pinned = false,
   start,
   onRetry,
 }: {
   video: string | null;
+  pinned?: boolean;
   start: Exclude<Start, { phase: 'ready' }>;
   onRetry: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const [choosing, setChoosing] = useState(false);
   const id = video ? titleOf(video) : null;
   const name = start.title?.name ?? '';
   const detail = start.episode
@@ -143,68 +148,103 @@ function Starting({
       : '';
 
   return (
-    <View style={styles.screen}>
-      {id ? <Art id={id} kind="background" style={StyleSheet.absoluteFill} placeholder={false} /> : null}
-      <LinearGradient
-        colors={['rgba(10,9,7,0.55)', 'rgba(10,9,7,0.82)', '#0a0907']}
-        locations={[0, 0.55, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={[styles.top, { paddingTop: Math.max(insets.top, space.lg), paddingLeft: insets.left + space.lg }]}>
-        <Tap shrink={0.88} onPress={() => router.back()} accessibilityLabel="Cancel" style={styles.round}>
-          <Icon name={icons.close} size={24} tint={color.ink} />
-        </Tap>
-      </View>
-      <View style={[styles.body, { paddingLeft: insets.left + 56, paddingRight: insets.right + 56 }]}>
-        {id && name ? <Logo id={id} name={name} style={styles.logo} /> : <View style={styles.logo} />}
-        {detail ? <Text style={styles.detail}>{detail}</Text> : null}
+    <PortalHost>
+      <View style={styles.screen}>
+        {id ? <Art id={id} kind="background" style={StyleSheet.absoluteFill} placeholder={false} /> : null}
+        <LinearGradient
+          colors={['rgba(10,9,7,0.55)', 'rgba(10,9,7,0.82)', '#0a0907']}
+          locations={[0, 0.55, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.top, { paddingTop: Math.max(insets.top, space.lg), paddingLeft: insets.left + space.lg }]}>
+          <Tap shrink={0.88} onPress={() => router.back()} accessibilityLabel="Cancel" style={styles.round}>
+            <Icon name={icons.close} size={24} tint={color.ink} />
+          </Tap>
+        </View>
+        <View style={[styles.body, { paddingLeft: insets.left + 56, paddingRight: insets.right + 56 }]}>
+          {id && name ? <Logo id={id} name={name} style={styles.logo} /> : <View style={styles.logo} />}
+          {detail ? <Text style={styles.detail}>{detail}</Text> : null}
 
-        {start.phase === 'failed' ? (
-          <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.failed}>
-            <View style={styles.failedLine}>
-              <Icon name={icons.warning} size={20} tint={color.error} />
-              <Text style={styles.failedText}>{sentence(start.message)}</Text>
+          {start.phase === 'failed' ? (
+            <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.failed}>
+              <View style={styles.failedLine}>
+                <Icon name={icons.warning} size={20} tint={color.error} />
+                <Text style={styles.failedText}>{sentence(start.message)}</Text>
+              </View>
+              {start.hint && !(video && pinned) ? <Text style={type.label}>{sentence(start.hint)}</Text> : null}
+              <View style={styles.actions}>
+                {video && pinned ? (
+                  <Button
+                    label="Play another source"
+                    icon={icons.play}
+                    onPress={() => router.replace({ pathname: '/play', params: { video } })}
+                  />
+                ) : null}
+                {video ? (
+                  <Button
+                    label="Choose a source"
+                    icon={icons.episodes}
+                    kind={pinned ? 'secondary' : 'primary'}
+                    onPress={() => setChoosing(true)}
+                  />
+                ) : null}
+                {video && pinned ? null : (
+                  <Button
+                    label="Try again"
+                    icon={icons.refresh}
+                    kind={video ? 'secondary' : 'primary'}
+                    onPress={onRetry}
+                  />
+                )}
+                <Button label="Back" kind="quiet" onPress={() => router.back()} />
+              </View>
+            </Animated.View>
+          ) : (
+            <View style={styles.progress}>
+              <View style={styles.stepLine}>
+                <LoadingMark size={22} label="Starting" />
+                <Animated.Text
+                  key={stepOf(start)}
+                  entering={FadeIn.duration(motion.quick)}
+                  exiting={FadeOut.duration(120)}
+                  layout={LinearTransition}
+                  style={styles.step}
+                >
+                  {stepOf(start)}
+                </Animated.Text>
+              </View>
+              {start.phase === 'trying' ? (
+                <Animated.Text
+                  key={start.release.id}
+                  entering={FadeIn.duration(motion.quick)}
+                  style={styles.release}
+                  numberOfLines={1}
+                >
+                  {[
+                    start.release.quality.resolution?.toUpperCase(),
+                    start.release.size ? bytes(start.release.size) : null,
+                    start.release.seeders !== null ? `${start.release.seeders} seeds` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Animated.Text>
+              ) : null}
             </View>
-            {start.hint ? <Text style={type.label}>{sentence(start.hint)}</Text> : null}
-            <View style={styles.actions}>
-              <Button label="Try again" icon={icons.refresh} onPress={onRetry} />
-              <Button label="Back" kind="secondary" onPress={() => router.back()} />
-            </View>
-          </Animated.View>
-        ) : (
-          <View style={styles.progress}>
-            <View style={styles.stepLine}>
-              <LoadingMark size={22} label="Starting" />
-              <Animated.Text
-                key={stepOf(start)}
-                entering={FadeIn.duration(motion.quick)}
-                exiting={FadeOut.duration(120)}
-                layout={LinearTransition}
-                style={styles.step}
-              >
-                {stepOf(start)}
-              </Animated.Text>
-            </View>
-            {start.phase === 'trying' ? (
-              <Animated.Text
-                key={start.release.id}
-                entering={FadeIn.duration(motion.quick)}
-                style={styles.release}
-                numberOfLines={1}
-              >
-                {[
-                  start.release.quality.resolution?.toUpperCase(),
-                  start.release.size ? bytes(start.release.size) : null,
-                  start.release.seeders !== null ? `${start.release.seeders} seeds` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Animated.Text>
-            ) : null}
-          </View>
-        )}
+          )}
+        </View>
+        {choosing && video ? (
+          <SourcesSheet
+            video={video}
+            label={detail || name}
+            onPick={(release) => {
+              setChoosing(false);
+              router.replace({ pathname: '/play', params: { video, source: release.id } });
+            }}
+            onClose={() => setChoosing(false)}
+          />
+        ) : null}
       </View>
-    </View>
+    </PortalHost>
   );
 }
 
