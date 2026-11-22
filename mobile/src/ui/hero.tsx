@@ -56,6 +56,7 @@ const progress = makeMutable(0);
 let flight: Flight | null = null;
 let tokens = 0;
 let afterClose: (() => void) | null = null;
+let kick: { token: number; go: () => void } | null = null;
 const listeners = new Set<() => void>();
 
 function set(next: Flight | null) {
@@ -179,7 +180,9 @@ export function HeroTarget({ id, children }: { id: string; children: ReactNode }
       style={hidden ? styles.hidden : undefined}
       onLayout={() => {
         const now = flight;
-        if (now?.id === id && now.phase === 'opening' && !now.ready) update(now.token, { ready: true });
+        if (now?.id !== id || now.phase !== 'opening' || now.ready) return;
+        update(now.token, { ready: true });
+        if (kick?.token === now.token) kick.go();
       }}
     >
       {children}
@@ -197,7 +200,7 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
   const back = phase === 'closing';
   const visible = useSharedValue(0);
   const started = useRef(false);
-  const [drawn, setDrawn] = useState(false);
+  const drawn = useRef(false);
 
   const start = () => {
     if (started.current) return;
@@ -211,13 +214,16 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
   };
 
   useEffect(() => {
-    if (ready && drawn) {
-      const frame = requestAnimationFrame(start);
-      return () => cancelAnimationFrame(frame);
-    }
+    kick = { token, go: () => drawn.current && start() };
+    return () => {
+      if (kick?.token === token) kick = null;
+    };
+  }, [token]);
+
+  useEffect(() => {
     const timer = setTimeout(start, ready ? DRAW_WITHIN : MOUNT_WITHIN);
     return () => clearTimeout(timer);
-  }, [ready, drawn]);
+  }, [ready]);
 
   const style = useAnimatedStyle(() => {
     const p = progress.value;
@@ -245,7 +251,10 @@ function Flying({ flight: { token, id, from, to, phase, ready } }: { flight: Fli
           style={styles.poster}
           fade={false}
           placeholder={false}
-          onDisplay={() => setDrawn(true)}
+          onDisplay={() => {
+            drawn.current = true;
+            if (flight?.token === token && flight.ready) start();
+          }}
         />
       </Animated.View>
     </View>

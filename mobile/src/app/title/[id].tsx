@@ -152,6 +152,7 @@ function facts(page: Page): string[] {
 
 function Body({ page }: { page: Page }) {
   const landed = useLanded(page.id);
+  const enter = (index: number) => (landed ? rise(index) : undefined);
   const target = page.play_target ?? page.next;
   useSources(landed ? (target?.video ?? null) : null);
   const targetEpisode = target ? findEpisode(page, target.video) : null;
@@ -174,7 +175,7 @@ function Body({ page }: { page: Page }) {
         <SaveButton id={page.id} saved={page.saved} />
       </View>
 
-      <Animated.View entering={rise(1)} style={styles.block}>
+      <Animated.View entering={enter(1)} style={styles.block}>
         <Text style={type.display} accessibilityRole="header">
           {page.name}
         </Text>
@@ -189,7 +190,7 @@ function Body({ page }: { page: Page }) {
         </View>
       </Animated.View>
 
-      <Animated.View entering={rise(2)} style={styles.actions}>
+      <Animated.View entering={enter(2)} style={styles.actions}>
         <Button
           label={playLabel}
           icon={icons.play}
@@ -208,14 +209,14 @@ function Body({ page }: { page: Page }) {
         </Tap>
       </Animated.View>
       {playDetail ? (
-        <Animated.View entering={rise(3)} style={styles.playDetail}>
+        <Animated.View entering={enter(3)} style={styles.playDetail}>
           {resume && targetWatched?.duration ? <Meter fraction={resume / targetWatched.duration} /> : null}
           <Text style={type.caption}>{playDetail}</Text>
         </Animated.View>
       ) : null}
 
       {target ? (
-        <Animated.View entering={rise(3)}>
+        <Animated.View entering={enter(3)}>
           <Tap
             shrink={1}
             highlight
@@ -231,13 +232,13 @@ function Body({ page }: { page: Page }) {
       ) : null}
 
       {page.synopsis && landed ? (
-        <Animated.View entering={rise(3)}>
+        <Animated.View entering={enter(3)}>
           <Synopsis text={page.synopsis} />
         </Animated.View>
       ) : null}
 
       {page.cast.length > 0 && landed ? (
-        <Animated.Text entering={rise(4)} style={[type.caption, styles.block]} numberOfLines={2}>
+        <Animated.Text entering={enter(4)} style={[type.caption, styles.block]} numberOfLines={2}>
           <Text style={{ color: color.soft, fontFamily: font.medium }}>Starring </Text>
           {page.cast.slice(0, 5).join(', ')}
         </Animated.Text>
