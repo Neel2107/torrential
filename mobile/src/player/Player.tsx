@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import * as Network from 'expo-network';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { AppState, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -359,18 +359,26 @@ export function Player({
     return () => clearInterval(timer);
   }, [isPlaying, save]);
 
+  const saveInBackground = useEffectEvent(() => {
+    save().catch(() => {});
+  });
+
+  const saveOnLeave = useEffectEvent(() => {
+    save().then(() => {
+      client.invalidateQueries({ queryKey: keys.home });
+
+      if (video) client.invalidateQueries({ queryKey: keys.title(titleOf(video)) });
+    });
+  });
+
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => state !== 'active' && save());
+    const subscription = AppState.addEventListener('change', (state) => state !== 'active' && saveInBackground());
 
     return () => {
       subscription.remove();
-      save().then(() => {
-        client.invalidateQueries({ queryKey: keys.home });
-
-        if (video) client.invalidateQueries({ queryKey: keys.title(titleOf(video)) });
-      });
+      saveOnLeave();
     };
-  }, [save, client, video]);
+  }, []);
 
   const switchSource = (source: Release) => {
     if (!video) return;
