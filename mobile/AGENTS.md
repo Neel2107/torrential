@@ -58,4 +58,9 @@ We build locally, not on EAS. The app runs torrential's engine inside itself, so
 - **Confirmations:** `ask()` from `src/ui/Ask.tsx`. It shows the native alert on iOS and the app's own dialog on Android.
 - **Going back:** use `leave()` from `src/ui/leave.ts`, never `router.back()`. A screen opened from a link has nothing behind it, so `leave()` goes home instead.
 - **Platforms:** Android follows X's app (icon tab bar, top bar, FAB, sheets). iOS uses Liquid Glass: NativeTabs, `src/ui/Glass.tsx` and native menus.
-- **Speed:** `[perf]` logs come from `src/perf.ts` (`mark`, `since`, `lap`). Read them with `adb logcat` on a release build.
+- **Speed:** measure with the `measure-android` skill on the release build, before and after a change. `[perf]` logs come from `src/perf.ts` (`mark`, `since`, `lap`). `docs/performance.md` holds the numbers we trust and the backlog.
+- **Springs:** a spring's `duration` is perceptual; it runs about 1.5× as long, so anything waiting on its end callback waits longer.
+- **Shared values on the JavaScript thread:** reading one in an effect or handler waits for the UI thread. Read them in worklets; keep what JavaScript needs in React state.
+- **Loops:** an animation that repeats (skeletons, loading marks) costs every frame for as long as it shows. Drive a group from one value or a Reanimated CSS animation, not one `withRepeat` per piece.
+- **Gestures:** Gesture Handler 3 hooks (`usePanGesture`, …) compile under React Compiler; builder chains (`Gesture.Pan()`) don't. New gestures use hooks.
+- **Presets:** entrances, exits and reflows use `appear`, `appearAfter(ms)`, `vanish`, `vanishDown` and `reflow` from `src/ui/presets.ts`. Never call `.delay()` or `.duration()` on a shared preset or Keyframe: it changes it for every user.
