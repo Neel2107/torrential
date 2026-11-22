@@ -1,8 +1,9 @@
 #!/bin/sh
 # Checks changes against the mistakes this repo has made. It fails when a change adds build output,
-# changes web/src/wire.ts without a crates/ change (wire.ts is generated from the engine), or raises or
-# drops a ceiling (--max-warnings, --max) in mobile/package.json. It warns on a commit subject longer
-# than 72 characters.
+# changes web/src/wire.ts without a crates/ change (wire.ts is generated from the engine), raises or
+# drops a ceiling (--max-warnings, --max) in mobile/package.json, or raises a budget or drops a budgeted
+# scenario in mobile/src/perf/budgets.ts or mobile/src/perf/bundle.json. It warns on a commit subject
+# longer than 72 characters.
 #
 #   mobile/scripts/guard.sh [<base>] [<head>]     each commit in base..head (default origin/mobile HEAD)
 #   mobile/scripts/guard.sh --staged              what is staged for the next commit
@@ -46,6 +47,38 @@ ceiling() {
   git show "$1mobile/package.json" 2>/dev/null | grep -o -- "$2 [0-9][0-9]*" | cut -d' ' -f2 | sort -n | tail -1
 }
 
+budgets() {
+  git show "$1mobile/src/perf/budgets.ts" 2>/dev/null | awk -F"'" '/scenario: .*route: .*requests: [0-9]+, chars: [0-9]+/ {
+    requests = $0; sub(/.*requests: /, "", requests)
+    chars = $0; sub(/.*chars: /, "", chars)
+    print $2 " | " $4 " | requests = " requests + 0
+    print $2 " | " $4 " | characters = " chars + 0
+  }'
+  git show "$1mobile/src/perf/bundle.json" 2>/dev/null | awk -F'"' '/"[a-z]+": *[0-9]+/ {
+    bytes = $3; gsub(/[^0-9]/, "", bytes)
+    print "bundle | " $2 " | bytes = " bytes + 0
+  }'
+}
+
+raised_budgets() {
+  { echo '#old'; budgets "$1"; echo '#new'; budgets "$2"; } | awk '
+    /^#old$/ { side = "old"; next }
+    /^#new$/ { side = "new"; next }
+    {
+      at = index($0, " = "); key = substr($0, 1, at - 1); value = substr($0, at + 3) + 0
+      group = substr(key, 1, index(key, " | ") - 1)
+      if (side == "old") { before[key] = value; was[group] = 1 } else { after[key] = value; is[group] = 1 }
+    }
+    END {
+      for (key in after) {
+        group = substr(key, 1, index(key, " | ") - 1)
+        if (key in before) { if (after[key] > before[key]) print "raises the budget " key " from " before[key] " to " after[key] }
+        else if (group in was) print "raises the budget " key " from 0 to " after[key]
+      }
+      for (group in was) if (!(group in is)) print "drops every budget of \"" group "\""
+    }' | sort
+}
+
 check() {
   label=$1 added=$2 changed=$3 old=$4 new=$5 reason=$6
 
@@ -79,6 +112,24 @@ check() {
         fail "$label $problem; fix the cause, or say why on a Raises-ceiling: line"
       fi
     done
+  fi
+
+  if [ -n "$old" ] && printf '%s\n' "$changed" | grep -qxE 'mobile/src/perf/(budgets\.ts|bundle\.json)'; then
+    raised=$(raised_budgets "$old" "$new")
+    [ -n "$raised" ] || return 0
+    printf '%s\n' "$raised" | while IFS= read -r problem; do
+      if [ -n "$reason" ]; then
+        report warning "$label $problem: $reason"
+      else
+        report error "$label $problem; fix the cause, or say why on a Raises-ceiling: line"
+      fi
+    done
+    count=$(printf '%s\n' "$raised" | wc -l | tr -d ' ')
+    if [ -n "$reason" ]; then
+      warnings=$((warnings + count))
+    else
+      failures=$((failures + count))
+    fi
   fi
 }
 
