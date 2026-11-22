@@ -9,7 +9,8 @@
 #   mobile/scripts/perf-f6.sh tabs [runs]     Home to Downloads and back; frames
 #   mobile/scripts/perf-f6.sh net [runs]      engine requests and characters received in the 8 s after launch
 #
-# Taps go through f6-tap.sh, so nothing lands outside the app. Media volume is set to 0 first.
+# Taps go through f6-tap.sh, so nothing lands outside the app. Media volume is set to 0 first. Targets are found
+# before the frame counter resets: a uiautomator dump makes the app build its accessibility tree, which costs frames.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 T=${F6:-100.107.101.1:5555}
@@ -107,10 +108,10 @@ case $scenario in
   title)
     home >/dev/null
     flight=() ready=()
+    xy=$(find_node 'content-desc="[^"]*, rated [^"]*"')
+    [ -n "$xy" ] || { echo "no poster found" >&2; exit 1; }
     $A shell dumpsys gfxinfo "$P" reset >/dev/null
     for _ in $(seq "$runs"); do
-      xy=$(find_node 'content-desc="[^"]*, rated [^"]*"')
-      [ -n "$xy" ] || { echo "no poster found" >&2; break; }
       $A logcat -c
       "$here/f6-tap.sh" $xy
       line=$(perf_line "tap to title ready" 10)
@@ -137,14 +138,14 @@ case $scenario in
     ;;
   tabs)
     home >/dev/null
+    downloads=$(find_node 'content-desc="Downloads[^"]*"')
+    home_tab=$(find_node 'content-desc="Home[^"]*"')
+    [ -n "$downloads" ] && [ -n "$home_tab" ] || { echo "no tabs found" >&2; exit 1; }
     $A shell dumpsys gfxinfo "$P" reset >/dev/null
     for _ in $(seq "$runs"); do
-      xy=$(find_node 'content-desc="Downloads[^"]*"')
-      [ -n "$xy" ] || { echo "no Downloads tab found" >&2; break; }
-      "$here/f6-tap.sh" $xy
+      "$here/f6-tap.sh" $downloads
       sleep 1
-      xy=$(find_node 'content-desc="Home[^"]*"')
-      "$here/f6-tap.sh" $xy
+      "$here/f6-tap.sh" $home_tab
       sleep 1
     done
     frames
