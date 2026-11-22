@@ -32,7 +32,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { titleOf, videoOf } from '@web/lib/video';
 
-import { get } from '@/engine/client';
+import { get, post } from '@/engine/client';
 import { keys, useTitle } from '@/engine/queries';
 import { useLink } from '@/engine/session';
 import { LoadingMark } from '@/ui/Bands';
@@ -61,6 +61,7 @@ import { SettingsSheet, type Sleep } from './SettingsSheet';
 import { SwipeLevel, useSideSwipes } from './swipes';
 import { SubtitleLook } from './SubtitleLook';
 import { SourcesSheet } from './SourcesSheet';
+import { pausesOnLeave } from './pauseOnLeave';
 import { choiceKey, SubtitleOverlay, useOnlineSubtitles, useSubtitleCues, type SubtitleChoice } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
 import { chooseAudio, chooseSubtitles, setSpeed } from './control';
@@ -364,6 +365,15 @@ export function Player({
   });
 
   const saveOnLeave = useEffectEvent(() => {
+    const page = video ? client.getQueryData<TitlePage>([...keys.title(titleOf(video)), link.base]) : undefined;
+
+    Network.getNetworkStateAsync()
+      .then((network) => {
+        if (pausesOnLeave(play.job, page?.saved, network.type === Network.NetworkStateType.CELLULAR))
+          return post(link, '/api/pause', { refs: [play.id] });
+      })
+      .catch(() => {});
+
     save().then(() => {
       client.invalidateQueries({ queryKey: keys.home });
 
