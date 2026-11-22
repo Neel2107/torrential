@@ -67,11 +67,7 @@ export function SettingsSheet({
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={type.headline}>Source</Text>
               <Text style={type.caption} numberOfLines={1}>
-                {[
-                  readable(source.name).title,
-                  source.quality.resolution,
-                  source.size && bytes(source.size),
-                ]
+                {[readable(source.name).title, source.quality.resolution, source.size && bytes(source.size)]
                   .filter(Boolean)
                   .join(' · ')}
               </Text>
