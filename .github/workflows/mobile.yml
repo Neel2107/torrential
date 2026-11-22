@@ -64,3 +64,5 @@ jobs:
       - run: pnpm run -s --if-present test:tools
       - name: Bundle for Android and iOS
         run: pnpm exec expo export --platform android --platform ios
+      - name: Check the bundle budget
+        run: node scripts/bundle-budget.js dist
