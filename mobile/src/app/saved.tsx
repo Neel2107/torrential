@@ -10,6 +10,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';
+import { EmptyState, NOTHING_SAVED } from '@/ui/EmptyState';
 
 type Saved = Extract<Copy, { state: 'saved' }>;
 
@@ -31,15 +32,7 @@ export default function SavedVideos() {
         data={saved}
         keyExtractor={(copy) => copy.job}
         contentContainerStyle={{ paddingBottom: insets.bottom + space.xl }}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Icon name={icons.phone} size={28} tint={color.soft} />
-            <Text style={[type.title, { textAlign: 'center' }]}>Nothing saved on this phone</Text>
-            <Text style={[type.body, { textAlign: 'center' }]}>
-              Save a finished download from its menu to watch it without an engine.
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={<EmptyState icon={icons.phone} title="Nothing on this phone" body={NOTHING_SAVED} />}
         renderItem={({ item }) => (
           <Animated.View>
             <Tap

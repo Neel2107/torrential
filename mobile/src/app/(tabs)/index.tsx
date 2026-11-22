@@ -36,6 +36,7 @@ import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { Button } from '@/ui/Button';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { color, radius, space, stage, type } from '@/theme';
+import { EmptyState } from '@/ui/EmptyState';
 
 export default function Home() {
   const home = useHome();
@@ -216,19 +217,13 @@ function ContinueCard({ item, width, index }: { item: Continue; width: number; i
 
 function Empty() {
   return (
-    <Animated.View entering={rise(0)} style={styles.empty}>
-      <Icon name={icons.film} size={40} tint={color.pencil} />
-      <Text style={[type.title, { textAlign: 'center' }]}>Your library is empty</Text>
-      <Text style={[type.body, { textAlign: 'center' }]}>
-        Find a film or a show and it starts playing in seconds, while it downloads.
-      </Text>
-      <Button
-        label="Search"
-        icon={icons.search}
-        onPress={() => router.navigate('/search')}
-        style={{ marginTop: space.sm }}
-      />
-    </Animated.View>
+    <EmptyState
+      icon={icons.film}
+      title="Your library is empty"
+      body="Find a film or a show and it starts playing in seconds, while it downloads."
+    >
+      <Button label="Search" icon={icons.search} onPress={() => router.navigate('/search')} />
+    </EmptyState>
   );
 }
 

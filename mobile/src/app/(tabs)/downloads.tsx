@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, useIsFocused } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useDerivedValue, withTiming } from 'react-native-reanimated';
 
 import { ago, bytes, percent, rate, sentence } from '@web/lib/format';
@@ -19,7 +19,6 @@ import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { JobBadge } from '@/ui/JobBadge';
 import { ActionSheet, MoreMenu, type RowAction } from '@/ui/RowMenu';
-import { rise } from '@/ui/rise';
 import { Pager, usePagerPosition } from '@/ui/Pager';
 import { Connecting } from '@/ui/Connecting';
 import { Tap } from '@/ui/Tap';
@@ -27,8 +26,7 @@ import { TitlePoster, TitleTap } from '@/ui/TitleTap';
 import { Actions, TopBar, useTopInset } from '@/ui/TopBar';
 import { alpha, color, font, motion, space, type } from '@/theme';
 import { reflow } from '@/ui/presets';
-
-const enter = (index: number) => (Platform.OS === 'android' ? undefined : rise(index));
+import { EmptyState, NOTHING_SAVED } from '@/ui/EmptyState';
 
 const ACTIVE = new Set<Job['state']>(['queued', 'metadata', 'checking', 'downloading', 'paused', 'error']);
 
@@ -70,17 +68,7 @@ export default function Downloads() {
           itemLayoutAnimation={reflow}
           contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }}
           ListHeaderComponent={<FreeSpace />}
-          ListEmptyComponent={
-            <Animated.View entering={enter(0)} style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Icon name={icons.phone} size={26} tint={color.soft} />
-              </View>
-              <Text style={[type.title, { textAlign: 'center' }]}>Nothing on this phone</Text>
-              <Text style={[type.body, { textAlign: 'center' }]}>
-                Save a finished download from its menu to watch it without the engine.
-              </Text>
-            </Animated.View>
-          }
+          ListEmptyComponent={<EmptyState icon={icons.phone} title="Nothing on this phone" body={NOTHING_SAVED} />}
           renderItem={({ item }) => <CopyRow copy={item} onMenu={() => setCopyMenu(item.job)} />}
         />
       </Pager>
@@ -141,19 +129,7 @@ function JobList({
           </View>
         ) : undefined
       }
-      ListEmptyComponent={
-        live ? (
-          <Animated.View entering={enter(0)} style={styles.empty}>
-            <View style={styles.emptyIcon}>
-              <Icon name={icons.downloads} size={26} tint={color.soft} />
-            </View>
-            <Text style={[type.title, { textAlign: 'center' }]}>{title}</Text>
-            <Text style={[type.body, { textAlign: 'center' }]}>{body}</Text>
-          </Animated.View>
-        ) : (
-          <Connecting />
-        )
-      }
+      ListEmptyComponent={live ? <EmptyState icon={icons.downloads} title={title} body={body} /> : <Connecting />}
       renderItem={({ item }) => <JobRow job={item} onMenu={() => onMenu(item)} landed={landed.has(item.id)} />}
     />
   );
@@ -664,13 +640,4 @@ const styles = StyleSheet.create({
   moreTarget: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   track: { height: 4, borderRadius: 2, backgroundColor: alpha(color.ink, 0.12), overflow: 'hidden' },
   fill: { height: 4, borderRadius: 2, width: '100%', transformOrigin: 'left' },
-  empty: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 80 },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: color.raised,
-  },
 });

@@ -49,6 +49,7 @@ import { BAR_HEIGHT, TABS_HEIGHT } from '@/ui/TopBar';
 import { progressOf, remainingOf, resume, subtitleOf } from '@/ui/watching';
 import { alpha, color, font, motion, radius, space, type } from '@/theme';
 import { appear, reflow, vanish } from '@/ui/presets';
+import { EmptyState } from '@/ui/EmptyState';
 
 const TABS = ['Films & shows', 'Torrents'] as const;
 const SHOWN = 3;
@@ -832,15 +833,7 @@ function DownloadRowOf({ job }: { job: Job }) {
 }
 
 function Hint({ icon, title, body }: { icon: (typeof icons)[keyof typeof icons]; title: string; body: string }) {
-  return (
-    <Animated.View entering={rise(0)} style={styles.hint}>
-      <View style={styles.hintIcon}>
-        <Icon name={icon} size={26} tint={color.soft} />
-      </View>
-      <Text style={[type.title, { textAlign: 'center' }]}>{title}</Text>
-      <Text style={[type.body, { textAlign: 'center' }]}>{body}</Text>
-    </Animated.View>
-  );
+  return <EmptyState icon={icon} title={title} body={body} />;
 }
 
 const styles = StyleSheet.create({
