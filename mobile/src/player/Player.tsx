@@ -50,6 +50,7 @@ import { RecoveryNotice, useStallRecovery, type Takeover } from './recovery';
 import { SeekBar } from './SeekBar';
 import { sourceFor, STARTS_DIRECT, useTimeline } from './timeline';
 import { SettingsSheet } from './SettingsSheet';
+import { SubtitleLook } from './SubtitleLook';
 import { SourcesSheet } from './SourcesSheet';
 import { choiceKey, SubtitleOverlay, useOnlineSubtitles, useSubtitleCues, type SubtitleChoice } from './Subtitles';
 import { TracksSheet } from './TracksSheet';
@@ -527,6 +528,14 @@ export function Player({
                 setDrawn(choice);
                 if (choice) player.subtitleTrack = null;
               }}
+              look={
+                <SubtitleLook
+                  offset={offset}
+                  onShift={(seconds) => drawnKey && setOffsets((previous) => ({ ...previous, [drawnKey]: seconds }))}
+                  style={preferences.subtitleStyle}
+                  onStyle={(change) => setPreferences({ subtitleStyle: { ...preferences.subtitleStyle, ...change } })}
+                />
+              }
               onClose={() => setSheet(null)}
             />
           ) : null}
@@ -537,10 +546,6 @@ export function Player({
               onSources={() => setSheet('sources')}
               speed={preferences.speed}
               onSpeed={(speed) => setPreferences({ speed })}
-              offset={offset}
-              onShift={(seconds) => drawnKey && setOffsets((previous) => ({ ...previous, [drawnKey]: seconds }))}
-              style={preferences.subtitleStyle}
-              onStyle={(change) => setPreferences({ subtitleStyle: { ...preferences.subtitleStyle, ...change } })}
               onClose={() => setSheet(null)}
             />
           ) : null}

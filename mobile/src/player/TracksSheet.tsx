@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEvent } from 'expo';
 import type { AudioTrack, SubtitleTrack, VideoPlayer } from 'expo-video';
 import { useEffect, useState } from 'react';
@@ -37,6 +38,7 @@ export function TracksSheet({
   online,
   drawn,
   onDraw,
+  look,
   onClose,
 }: {
   player: VideoPlayer;
@@ -47,6 +49,8 @@ export function TracksSheet({
   online: OnlineLookup;
   drawn: SubtitleChoice | null;
   onDraw: (choice: SubtitleChoice | null) => void;
+  /** Timing, size and background of drawn subtitles, under the choices. */
+  look: ReactNode;
   onClose: () => void;
 }) {
   const { subtitleTrack } = useEvent(player, 'subtitleTrackChange', { subtitleTrack: player.subtitleTrack });
@@ -93,6 +97,7 @@ export function TracksSheet({
 
         <Text style={[type.section, styles.section]}>Found online</Text>
         <OnlineRows lookup={online} drawn={drawn} onDraw={onDraw} />
+        {look}
 
         <Text style={[type.title, styles.heading, { marginTop: space.lg }]}>Audio</Text>
         {streamAudio

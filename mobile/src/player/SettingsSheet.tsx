@@ -3,7 +3,6 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { bytes } from '@web/lib/format';
 import { readable } from '@web/lib/release';
-import type { SubtitleBacking, SubtitleStyle } from '@web/lib/storage';
 import type { Release } from '@web/wire';
 
 import { Icon, icons } from '@/ui/Icon';
@@ -13,39 +12,16 @@ import { color, font, radius, space, type } from '@/theme';
 
 /** The web player's speeds. Its `actions.ts` imports React, which would load a second copy from the web app. */
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
-const SIZES: [short: string, label: string, scale: number][] = [
-  ['S', 'Small', 0.8],
-  ['M', 'Medium', 1],
-  ['L', 'Large', 1.3],
-  ['XL', 'Extra large', 1.65],
-];
-const BACKINGS: [label: string, backing: SubtitleBacking][] = [
-  ['Shadow', 'shadow'],
-  ['Outline', 'outline'],
-  ['Box', 'box'],
-];
-const SHIFTS = [-0.5, -0.1, 0.1, 0.5];
-
-/** `0.3 s later`, `2.5 s earlier`, or `In sync`, as the web player words it. */
-function offsetText(seconds: number): string {
-  if (seconds === 0) return 'In sync';
-  return `${Math.abs(seconds).toFixed(1)} s ${seconds > 0 ? 'later' : 'earlier'}`;
-}
-
 function speedText(speed: number): string {
   return speed === 1 ? 'Normal' : `${speed}×`;
 }
 
-/** The player's settings: the source of a title, the speed, and the timing and look of drawn subtitles. */
+/** The player's settings: the source of a title and the speed. Subtitles are set where they are chosen. */
 export function SettingsSheet({
   source,
   onSources,
   speed,
   onSpeed,
-  offset,
-  onShift,
-  style,
-  onStyle,
   onClose,
 }: {
   /** The release playing, for a title play, whose other sources can take over. */
@@ -53,11 +29,6 @@ export function SettingsSheet({
   onSources: () => void;
   speed: number;
   onSpeed: (speed: number) => void;
-  /** Seconds the drawn subtitles show later than written, or null when none are drawn. */
-  offset: number | null;
-  onShift: (seconds: number) => void;
-  style: SubtitleStyle;
-  onStyle: (change: Partial<SubtitleStyle>) => void;
   onClose: () => void;
 }) {
   return (
@@ -97,66 +68,12 @@ export function SettingsSheet({
             ))}
           </ScrollView>
         </Section>
-
-        <Section title="Subtitle timing" value={offset === null ? null : offsetText(offset)}>
-          {offset === null ? (
-            <Text style={type.caption}>Turn on a subtitle file or an online subtitle to shift its timing.</Text>
-          ) : (
-            <View style={styles.chips}>
-              {SHIFTS.map((shift) => (
-                <Chip
-                  key={shift}
-                  label={`${shift > 0 ? '+' : '−'}${Math.abs(shift)} s`}
-                  selected={false}
-                  onPress={() => onShift(Math.round((offset + shift) * 10) / 10)}
-                  accessibilityLabel={`Show subtitles ${Math.abs(shift)} seconds ${shift > 0 ? 'later' : 'earlier'}`}
-                />
-              ))}
-              {offset !== 0 ? (
-                <Chip
-                  label="Reset"
-                  selected={false}
-                  onPress={() => onShift(0)}
-                  accessibilityLabel="Put subtitles back in sync"
-                />
-              ) : null}
-            </View>
-          )}
-        </Section>
-
-        <Section title="Subtitle size">
-          <View style={styles.chips}>
-            {SIZES.map(([short, label, scale]) => (
-              <Chip
-                key={short}
-                label={short}
-                selected={style.scale === scale}
-                onPress={() => onStyle({ scale })}
-                accessibilityLabel={`${label} subtitles`}
-              />
-            ))}
-          </View>
-        </Section>
-
-        <Section title="Subtitle background">
-          <View style={styles.chips}>
-            {BACKINGS.map(([label, backing]) => (
-              <Chip
-                key={backing}
-                label={label}
-                selected={style.backing === backing}
-                onPress={() => onStyle({ backing })}
-                accessibilityLabel={`${label} behind subtitles`}
-              />
-            ))}
-          </View>
-        </Section>
       </ScrollView>
     </Sheet>
   );
 }
 
-function Section({ title, value, children }: { title: string; value?: string | null; children: ReactNode }) {
+export function Section({ title, value, children }: { title: string; value?: string | null; children: ReactNode }) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHead}>
@@ -168,7 +85,7 @@ function Section({ title, value, children }: { title: string; value?: string | n
   );
 }
 
-function Chip({
+export function Chip({
   label,
   selected,
   onPress,
