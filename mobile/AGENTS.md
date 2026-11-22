@@ -56,6 +56,17 @@ Commit straight to `mobile`, one change per commit. CI (`.github/workflows/mobil
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `pnpm exec expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
 
+## Tests
+
+- **Where:** app tests sit next to the code they test, as `src/**/*.test.ts(x)`. Shared helpers live in `src/test/`. The oxlint rules' tests sit next to each rule in `tools/oxlint/anti-slop/rules/`.
+- **Commands:** `pnpm test` runs the app's tests with jest-expo, as Android and through React Compiler, so they run the code the phone runs. `pnpm test:tools` runs the lint rules' tests with vitest. Both, and `pnpm -s check`, pass before a change is done.
+- **The engine:** tests never mock modules (`anti-slop/no-module-mocking`). Call `answer()` from `src/test/engine.ts` to answer the requests `src/engine/client.ts` sends through its `transport`, as the engine would: `json()` for a route's reply, `refusal()` for the `{ "error": … }` envelope, `inPieces()` and `inBytes()` for a stream that arrives in chunks. `answer()` returns what was asked, and the real transport comes back after each test.
+- **Wire data:** build engine types with the builders in `src/test/wire.ts` (`aJob`, `aRelease`, `aPosition`, `anError`), which start from a valid value and change only what the test names. Add a builder there rather than casting.
+- **Components:** RNTL 14's `render` is async; `await` it. Assert what a person sees or hears (text, role, accessibility value), not props or state.
+- **Names:** a test's name is a sentence saying the behaviour, such as "a last line with no newline after it still arrives".
+- **Fixes:** a fix in pure code (parsing, stored data, wire handling, anything without UI) comes with a test that failed before the fix and passes after it.
+- **Worklets:** `anti-slop/no-js-call-in-worklet` reports a plain function called inside a worklet. Its description lists what it misses, so a clean run is not proof.
+
 ## This app
 
 - **Check:** `pnpm -s check` runs tsc, oxlint with the anti-slop rules (`.oxlintrc.json`, plugin vendored in `tools/oxlint/anti-slop`, at most 92 warnings, all known debt, no errors), Prettier and `scripts/compiler-check.js`. oxlint's anti-slop plugin is TypeScript, so use Node 22 (`.nvmrc`; on this Mac `/opt/homebrew/opt/node@22/bin`). The compiler check fails when React Compiler skips more components and hooks than it does today (9). Don’t raise that number; fix the cause.
