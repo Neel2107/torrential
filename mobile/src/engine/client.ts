@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 
 import type { ErrorCode, Error as WireError } from '@web/wire';
 
+import { net } from '@/perf';
+
 export type Link = { base: string; token: string | null };
 
 /** What the client reads from the engine's answer: expo/fetch's response, or one a test builds. */
@@ -110,7 +112,11 @@ async function send(link: Link, path: string, init: { method: 'GET' | 'POST'; bo
 }
 
 export async function get<T>(link: Link, path: string, signal?: AbortSignal): Promise<T> {
-  return fromEngine<T>(await (await send(link, path, { method: 'GET', signal })).text());
+  const startedAt = performance.now();
+  const text = await (await send(link, path, { method: 'GET', signal })).text();
+  net(path, text.length, startedAt);
+
+  return fromEngine<T>(text);
 }
 
 export async function post<T, B extends object = object>(
@@ -119,7 +125,11 @@ export async function post<T, B extends object = object>(
   body: B,
   signal?: AbortSignal,
 ): Promise<T> {
-  return fromEngine<T>(await (await send(link, path, { method: 'POST', body, signal })).text());
+  const startedAt = performance.now();
+  const text = await (await send(link, path, { method: 'POST', body, signal })).text();
+  net(path, text.length, startedAt);
+
+  return fromEngine<T>(text);
 }
 
 async function readLines(response: Reply, onLine: (line: string) => void): Promise<void> {
@@ -159,8 +169,14 @@ export async function stream<T>(
   init: { method: 'GET' | 'POST'; body?: object; signal?: AbortSignal },
   onMessage: (message: T) => void,
 ): Promise<void> {
+  const startedAt = performance.now();
   const response = await send(link, path, init);
-  await readLines(response, (line) => onMessage(fromEngine<T>(line)));
+  let chars = 0;
+  await readLines(response, (line) => {
+    chars += line.length;
+    onMessage(fromEngine<T>(line));
+  });
+  net(path, chars, startedAt);
 }
 
 export async function events<T>(link: Link, path: string, signal: AbortSignal, onMessage: (message: T) => void) {

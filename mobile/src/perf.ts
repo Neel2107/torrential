@@ -30,3 +30,8 @@ export function once(label: string) {
   reached.add(label);
   console.log(`[perf] ${label}`);
 }
+
+/** Logs one engine request as `[perf] net /api/route 1234 B 56 ms`: its route without the query, the characters received, and the time from asking to the last byte. */
+export function net(path: string, chars: number, startedAt: number) {
+  console.log(`[perf] net ${path.split('?')[0]} ${chars} B ${Math.round(performance.now() - startedAt)} ms`);
+}
