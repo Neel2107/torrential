@@ -1,9 +1,11 @@
 import * as Application from 'expo-application';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { z } from 'zod';
 
 import { useDataSaver } from '@/engine/dataSaver';
 import { useVersion } from '@/engine/queries';
@@ -15,6 +17,8 @@ import { Tap } from '@/ui/Tap';
 import { ThemePicker } from '@/ui/ThemePicker';
 import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';
+
+const commit = z.string().catch('Unknown').parse(Constants.expoConfig?.extra?.commit);
 
 export default function Settings() {
   const insets = useSafeAreaInsets();
@@ -76,11 +80,9 @@ export default function Settings() {
           </View>
         </Group>
         <Group title="About" index={3}>
-          <Line
-            label="App"
-            value={`${Application.nativeApplicationVersion ?? ''} (${Application.nativeBuildVersion ?? ''})`}
-            last
-          />
+          <Line label="Version" value={Application.nativeApplicationVersion ?? 'Unknown'} />
+          <Line label="Build" value={Application.nativeBuildVersion ?? 'Unknown'} />
+          <Line label="Commit" value={commit} last />
         </Group>
       </ScrollView>
     </View>
