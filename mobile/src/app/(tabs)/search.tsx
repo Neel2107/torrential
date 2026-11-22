@@ -296,7 +296,7 @@ function Titles({
         )
       }
       renderItem={({ item, index }) => (
-        <Animated.View style={stale}>
+        <Animated.View style={stale} pointerEvents={result.isPlaceholderData ? 'none' : 'auto'}>
           <TitleRow title={item} index={index} onOpen={onOpen} />
         </Animated.View>
       )}
@@ -388,7 +388,7 @@ function Torrents({
   useEffect(() => {
     if (!query) return setState({ releases: [], pending: [], done: false, error: null });
     const controller = new AbortController();
-    setState((previous) => ({ ...previous, pending: ['…'], done: false, error: null }));
+    setState({ releases: [], pending: ['…'], done: false, error: null });
     stream<SearchMessage>(
       link,
       '/api/search',
