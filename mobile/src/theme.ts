@@ -143,7 +143,7 @@ function readTheme(): ThemeId {
 
 /** Saves the choice; it takes effect on the next launch or reload. */
 export function saveTheme(id: ThemeId) {
-  stored.write(id);
+  stored.writeSync(id);
 }
 
 export const themeId: ThemeId = readTheme();

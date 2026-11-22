@@ -49,6 +49,7 @@ function Play() {
     <ByTorrent
       torrent={ref}
       file={file ? Number(file) : undefined}
+      at={at ? Number(at) : null}
       attempt={attempt}
       retry={() => setAttempt((n) => n + 1)}
     />
@@ -66,19 +67,19 @@ function Play() {
 function ByTorrent({
   torrent,
   file,
+  at,
   attempt,
   retry,
 }: {
   torrent: string;
   file?: number;
+  at: number | null;
   attempt: number;
   retry: () => void;
 }) {
   const start = useTorrentPlay(torrent, attempt, file);
   if (start.phase === 'ready') {
-    return (
-      <Player video={null} play={start.play} release={start.release} resumeAt={null} title={null} episode={null} />
-    );
+    return <Player video={null} play={start.play} release={start.release} resumeAt={at} title={null} episode={null} />;
   }
   return <Starting video={null} start={start} onRetry={retry} />;
 }

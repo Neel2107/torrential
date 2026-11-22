@@ -4,49 +4,75 @@ import type { Position } from '@web/wire';
 
 import { post, type Link } from './client';
 
-const outbox = new File(Paths.document, 'unsent-positions.json');
+type Unsent = Record<string, Record<string, Position>>;
 
-function read(): Record<string, Position> {
+const outbox = new File(Paths.document, 'unsent-positions.json');
+let line: Promise<void> = Promise.resolve();
+
+function read(): Unsent {
   try {
-    return outbox.exists ? (JSON.parse(outbox.textSync()) as Record<string, Position>) : {};
+    return outbox.exists ? (JSON.parse(outbox.textSync()) as Unsent) : {};
   } catch {
     return {};
   }
 }
 
-function write(unsent: Record<string, Position>) {
+function write(unsent: Unsent) {
   try {
-    if (Object.keys(unsent).length === 0) {
+    const kept = Object.fromEntries(Object.entries(unsent).filter(([, videos]) => Object.keys(videos).length > 0));
+    if (Object.keys(kept).length === 0) {
       if (outbox.exists) outbox.delete();
       return;
     }
-    outbox.write(JSON.stringify(unsent));
+    outbox.writeSync(JSON.stringify(kept));
   } catch {}
 }
 
-/** Sends where a video stopped; one the engine does not take is kept on the phone and sent again later. */
-export async function report(link: Link, position: Position): Promise<void> {
-  try {
-    await post(link, '/api/watched', position);
-  } catch {
-    write({ ...read(), [position.video]: position });
-    return;
-  }
-  await resend(link);
+function queued(task: () => Promise<void>): Promise<void> {
+  line = line.then(task, task);
+  return line;
 }
 
-/** Sends the positions the engine missed, keeping any it still does not take. */
-export async function resend(link: Link): Promise<void> {
+function hold(engine: string, position: Position) {
   const unsent = read();
-  const videos = Object.keys(unsent);
-  if (videos.length === 0) return;
-  for (const video of videos) {
-    try {
-      await post(link, '/api/watched', { ...unsent[video], starts: false });
-      delete unsent[video];
-    } catch {
-      break;
-    }
-  }
+  unsent[engine] = { ...unsent[engine], [position.video]: position };
   write(unsent);
+}
+
+async function flush(link: Link) {
+  for (const position of Object.values(read()[link.base] ?? {})) {
+    try {
+      await post(link, '/api/watched', { ...position, starts: false });
+    } catch {
+      return;
+    }
+    const unsent = read();
+    if (unsent[link.base]?.[position.video] === undefined) continue;
+    if (JSON.stringify(unsent[link.base][position.video]) !== JSON.stringify(position)) continue;
+    delete unsent[link.base][position.video];
+    write(unsent);
+  }
+}
+
+/** Sends where a video stopped, one report at a time. One the engine does not take is kept on the phone for that engine, the latest per video, and sent again later. */
+export function report(link: Link, position: Position): Promise<void> {
+  return queued(async () => {
+    const unsent = read();
+    if (unsent[link.base]?.[position.video]) {
+      delete unsent[link.base][position.video];
+      write(unsent);
+    }
+    try {
+      await post(link, '/api/watched', position);
+    } catch {
+      hold(link.base, position);
+      return;
+    }
+    await flush(link);
+  });
+}
+
+/** Sends the positions this engine missed, keeping any it still does not take. */
+export function resend(link: Link): Promise<void> {
+  return queued(() => flush(link));
 }

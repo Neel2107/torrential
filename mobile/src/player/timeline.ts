@@ -91,6 +91,16 @@ export function useTimeline({
   const decided = useRef(false);
   const directRetried = useRef(false);
   const streamRetried = useRef(false);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+    };
+  }, []);
 
   const now = useCallback(() => {
     const current = modeRef.current;
@@ -113,8 +123,13 @@ export function useTimeline({
       startedAt.current = null;
       setMode(next);
       const source = sourceFor(link, play, next, metadata);
-      if (!source) return;
-      await player.replaceAsync(source);
+      if (!source || !alive.current) return;
+      try {
+        await player.replaceAsync(source);
+      } catch {
+        return;
+      }
+      if (!alive.current) return;
       if (next.kind === 'direct' && at > 0) player.currentTime = at;
       if (resume) player.play();
     },
@@ -153,12 +168,12 @@ export function useTimeline({
     const at = current.kind === 'stream' ? Math.max(now(), current.from) : now();
     if (current.kind === 'direct' && !directRetried.current) {
       directRetried.current = true;
-      setTimeout(() => switchTo({ kind: 'direct' }, at), 1500);
+      retryTimer.current = setTimeout(() => switchTo({ kind: 'direct' }, at), 1500);
     } else if (current.kind === 'direct') {
       switchTo({ kind: 'stream', video: 'copy', from: at, audio: null, reason: 'failed' }, at);
     } else if (current.kind === 'stream' && !streamRetried.current) {
       streamRetried.current = true;
-      setTimeout(() => switchTo({ ...current, from: at }, at), 1500);
+      retryTimer.current = setTimeout(() => switchTo({ ...current, from: at }, at), 1500);
     } else if (current.kind === 'stream' && current.video === 'copy') {
       switchTo({ ...current, video: 'h264', from: at, reason: 'failed' }, at);
     }

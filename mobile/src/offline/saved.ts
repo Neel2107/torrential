@@ -48,7 +48,7 @@ function keep() {
   const saved = [...copies.values()].filter((copy): copy is Saved => copy.state === 'saved');
   try {
     if (!manifest.exists) manifest.create({ intermediates: true });
-    manifest.write(JSON.stringify(saved));
+    manifest.writeSync(JSON.stringify(saved));
   } catch {}
 }
 
@@ -79,6 +79,11 @@ function order(copy: Copy): number {
   return copy.state === 'saved' ? copy.saved_at : Number.MAX_SAFE_INTEGER;
 }
 
+/** The copy of `job` as it stands now, outside React. */
+export function copyOf(job: string): Copy | undefined {
+  return copies.get(job);
+}
+
 export function useCopy(job: string): Copy | undefined {
   return useSyncExternalStore(subscribe, () => copies).get(job);
 }
@@ -93,18 +98,19 @@ export function freeSpace(): number | null {
 
 const claimed = new Set<string>();
 
-export async function save(link: Link, job: string, label: Label): Promise<void> {
+/** Copies a finished download's video to this phone; `file` picks which video when the download holds several. */
+export async function save(link: Link, job: string, label: Label, file?: number): Promise<void> {
   const before = copies.get(job);
   if (claimed.has(job) || before?.state === 'saving' || before?.state === 'saved') return;
   claimed.add(job);
   try {
-    await copy(link, job, label);
+    await copy(link, job, label, file);
   } finally {
     claimed.delete(job);
   }
 }
 
-async function copy(link: Link, job: string, label: Label): Promise<void> {
+async function copy(link: Link, job: string, label: Label, index?: number): Promise<void> {
   const fail = (error: string) => put({ job, label, size: 0, state: 'failed', error });
 
   let reply: FilesReply;
@@ -113,7 +119,9 @@ async function copy(link: Link, job: string, label: Label): Promise<void> {
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'Could not reach the engine.');
   }
-  const file = savedVideo(reply.files);
+  const file =
+    (index === undefined ? null : reply.files.find((candidate) => candidate.index === index)) ??
+    savedVideo(reply.files);
   if (!file) return fail('This download has no video to save.');
   const free = freeSpace();
   if (free !== null && file.size > free - KEEP_FREE) {
@@ -205,7 +213,7 @@ async function keepSubtitles(link: Link, job: string, video: number, reply: File
   const text = await response.text();
   if (!text.trim()) return null;
   const target = new File(folder, `${job}.vtt`);
-  target.write(text);
+  target.writeSync(text);
   return target.uri;
 }
 

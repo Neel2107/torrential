@@ -151,6 +151,20 @@ export const STATE: Record<Job['state'], string> = {
 
 const EPISODE = /s(\d{1,2})[ ._-]*e(\d{1,3})|\b(\d{1,2})x(\d{2,3})\b/i;
 
+/** The episode numbers a season download picked, or null when it picked them all or its names do not say. */
+export function pickedEpisodes(job: Job): number[] | null {
+  if (job.selection.kind !== 'patterns') return null;
+  const numbers = [
+    ...new Set(
+      job.selection.value
+        .map((name) => EPISODE.exec(name))
+        .filter((found) => found !== null)
+        .map((found) => Number(found[2] ?? found[4])),
+    ),
+  ].sort((a, b) => a - b);
+  return numbers.length > 0 ? numbers : null;
+}
+
 function episodesOf(job: Job): string | null {
   if (job.title && /e\d/i.test(job.title.span)) return null;
   const names = job.selection.kind === 'patterns' ? job.selection.value : job.path ? [job.path] : [];
