@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -10,7 +10,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { sentence } from '@web/lib/format';
 
@@ -20,6 +19,7 @@ import { EngineError } from '@/engine/client';
 import { parsePairing, useSession } from '@/engine/session';
 import { useCopies } from '@/offline/saved';
 import { Button } from '@/ui/Button';
+import { FormError, FormSheet } from '@/ui/FormSheet';
 import { Icon, icons } from '@/ui/Icon';
 import { Mark } from '@/ui/Mark';
 import { leave } from '@/ui/leave';
@@ -46,7 +46,6 @@ function explain(cause: unknown): string {
 
 export default function Pair() {
   const { pair, connectOverUsb, runOnPhone } = useSession();
-  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>('scan');
   const [address, setAddress] = useState('');
   const [code, setCode] = useState('');
@@ -111,93 +110,80 @@ export default function Pair() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        {router.canGoBack() ? (
-          <Button
-            kind="quiet"
-            label="Cancel"
-            onPress={() => {
-              Keyboard.dismiss();
-              leave();
-            }}
-            style={{ alignSelf: 'flex-start' }}
-          />
-        ) : null}
-        <View style={styles.brand}>
-          <Mark size={40} />
-          <Text style={styles.wordmark}>torrential</Text>
-        </View>
-        {CAN_RUN_LOCALLY ? (
-          <View style={styles.phone}>
-            <View style={styles.phoneHead}>
-              <View style={styles.phoneIcon}>
-                <Icon name={icons.phone} size={20} tint={color.action} />
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={type.headline}>Watch on this phone</Text>
-                <Text style={type.label}>Downloads and plays right here. No computer needed.</Text>
-              </View>
-            </View>
-            <Button
-              label={starting ? 'Starting on this phone…' : 'Use this phone'}
-              busy={starting}
-              onPress={startPhone}
-            />
-            {phoneProblem ? (
-              <Text style={[type.label, { color: color.error }]} accessibilityLiveRegion="assertive">
-                Couldn’t start on this phone. Try again.
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
-        {saved > 0 ? (
-          <Button
-            kind="secondary"
-            icon={icons.play}
-            label={`Watch what is on this phone (${saved})`}
-            onPress={() => router.push('/saved')}
-          />
-        ) : null}
-        <Text style={CAN_RUN_LOCALLY ? type.title : type.display}>
-          {CAN_RUN_LOCALLY ? 'Or connect your computer' : 'Connect to your computer'}
-        </Text>
-        <Text style={type.body}>
-          On the computer running torrential, open <Text style={styles.strong}>Devices</Text> and choose{' '}
-          <Text style={styles.strong}>Add a device</Text>, or run{' '}
-          <Text style={styles.code}>torrential devices add</Text>.
-        </Text>
-
-        {mode === 'scan' ? (
-          <Scanner onScan={onScan} busy={busy} />
-        ) : (
-          <Typed {...{ address, setAddress, code, setCode, submit, busy }} />
-        )}
-
-        {problem ? (
-          <Animated.View entering={appear} exiting={vanish} style={styles.problem} accessibilityLiveRegion="assertive">
-            <Icon name={icons.warning} size={18} tint={color.error} />
-            <Text style={[type.label, { color: color.error, flex: 1 }]}>{problem}</Text>
-          </Animated.View>
-        ) : null}
-
+    <FormSheet fit="screen">
+      {router.canGoBack() ? (
         <Button
           kind="quiet"
-          label={mode === 'scan' ? 'Type the address and code instead' : 'Scan the code instead'}
+          label="Cancel"
           onPress={() => {
-            setProblem(null);
-            setMode(mode === 'scan' ? 'type' : 'scan');
+            Keyboard.dismiss();
+            leave();
           }}
+          style={{ alignSelf: 'flex-start' }}
         />
-        {__DEV__ ? <Button kind="quiet" label="Use the USB connection (development)" onPress={connectOverUsb} /> : null}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      ) : null}
+      <View style={styles.brand}>
+        <Mark size={40} />
+        <Text style={styles.wordmark}>torrential</Text>
+      </View>
+      {CAN_RUN_LOCALLY ? (
+        <View style={styles.phone}>
+          <View style={styles.phoneHead}>
+            <View style={styles.phoneIcon}>
+              <Icon name={icons.phone} size={20} tint={color.action} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={type.headline}>Watch on this phone</Text>
+              <Text style={type.label}>Downloads and plays right here. No computer needed.</Text>
+            </View>
+          </View>
+          <Button
+            label={starting ? 'Starting on this phone…' : 'Use this phone'}
+            busy={starting}
+            onPress={startPhone}
+          />
+          {phoneProblem ? <FormError>Couldn’t start on this phone. Try again.</FormError> : null}
+        </View>
+      ) : null}
+      {saved > 0 ? (
+        <Button
+          kind="secondary"
+          icon={icons.play}
+          label={`Watch what is on this phone (${saved})`}
+          onPress={() => router.push('/saved')}
+        />
+      ) : null}
+      <Text style={CAN_RUN_LOCALLY ? type.title : type.display}>
+        {CAN_RUN_LOCALLY ? 'Or connect your computer' : 'Connect to your computer'}
+      </Text>
+      <Text style={type.body}>
+        On the computer running torrential, open <Text style={styles.strong}>Devices</Text> and choose{' '}
+        <Text style={styles.strong}>Add a device</Text>, or run <Text style={styles.code}>torrential devices add</Text>.
+      </Text>
+
+      {mode === 'scan' ? (
+        <Scanner onScan={onScan} busy={busy} />
+      ) : (
+        <Typed {...{ address, setAddress, code, setCode, submit, busy }} />
+      )}
+
+      {problem ? (
+        <Animated.View entering={appear} exiting={vanish} style={styles.problem} accessibilityLiveRegion="assertive">
+          <Icon name={icons.warning} size={18} tint={color.error} />
+          <Text style={[type.label, { color: color.error, flex: 1 }]}>{problem}</Text>
+        </Animated.View>
+      ) : null}
+
+      <Button
+        kind="quiet"
+        label={mode === 'scan' ? 'Type the address and code instead' : 'Scan the code instead'}
+        onPress={() => {
+          setProblem(null);
+          setMode(mode === 'scan' ? 'type' : 'scan');
+        }}
+      />
+      {__DEV__ ? <Button kind="quiet" label="Use the USB connection (development)" onPress={connectOverUsb} /> : null}
+    </FormSheet>
   );
 }
 
@@ -308,8 +294,6 @@ function Typed({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.paper },
-  content: { paddingHorizontal: space.page, gap: space.lg },
   phone: { gap: space.md, padding: space.lg, borderRadius: radius.lg, backgroundColor: color.raised },
   phoneHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   phoneIcon: {

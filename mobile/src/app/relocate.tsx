@@ -1,17 +1,16 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, TextInput } from 'react-native';
 
 import { sentence } from '@web/lib/format';
 
 import { EngineError } from '@/engine/client';
 import { parsePairing, useSession } from '@/engine/session';
 import { Button } from '@/ui/Button';
+import { FormError, FormSheet } from '@/ui/FormSheet';
 import { leave } from '@/ui/leave';
 import { color, font, radius, space, type } from '@/theme';
 
 export default function Relocate() {
-  const insets = useSafeAreaInsets();
   const { session, relocate } = useSession();
   const current = session.state === 'paired' ? session.link.base.replace(/^https?:\/\//, '') : '';
   const [text, setText] = useState('');
@@ -42,8 +41,7 @@ export default function Relocate() {
   };
 
   return (
-    <View style={[styles.sheet, { paddingBottom: insets.bottom + space.xl }]}>
-      <Text style={type.title}>Change address</Text>
+    <FormSheet title="Change address" actions={<Button label="Connect" onPress={submit} busy={busy} />}>
       <Text style={type.body}>
         The phone is still paired. If the computer moved to another network, type its address there. Run{' '}
         <Text style={styles.code}>torrential devices add</Text> on it to see the address, then cancel.
@@ -64,14 +62,12 @@ export default function Relocate() {
         style={styles.input}
         accessibilityLabel="Address of the computer"
       />
-      {problem ? <Text style={[type.label, { color: color.error }]}>{problem}</Text> : null}
-      <Button label="Connect" onPress={submit} busy={busy} />
-    </View>
+      {problem ? <FormError>{problem}</FormError> : null}
+    </FormSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: { backgroundColor: color.raised, padding: space.xl, gap: space.lg },
   code: { fontFamily: 'monospace', fontSize: 14, color: color.ink },
   input: {
     minHeight: 52,

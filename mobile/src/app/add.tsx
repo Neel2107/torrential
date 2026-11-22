@@ -5,10 +5,10 @@ import { clearSharedPayloads, useIncomingShare } from 'expo-sharing';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { findTorrent, magnetFromTorrentFile } from '@/engine/torrentFile';
 import { Button } from '@/ui/Button';
+import { FormError, FormSheet } from '@/ui/FormSheet';
 import { Icon, icons } from '@/ui/Icon';
 import { Tap } from '@/ui/Tap';
 import { alpha, color, font, radius, space, type } from '@/theme';
@@ -36,7 +36,6 @@ function describe(ref: string): string {
 
 export default function Add() {
   const params = useLocalSearchParams<{ link?: string; file?: string }>();
-  const insets = useSafeAreaInsets();
   const share = useIncomingShare();
   const [text, setText] = useState(params.link ?? '');
   const [clip, setClip] = useState<string | null>(null);
@@ -93,8 +92,18 @@ export default function Add() {
   };
 
   return (
-    <View style={[styles.sheet, { paddingBottom: insets.bottom + space.xl }]}>
-      <Text style={type.title}>Add a torrent</Text>
+    <FormSheet
+      title="Add a torrent"
+      actions={
+        <Button
+          label={reading ? 'Reading the file' : 'Play'}
+          icon={icons.play}
+          busy={reading}
+          disabled={!found}
+          onPress={() => found && play(found)}
+        />
+      }
+    >
       <Text style={type.body}>
         Paste a magnet link, an infohash, or a link to a .torrent file. It starts playing while it downloads.
       </Text>
@@ -145,21 +154,12 @@ export default function Add() {
           </Text>
         </Animated.View>
       ) : null}
-      {problem ? <Text style={[type.label, { color: color.error }]}>{problem}</Text> : null}
-
-      <Button
-        label={reading ? 'Reading the file' : 'Play'}
-        icon={icons.play}
-        busy={reading}
-        disabled={!found}
-        onPress={() => found && play(found)}
-      />
-    </View>
+      {problem ? <FormError>{problem}</FormError> : null}
+    </FormSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: { backgroundColor: color.raised, padding: space.xl, gap: space.lg },
   clip: {
     flexDirection: 'row',
     alignItems: 'center',
