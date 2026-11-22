@@ -92,7 +92,7 @@ export function SettingsSheet({
         </Section>
 
         <Section title="Sleep timer" value={sleepText(sleep)}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.line}>
+          <View style={styles.wrapLine}>
             {SLEEPS.map(([label, minutes]) => (
               <Chip
                 key={label}
@@ -116,7 +116,7 @@ export function SettingsSheet({
                 accessibilityLabel={minutes === null ? 'No sleep timer' : `Pause ${label.toLowerCase()}`}
               />
             ))}
-          </ScrollView>
+          </View>
         </Section>
       </ScrollView>
     </Sheet>
@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
   section: { gap: space.sm },
   sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  wrapLine: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   line: { flexDirection: 'row', gap: space.sm },
   chip: {
     minWidth: 52,

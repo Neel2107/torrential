@@ -352,8 +352,10 @@ export function Player({
   }, [sleep, player]);
 
   useEffect(() => {
-    if (ended) setLocked(false);
-  }, [ended]);
+    if (!ended) return;
+    setLocked(false);
+    if (sleep?.kind === 'end') carriedSleep = null;
+  }, [ended, sleep]);
 
   useEffect(() => {
     if (!unlockShown) return;
@@ -678,6 +680,7 @@ export function Player({
           {ended ? (
             <Ended
               next={sleep?.kind === 'end' ? null : next}
+              slept={sleep?.kind === 'end' && next !== null}
               onNext={() => next && router.replace({ pathname: '/play', params: { video: next.video } })}
               onReplay={() => {
                 setEnded(false);

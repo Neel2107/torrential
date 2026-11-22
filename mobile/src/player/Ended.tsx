@@ -23,11 +23,14 @@ const UP_NEXT_SECONDS = 10;
 
 export function Ended({
   next,
+  slept = false,
   onNext,
   onReplay,
   onBack,
 }: {
   next: UpNext | null;
+  /** The sleep timer stopped here, before the next episode. */
+  slept?: boolean;
   onNext: () => void;
   onReplay: () => void;
   onBack: () => void;
@@ -90,7 +93,7 @@ export function Ended({
           </Text>
         </View>
       ) : (
-        <Text style={[type.title, styles.center]}>The end</Text>
+        <Text style={[type.title, styles.center]}>{slept ? 'Sleep timer ended' : 'The end'}</Text>
       )}
       <View style={styles.actions}>
         {next ? <Button label="Play now" icon={icons.play} onPress={onNext} /> : null}
