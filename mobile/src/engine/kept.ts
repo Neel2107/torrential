@@ -5,8 +5,18 @@ import { fromEngine, type Link } from './client';
 /** A reply kept on disk and when it was written, in milliseconds since the epoch. */
 export type Kept<T> = { data: T; at: number };
 
-function fileOf(link: Link, route: string): File {
-  return new File(Paths.cache, `kept-${`${link.base}${route}`.replace(/[^a-z0-9]+/gi, '_')}.json`);
+/** Where replies are kept between launches: files in the phone's cache in the app, memory in a test. `at` is when one was written, in milliseconds since the epoch. */
+export const shelf = {
+  read: (name: string): { text: string; at: number } | undefined => {
+    const file = new File(Paths.cache, name);
+
+    return file.exists ? { text: file.textSync(), at: file.lastModified ?? 0 } : undefined;
+  },
+  write: (name: string, text: string): Promise<void> => new File(Paths.cache, name).write(text),
+};
+
+function nameOf(link: Link, route: string): string {
+  return `kept-${`${link.base}${route}`.replace(/[^a-z0-9]+/gi, '_')}.json`;
 }
 
 /**
@@ -15,11 +25,11 @@ function fileOf(link: Link, route: string): File {
  */
 export function keptReply<T>(link: Link, route: string): Kept<T> | undefined {
   try {
-    const file = fileOf(link, route);
+    const kept = shelf.read(nameOf(link, route));
 
-    if (!file.exists) return undefined;
+    if (!kept) return undefined;
 
-    return { data: fromEngine<T>(file.textSync()), at: file.lastModified ?? 0 };
+    return { data: fromEngine<T>(kept.text), at: kept.at };
   } catch {
     return undefined;
   }
@@ -27,9 +37,7 @@ export function keptReply<T>(link: Link, route: string): Kept<T> | undefined {
 
 /** Keeps the engine's answer to `route` for the next launch, without waiting for the disk. */
 export function keepReply<T>(link: Link, route: string, data: T) {
-  fileOf(link, route)
-    .write(JSON.stringify(data))
-    .catch(() => {});
+  shelf.write(nameOf(link, route), JSON.stringify(data)).catch(() => {});
 }
 
 /** A query's `initialData` from the reply kept for `route`, read from disk only when the query is first made. Keep the fresh reply in its `queryFn` with `keepReply`. */
