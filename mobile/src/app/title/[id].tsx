@@ -323,17 +323,24 @@ function DownloadButton({
   onState: (fetching: Fetching) => void;
 }) {
   const { fetching: asked, start, onComputer } = useDownload(video, label);
-  const held = useHeldProgress(video);
+  const held = useHeldProgress(video, asked.state === 'started' ? asked.job : undefined);
   const [choosing, setChoosing] = useState(false);
+  const [seen, setSeen] = useState<string | null>(null);
+  const job = asked.state === 'started' ? asked.job : null;
+  useEffect(() => {
+    if (job && held.state !== 'none') setSeen(job);
+  }, [job, held.state]);
+  const gone = job !== null && seen === job && held.state === 'none';
+  const shown: Fetching = gone ? { state: 'idle' } : asked;
   const state =
     asked.state === 'finding'
       ? 'finding'
       : held.state === 'done'
         ? 'done'
-        : held.state === 'downloading' || asked.state === 'started'
+        : held.state === 'downloading' || (asked.state === 'started' && !gone)
           ? 'downloading'
           : 'idle';
-  useEffect(() => onState(asked), [asked, onState]);
+  useEffect(() => onState(shown), [shown.state, onState]);
   return (
     <>
       <Tap

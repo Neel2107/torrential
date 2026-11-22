@@ -73,7 +73,7 @@ const NONE: Held = { state: 'none', fraction: 0 };
 const sameHeld = (a: Held, b: Held) =>
   a.state === b.state && Math.round(a.fraction * 200) === Math.round(b.fraction * 200);
 
-function held(jobs: Job[], video: string | null): Held {
+function held(jobs: Job[], video: string | null, prefer?: string): Held {
   if (!video) return NONE;
   const [title, season, episode] = video.split(':');
   const spans = season ? [`s${Number(season)}e${Number(episode)}`, `s${Number(season)}`] : ['film'];
@@ -86,6 +86,9 @@ function held(jobs: Job[], video: string | null): Held {
   if (covering.some((job) => job.state === 'done')) return { state: 'done', fraction: 1 };
   const moving = covering.filter((job) => job.state !== 'paused' && job.state !== 'error');
   if (moving.length === 0) return NONE;
+  const mine = moving.find((job) => job.id === prefer);
+  if (mine)
+    return { state: 'downloading', fraction: mine.progress.size ? mine.progress.verified / mine.progress.size : 0 };
   const fraction = Math.max(
     ...moving.map((job) => (job.progress.size ? job.progress.verified / job.progress.size : 0)),
   );
@@ -97,9 +100,9 @@ export function useHeldState(video: string | null): Held['state'] {
   return useJobsSelect(({ jobs }) => held(jobs, video).state);
 }
 
-/** The same, with how much of it has arrived, changing in half-percent steps. */
-export function useHeldProgress(video: string | null): Held {
-  return useJobsSelect(({ jobs }) => held(jobs, video), sameHeld);
+/** The same, with how much of it has arrived, changing in half-percent steps; the download `prefer` names counts first. */
+export function useHeldProgress(video: string | null, prefer?: string): Held {
+  return useJobsSelect(({ jobs }) => held(jobs, video, prefer), sameHeld);
 }
 
 /** Whether a download already covers `video`. */

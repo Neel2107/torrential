@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { useEffect, useSyncExternalStore } from 'react';
-import { Alert, BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -57,6 +57,8 @@ export function AskHost() {
 
 function Dialog({ asking: question }: { asking: Asking }) {
   const shown = useSharedValue(0);
+  const answered = useRef(false);
+  const [leaving, setLeaving] = useState(false);
   const tint = question.danger ? color.error : color.action;
 
   const finish = (yes: boolean) => {
@@ -64,17 +66,15 @@ function Dialog({ asking: question }: { asking: Asking }) {
     question.answer(yes);
   };
   const close = (yes: boolean) => {
+    if (answered.current) return;
+    answered.current = true;
+    setLeaving(true);
     shown.set(withTiming(0, { duration: 150, easing: motion.out }, (done) => done && scheduleOnRN(finish, yes)));
   };
 
   useEffect(() => {
     shown.set(withTiming(1, { duration: 240, easing: motion.out }));
-    const back = BackHandler.addEventListener('hardwareBackPress', () => {
-      close(false);
-      return true;
-    });
-    return () => back.remove();
-  });
+  }, [shown]);
 
   const backdrop = useAnimatedStyle(() => ({ opacity: shown.get() }));
   const card = useAnimatedStyle(() => ({
@@ -83,32 +83,41 @@ function Dialog({ asking: question }: { asking: Asking }) {
   }));
 
   return (
-    <View style={StyleSheet.absoluteFill} accessibilityViewIsModal>
-      <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdrop]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => close(false)} accessibilityLabel="Cancel" />
-      </Animated.View>
-      <View style={styles.center} pointerEvents="box-none">
-        <Animated.View style={[styles.card, card]} accessibilityRole="alert">
-          {question.icon ? (
-            <View style={[styles.badge, { backgroundColor: alpha(tint, 0.14) }]}>
-              <Icon name={question.icon} size={22} tint={tint} />
-            </View>
-          ) : null}
-          <Text style={styles.title} accessibilityRole="header">
-            {question.title}
-          </Text>
-          <Text style={styles.message}>{question.message}</Text>
-          <View style={styles.buttons}>
-            <Button
-              kind={question.danger ? 'danger' : 'primary'}
-              label={question.confirm}
-              onPress={() => close(true)}
-            />
-            <Button kind="secondary" label="Cancel" onPress={() => close(false)} />
-          </View>
+    <Modal
+      transparent
+      visible
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={() => close(false)}
+    >
+      <View style={StyleSheet.absoluteFill} pointerEvents={leaving ? 'none' : 'auto'}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdrop]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => close(false)} accessibilityLabel="Cancel" />
         </Animated.View>
+        <View style={styles.center} pointerEvents="box-none">
+          <Animated.View style={[styles.card, card]} accessibilityRole="alert">
+            {question.icon ? (
+              <View style={[styles.badge, { backgroundColor: alpha(tint, 0.14) }]}>
+                <Icon name={question.icon} size={22} tint={tint} />
+              </View>
+            ) : null}
+            <Text style={styles.title} accessibilityRole="header">
+              {question.title}
+            </Text>
+            <Text style={styles.message}>{question.message}</Text>
+            <View style={styles.buttons}>
+              <Button
+                kind={question.danger ? 'danger' : 'primary'}
+                label={question.confirm}
+                onPress={() => close(true)}
+              />
+              <Button kind="secondary" label="Cancel" onPress={() => close(false)} />
+            </View>
+          </Animated.View>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 
