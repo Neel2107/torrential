@@ -3,6 +3,7 @@ import { defineRule } from "@oxlint/plugins";
 import type { ESTree } from "@oxlint/plugins";
 
 type WorkletFunction = ESTree.Function | ESTree.ArrowFunctionExpression;
+type IdentifierNode = Extract<ESTree.Node, { type: "Identifier" }>;
 
 /** The calls whose arguments at these positions Reanimated turns into worklets. */
 const WORKLET_ARGUMENTS = new Map<string, number[]>([
@@ -56,9 +57,9 @@ function children(node: ESTree.Node): ESTree.Node[] {
   return found;
 }
 
-function readsIn(fn: WorkletFunction): ESTree.IdentifierReference[] {
-  const reads: ESTree.IdentifierReference[] = [];
-  const pending: ESTree.Node[] = [fn.body];
+function readsIn(fn: WorkletFunction): IdentifierNode[] {
+  const reads: IdentifierNode[] = [];
+  const pending: (ESTree.Node | null)[] = [fn.body];
 
   while (pending.length > 0) {
     const node = pending.pop();

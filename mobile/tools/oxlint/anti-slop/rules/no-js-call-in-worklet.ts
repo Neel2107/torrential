@@ -86,8 +86,8 @@ function exportsWorklet(fromFile: string, source: string, name: string): boolean
   return declared.test(text);
 }
 
-function rootIdentifier(node: ESTree.Node): ESTree.IdentifierReference | null {
-  let current = node;
+function rootIdentifier(node: ESTree.Expression): ESTree.IdentifierReference | null {
+  let current: ESTree.Expression | ESTree.Super = node;
 
   while (current.type === "MemberExpression") current = current.object;
 
