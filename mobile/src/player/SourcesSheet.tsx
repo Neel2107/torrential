@@ -21,12 +21,14 @@ import { useSources, type Sources } from './sources';
 export function SourcesSheet({
   video,
   label,
+  heading = 'Choose a source',
   current,
   onPick,
   onClose,
 }: {
   video: string;
   label: string;
+  heading?: string;
   current?: string;
   onPick?: (release: Release) => void;
   onClose: () => void;
@@ -44,7 +46,7 @@ export function SourcesSheet({
   return (
     <Sheet onClose={onClose}>
       <View style={styles.head}>
-        <Text style={type.title}>Choose a source</Text>
+        <Text style={type.title}>{heading}</Text>
         <Text style={type.caption}>{label}</Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: space.md }}>

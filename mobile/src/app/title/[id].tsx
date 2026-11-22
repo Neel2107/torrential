@@ -27,7 +27,7 @@ import { episodeCode, episodeName, findEpisode, seasonName } from '@web/titles/w
 import type { EpisodeInfo, TitlePage as Page, Watched } from '@web/wire';
 
 import { authHeaders, url } from '@/engine/client';
-import { useDownload, useHeldState, type Fetching } from '@/engine/download';
+import { useDownload, useHeldProgress, useHeldState, type Fetching } from '@/engine/download';
 import { useSaveTitle, useTitle } from '@/engine/queries';
 import { useLink, useSession } from '@/engine/session';
 import { useSources } from '@/player/sources';
@@ -43,6 +43,7 @@ import { HeroTarget, useHeroPage, useLanded } from '@/ui/hero';
 import { bannerHeight as bannerHeightOf, OVERLAP, POSTER, RING, RISE } from '@/ui/titleGeometry';
 import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
+import { ProgressRing } from '@/ui/ProgressRing';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { TabStrip, usePagerPosition } from '@/ui/Pager';
@@ -225,6 +226,7 @@ function Body({ page }: { page: Page }) {
             tags: targetEpisode ? episodeCode(targetEpisode) : page.year ? String(page.year) : '',
             poster: page.id,
           }}
+          sheetLabel={targetEpisode ? `${episodeCode(targetEpisode)} · ${episodeName(targetEpisode)}` : page.name}
           onState={setFetching}
         />
         <Tap
@@ -238,16 +240,24 @@ function Body({ page }: { page: Page }) {
         </Tap>
       </Animated.View>
       {fetching.state === 'started' || fetching.state === 'failed' ? (
-        <Animated.Text
-          entering={FadeIn.duration(motion.standard)}
-          style={[type.caption, { color: fetching.state === 'failed' ? color.error : color.action }]}
-        >
-          {fetching.state === 'failed'
-            ? sentence(fetching.message)
-            : onComputer
-              ? 'Downloading. It comes to this phone when it finishes.'
-              : 'Downloading to this phone. Follow it in Downloads.'}
-        </Animated.Text>
+        <Animated.View entering={FadeIn.duration(motion.standard)} style={styles.fetched}>
+          {fetching.state === 'failed' ? (
+            <Text style={[type.caption, { color: color.error }]}>{sentence(fetching.message)}</Text>
+          ) : (
+            <Tap
+              shrink={0.97}
+              onPress={() => router.navigate('/downloads')}
+              accessibilityLabel={`${onComputer ? 'Downloading. It comes to this phone when it finishes.' : 'Downloading to this phone.'} Open Downloads`}
+              style={styles.fetchedRow}
+            >
+              <Text style={[type.caption, { flex: 1 }]}>
+                {onComputer ? 'Downloading. It comes to this phone when it finishes.' : 'Downloading to this phone.'}
+              </Text>
+              <Text style={[type.caption, { color: color.action, fontFamily: font.medium }]}>Downloads</Text>
+              <Icon name={icons.chevron} size={14} tint={color.action} />
+            </Tap>
+          )}
+        </Animated.View>
       ) : null}
       {playDetail ? (
         <Animated.View entering={enter(3)} style={styles.playDetail}>
@@ -303,50 +313,74 @@ function Body({ page }: { page: Page }) {
 function DownloadButton({
   video,
   label,
+  sheetLabel,
   onState,
 }: {
   video: string | null;
   label: Label;
+  sheetLabel: string;
   onState: (fetching: Fetching) => void;
 }) {
   const { fetching: asked, start, onComputer } = useDownload(video, label);
-  const held = useHeldState(video);
+  const held = useHeldProgress(video);
+  const [choosing, setChoosing] = useState(false);
   const state =
     asked.state === 'finding'
       ? 'finding'
-      : held === 'done'
+      : held.state === 'done'
         ? 'done'
-        : held === 'downloading' || asked.state === 'started'
+        : held.state === 'downloading' || asked.state === 'started'
           ? 'downloading'
           : 'idle';
   useEffect(() => onState(asked), [asked, onState]);
   return (
-    <Tap
-      shrink={0.92}
-      disabled={!video || state !== 'idle'}
-      onPress={start}
-      accessibilityLabel={
-        state === 'done'
-          ? onComputer
-            ? 'Downloaded on your computer'
-            : 'Downloaded to this phone'
-          : state === 'downloading'
-            ? 'Downloading. Follow it in Downloads.'
-            : 'Download to this phone'
-      }
-      accessibilityState={{ busy: state === 'finding' }}
-      style={[styles.squareButton, state === 'downloading' && { borderColor: color.action }]}
-    >
-      {state === 'finding' ? (
-        <LoadingMark size={20} label="Finding a source" />
-      ) : (
-        <Icon
-          name={state === 'done' ? icons.check : icons.downloads}
-          size={20}
-          tint={state === 'idle' ? color.ink : color.action}
+    <>
+      <Tap
+        haptic
+        shrink={0.92}
+        disabled={!video || state !== 'idle'}
+        onPress={() => setChoosing(true)}
+        accessibilityLabel={
+          state === 'done'
+            ? onComputer
+              ? 'Downloaded on your computer'
+              : 'Downloaded to this phone'
+            : state === 'downloading'
+              ? `Downloading, ${Math.round(held.fraction * 100)}%. Follow it in Downloads.`
+              : 'Download'
+        }
+        accessibilityHint={state === 'idle' ? 'Choose a source to download.' : undefined}
+        accessibilityState={{ busy: state === 'finding' }}
+        style={[
+          styles.squareButton,
+          state === 'downloading' && styles.ringed,
+          state === 'done' && { borderColor: color.action },
+        ]}
+      >
+        {state === 'downloading' ? <ProgressRing size={48} fraction={held.fraction} /> : null}
+        {state === 'finding' ? (
+          <LoadingMark size={20} label="Finding a source" />
+        ) : (
+          <Icon
+            name={state === 'done' ? icons.check : icons.downloads}
+            size={20}
+            tint={state === 'idle' ? color.ink : color.action}
+          />
+        )}
+      </Tap>
+      {choosing && video ? (
+        <SourcesSheet
+          video={video}
+          label={sheetLabel}
+          heading="Download a source"
+          onPick={(release) => {
+            setChoosing(false);
+            start(release.id);
+          }}
+          onClose={() => setChoosing(false)}
         />
-      )}
-    </Tap>
+      ) : null}
+    </>
   );
 }
 
@@ -684,6 +718,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.rule,
   },
+  ringed: { borderWidth: 0 },
+  fetched: { marginTop: space.md },
+  fetchedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 },
   playDetail: { gap: space.sm, marginTop: space.md },
   sourcesRow: {
     flexDirection: 'row',

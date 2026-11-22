@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { File, Paths } from 'expo-file-system';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import type { PlayTitle, Viewer } from '@web/wire';
+import type { Job, PlayTitle, Viewer } from '@web/wire';
 
 import { pickedEpisodes, useJobsSelect } from '@/engine/jobs';
 import { copyOf, save, type Label } from '@/offline/saved';
@@ -43,8 +43,13 @@ function writeWanted(jobs: Wanted) {
 }
 
 /** Starts a download of `video` to keep, finding its source the way Play would, without opening the player: it answers once a source holds. */
-export async function startDownload(link: Link, viewer: Viewer, video: string): Promise<{ job: string; file: number }> {
-  const body: PlayTitle = { video, viewer, keep: true };
+export async function startDownload(
+  link: Link,
+  viewer: Viewer,
+  video: string,
+  source?: string,
+): Promise<{ job: string; file: number }> {
+  const body: PlayTitle = source ? { video, viewer, source, keep: true } : { video, viewer, keep: true };
   let job: { job: string; file: number } | null = null;
   let failure: string | null = null;
   const controller = new AbortController();
@@ -61,21 +66,40 @@ export async function startDownload(link: Link, viewer: Viewer, video: string): 
   throw new Error(failure ?? 'No source started.');
 }
 
-/** How far a download covering `video` has come: the film, the episode, or the season it is in. */
-export function useHeldState(video: string | null): 'none' | 'downloading' | 'done' {
-  const [title, season, episode] = (video ?? '').split(':');
+export type Held = { state: 'none' | 'downloading' | 'done'; fraction: number };
+
+const NONE: Held = { state: 'none', fraction: 0 };
+
+const sameHeld = (a: Held, b: Held) =>
+  a.state === b.state && Math.round(a.fraction * 200) === Math.round(b.fraction * 200);
+
+function held(jobs: Job[], video: string | null): Held {
+  if (!video) return NONE;
+  const [title, season, episode] = video.split(':');
   const spans = season ? [`s${Number(season)}e${Number(episode)}`, `s${Number(season)}`] : ['film'];
-  return useJobsSelect(({ jobs }) => {
-    if (!video) return 'none';
-    const covering = jobs.filter((job) => {
-      if (job.title?.title !== title || !spans.includes(job.title.span.toLowerCase())) return false;
-      if (!season || /e\d/i.test(job.title.span)) return true;
-      const picked = pickedEpisodes(job);
-      return picked === null || picked.includes(Number(episode));
-    });
-    if (covering.some((job) => job.state === 'done')) return 'done';
-    return covering.some((job) => job.state !== 'paused' && job.state !== 'error') ? 'downloading' : 'none';
+  const covering = jobs.filter((job) => {
+    if (job.title?.title !== title || !spans.includes(job.title.span.toLowerCase())) return false;
+    if (!season || /e\d/i.test(job.title.span)) return true;
+    const picked = pickedEpisodes(job);
+    return picked === null || picked.includes(Number(episode));
   });
+  if (covering.some((job) => job.state === 'done')) return { state: 'done', fraction: 1 };
+  const moving = covering.filter((job) => job.state !== 'paused' && job.state !== 'error');
+  if (moving.length === 0) return NONE;
+  const fraction = Math.max(
+    ...moving.map((job) => (job.progress.size ? job.progress.verified / job.progress.size : 0)),
+  );
+  return { state: 'downloading', fraction };
+}
+
+/** How far a download covering `video` has come: the film, the episode, or the season it is in. */
+export function useHeldState(video: string | null): Held['state'] {
+  return useJobsSelect(({ jobs }) => held(jobs, video).state);
+}
+
+/** The same, with how much of it has arrived, changing in half-percent steps. */
+export function useHeldProgress(video: string | null): Held {
+  return useJobsSelect(({ jobs }) => held(jobs, video), sameHeld);
 }
 
 /** Whether a download already covers `video`. */
@@ -93,12 +117,12 @@ export function useDownload(video: string | null, label: Label) {
 
   useEffect(() => setFetching({ state: 'idle' }), [video]);
 
-  const start = async () => {
+  const start = async (source?: string) => {
     if (!video || fetching.state === 'finding') return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setFetching({ state: 'finding' });
     try {
-      const started = await startDownload(link, viewer, video);
+      const started = await startDownload(link, viewer, video, source);
       if (onComputer) writeWanted({ ...readWanted(), [started.job]: { label, file: started.file } });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setFetching({ state: 'started', job: started.job });
