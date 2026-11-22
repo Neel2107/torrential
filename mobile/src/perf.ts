@@ -12,3 +12,10 @@ export function since(name: string, label: string) {
   marks.delete(name);
   console.log(`[perf] ${label} ${Math.round(performance.now() - at)} ms`);
 }
+
+/** Logs how long since `name` was marked without ending it, for the steps in between. */
+export function lap(name: string, label: string) {
+  const at = marks.get(name);
+  if (at === undefined) return;
+  console.log(`[perf] ${label} ${Math.round(performance.now() - at)} ms`);
+}

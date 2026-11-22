@@ -15,6 +15,7 @@ import type {
 
 import { EngineError, post, stream, type Link } from '@/engine/client';
 import { useLink } from '@/engine/session';
+import { lap } from '@/perf';
 
 type PlayMessage =
   | { type: 'resolved'; video: string; title: TitleCard; episode: EpisodeInfo | null }
@@ -103,6 +104,7 @@ export function useTitlePlay(video: string, attempt: number, source?: string): S
 
     const body: PlayTitle = source ? { video, viewer, source } : { video, viewer };
     stream<PlayMessage>(link, '/api/title/play', { method: 'POST', body, signal: controller.signal }, (message) => {
+      lap('play', `play ${message.type}`);
       switch (message.type) {
         case 'resolved':
           title = message.title;
