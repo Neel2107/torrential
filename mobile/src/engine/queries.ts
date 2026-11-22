@@ -96,12 +96,12 @@ function searchRoute(query: string): string {
   return `/api/titles?q=${encodeURIComponent(query)}`;
 }
 
-export function useTitleSearch(q: string) {
-  const link = useLink();
+/** The search for titles named `q`, kept on disk, so a search can start before the screen that shows it renders. */
+export function titleSearchQuery(link: Link, q: string) {
   const query = q.trim();
   const route = searchRoute(query);
 
-  return useQuery({
+  return queryOptions({
     queryKey: [...keys.titles(query), link.base],
     queryFn: async ({ signal }) => {
       lap('typed', 'search sent');
@@ -111,10 +111,15 @@ export function useTitleSearch(q: string) {
       return found;
     },
     enabled: query.length > 0,
-    placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
     ...keptOptions<TitleSearch>(link, route),
   });
+}
+
+export function useTitleSearch(q: string) {
+  const link = useLink();
+
+  return useQuery({ ...titleSearchQuery(link, q), placeholderData: keepPreviousData });
 }
 
 /** Whether a search for `q` already has an answer, in memory or kept on disk, so it can show without waiting for typing to settle. */

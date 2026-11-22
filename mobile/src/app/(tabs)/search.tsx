@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Keyboard, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   interpolateColor,
@@ -28,7 +28,7 @@ import {
 
 import { post, stream } from '@/engine/client';
 import { openJob, STATE, useJob, useJobName, useJobsSelect } from '@/engine/jobs';
-import { keys, useHome, useKnownSearch, useTitleSearch } from '@/engine/queries';
+import { keys, titleSearchQuery, useHome, useKnownSearch, useTitleSearch } from '@/engine/queries';
 import { mark, since } from '@/perf';
 import { useRecentSearches } from '@/engine/recent';
 import { useLink } from '@/engine/session';
@@ -75,10 +75,16 @@ const SETTLE_MS = 280;
 const ignore = () => {};
 const NOTHING: ReadonlySet<string> = new Set();
 
-function useDebounced<T>(value: T, ms: number): T {
+/** `value` once it has stayed the same for `ms`. `onSettle` runs as it settles, before the render that shows it, so work it starts doesn't wait for that render. */
+function useDebounced<T>(value: T, ms: number, onSettle: (value: T) => void): T {
   const [settled, setSettled] = useState(value);
+  const settle = useEffectEvent(onSettle);
+
   useEffect(() => {
-    const timer = setTimeout(() => setSettled(value), ms);
+    const timer = setTimeout(() => {
+      settle(value);
+      setSettled(value);
+    }, ms);
 
     return () => clearTimeout(timer);
   }, [value, ms]);
@@ -107,7 +113,13 @@ export default function Search() {
   const position = usePagerPosition(0);
   const [everything, setEverything] = useState(false);
   const typed = text.trim();
-  const settled = useDebounced(typed, SETTLE_MS);
+  const link = useLink();
+  const client = useQueryClient();
+
+  const settled = useDebounced(typed, SETTLE_MS, (next) => {
+    if (tab === 0 && next) client.prefetchQuery(titleSearchQuery(link, next));
+  });
+
   const known = useKnownSearch();
   const query = typed !== settled && known(typed) ? typed : settled;
   const top = insets.top + BAR_HEIGHT + TABS_HEIGHT;
