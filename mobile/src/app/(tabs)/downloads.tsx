@@ -12,7 +12,7 @@ import { openJob, STATE, useJob, useJobName, useJobs } from '@/engine/jobs';
 import { qualityOf } from '@/engine/quality';
 import { Art } from '@/ui/Art';
 import { useLink, useSession } from '@/engine/session';
-import { cancel, copyOf, freeSpace, remove, save, useCopies, useCopy, type Copy } from '@/offline/saved';
+import { cancel, copyOf, freeSpace, remove, retry, save, useCopies, useCopy, type Copy } from '@/offline/saved';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
@@ -524,7 +524,7 @@ function useCopyActions(copy: Copy): RowAction[] {
         label: 'Try again',
         icon: icons.refresh,
         symbol: 'arrow.clockwise',
-        run: () => save(link, copy.job, copy.label),
+        run: () => retry(link, copy),
       },
       { id: 'dismiss', label: 'Dismiss', icon: icons.close, symbol: 'xmark', run: when('failed') },
     ];

@@ -1,4 +1,4 @@
-import { Directory, File, Paths, type DownloadTask } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 
@@ -6,7 +6,7 @@ import { bytes } from '@web/lib/format';
 import { fileName, fileUrl, savedVideo } from '@web/lib/release';
 import type { FilesReply, OnlineSubtitles } from '@web/wire';
 
-import { authHeaders, get, post, url, type Link } from '@/engine/client';
+import { authHeaders, get, post, transport, url, type Download, type Link } from '@/engine/client';
 import { languageName, sameLanguage } from '@/player/languages';
 import { NO_PREFERENCES, playerPreferences, readStored, savedCopies } from '@/engine/stored';
 
@@ -29,7 +29,7 @@ const manifest = new File(folder, 'saved.json');
 let copies: ReadonlyMap<string, Copy> = new Map();
 let loaded = false;
 const listeners = new Set<() => void>();
-const tasks = new Map<string, DownloadTask>();
+const tasks = new Map<string, Download>();
 
 function publish(next: Map<string, Copy>) {
   copies = next;
@@ -97,12 +97,19 @@ export function useCopy(job: string): Copy | undefined {
   return useSyncExternalStore(subscribe, () => copies).get(job);
 }
 
+/** How much room the phone has for copies, in bytes, or null when it will not say. The app asks expo-file-system; a test says how much. */
+export const disk = {
+  free: (): number | null => {
+    try {
+      return Paths.availableDiskSpace;
+    } catch {
+      return null;
+    }
+  },
+};
+
 export function freeSpace(): number | null {
-  try {
-    return Paths.availableDiskSpace;
-  } catch {
-    return null;
-  }
+  return disk.free();
 }
 
 const claimed = new Set<string>();
@@ -119,6 +126,11 @@ export async function save(link: Link, job: string, label: Label, file?: number)
   } finally {
     claimed.delete(job);
   }
+}
+
+/** Tries a failed copy again. */
+export function retry(link: Link, failed: Copy): Promise<void> {
+  return save(link, failed.job, failed.label);
 }
 
 async function copy(link: Link, job: string, label: Label, index?: number): Promise<void> {
@@ -158,10 +170,10 @@ async function copy(link: Link, job: string, label: Label, index?: number): Prom
 
   put({ job, label, size, state: 'saving', written: 0 });
   let shown = 0;
-  let task: DownloadTask | null = null;
+  let task: Download | null = null;
 
   try {
-    task = File.createDownloadTask(url(link, fileUrl(job, file)), part, {
+    task = transport.download(url(link, fileUrl(job, file)), part, {
       headers: authHeaders(link),
       onProgress: ({ bytesWritten }) => {
         const now = Date.now();

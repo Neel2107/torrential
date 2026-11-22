@@ -1,4 +1,13 @@
-import type { Error as WireError, ErrorCode, Job, JobStatus, Position, Release } from '@web/wire';
+import type {
+  Error as WireError,
+  ErrorCode,
+  FilesReply,
+  Job,
+  JobStatus,
+  Position,
+  Release,
+  TorrentFile,
+} from '@web/wire';
 
 type JobFields = Omit<Extract<Job, { state: 'queued' }>, 'state'>;
 
@@ -57,4 +66,25 @@ export function aPosition(change: Partial<Position> = {}): Position {
 /** The error the engine puts in its `{ "error": … }` envelope. */
 export function anError(code: ErrorCode, message: string, change: Partial<WireError> = {}): WireError {
   return { code, message, ...change };
+}
+
+/** One file of a download as the engine lists it, selected and wholly verified, changed only where a test says. */
+export function aFile(change: Partial<TorrentFile> = {}): TorrentFile {
+  const base: TorrentFile = { index: 0, path: 'Sintel.2010.mkv', size: 100, selected: true, verified: 100 };
+
+  return { ...base, ...change };
+}
+
+/** A download's files as `POST /api/files` lists them. */
+export function someFiles(files: TorrentFile[], change: Partial<FilesReply> = {}): FilesReply {
+  const base: FilesReply = {
+    id: 'a1',
+    name: 'Sintel',
+    total_size: files.reduce((total, file) => total + file.size, 0),
+    files,
+    metadata_source: 'download',
+    elapsed_ms: 0,
+  };
+
+  return { ...base, ...change };
 }

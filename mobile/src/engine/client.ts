@@ -1,4 +1,5 @@
 import * as Device from 'expo-device';
+import { File, type DownloadTask, type DownloadTaskOptions } from 'expo-file-system';
 import { fetch, type FetchRequestInit } from 'expo/fetch';
 import { Platform } from 'react-native';
 
@@ -11,10 +12,19 @@ export type Link = { base: string; token: string | null };
 /** What the client reads from the engine's answer: expo/fetch's response, or one a test builds. */
 export type Reply = Pick<Response, 'ok' | 'status' | 'headers' | 'text' | 'body'>;
 
-/** How requests reach the engine. The app sends them with expo/fetch; a test answers them as the engine would. */
-export type Transport = { fetch: (address: string, init: FetchRequestInit) => Promise<Reply> };
+/** What the app drives of a file download: expo-file-system's task, or one a test builds. */
+export type Download = Pick<DownloadTask, 'state' | 'downloadAsync' | 'cancel'>;
 
-export const transport: Transport = { fetch };
+/** How requests and file downloads reach the engine. The app sends them with expo/fetch and expo-file-system; a test answers them as the engine would. */
+export type Transport = {
+  fetch: (address: string, init: FetchRequestInit) => Promise<Reply>;
+  download: (address: string, to: File, options: DownloadTaskOptions) => Download;
+};
+
+export const transport: Transport = {
+  fetch,
+  download: (address, to, options) => File.createDownloadTask(address, to, options),
+};
 
 export const PORT = 47919;
 export const COOKIE = 'torrential_device';

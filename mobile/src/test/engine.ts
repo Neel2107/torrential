@@ -1,4 +1,5 @@
 import { afterEach } from '@jest/globals';
+import type { DownloadTaskState } from 'expo-file-system';
 import type { FetchRequestInit } from 'expo/fetch';
 
 import { transport, type Link, type Reply } from '@/engine/client';
@@ -8,9 +9,11 @@ import type { Error as WireError } from '@web/wire';
 export type Asked = { address: string; init: FetchRequestInit };
 
 const sent = transport.fetch;
+const downloaded = transport.download;
 
 afterEach(() => {
   transport.fetch = sent;
+  transport.download = downloaded;
 });
 
 export const LINK: Link = { base: 'http://engine.test:47919', token: null };
@@ -59,4 +62,42 @@ export function json<T>(value: T, status = 200): Reply {
 /** The engine refusing a request with its error envelope. */
 export function refusal(status: number, error: WireError): Reply {
   return json({ error }, status);
+}
+
+/** Serves every file the app downloads, until the test ends, writing what `engine` gives for its address where the app asked, and keeps the addresses asked for. A download stays open until `engine`'s promise settles, and fails when it rejects. */
+export function serve(engine: (address: string) => string | Promise<string>): string[] {
+  const asked: string[] = [];
+
+  transport.download = (address, to) => {
+    asked.push(address);
+    let state: DownloadTaskState = 'idle';
+    const cancelled = () => state === 'cancelled';
+
+    return {
+      get state() {
+        return state;
+      },
+      cancel: () => {
+        state = 'cancelled';
+      },
+      downloadAsync: async () => {
+        state = 'active';
+
+        try {
+          const body = await engine(address);
+
+          if (cancelled()) throw new Error('The download was cancelled.');
+          to.write(body);
+          state = 'completed';
+
+          return to;
+        } catch (error) {
+          if (!cancelled()) state = 'error';
+          throw error;
+        }
+      },
+    };
+  };
+
+  return asked;
 }

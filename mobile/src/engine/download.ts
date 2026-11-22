@@ -48,6 +48,27 @@ function writeWanted(jobs: Wanted) {
   for (const listener of askedListeners) listener();
 }
 
+/** Asks for `file` of the computer's download `job` to be saved to this phone once it finishes. */
+export function wantCopy(job: string, label: Label, file: number) {
+  writeWanted({ ...readWanted(), [job]: { label, file } });
+}
+
+async function saveAsked(link: Link, job: string, { label, file }: Wanted[string]) {
+  await save(link, job, label, file);
+
+  if (copyOf(job)?.state !== 'saved') return;
+  const left = readWanted();
+  delete left[job];
+  writeWanted(left);
+}
+
+/** Saves to this phone each of the `done` downloads asked for that way, forgetting the ask once its copy is saved. */
+export function saveWanted(link: Link, done: string[]): Promise<void[]> {
+  const wanting = readWanted();
+
+  return Promise.all(done.flatMap((job) => (wanting[job] ? [saveAsked(link, job, wanting[job])] : [])));
+}
+
 /** Starts a download of `video` to keep, finding its source the way Play would, without opening the player: it answers once a source holds. */
 export async function startDownload(
   link: Link,
@@ -146,7 +167,7 @@ export function useDownload(video: string | null, label: Label) {
     try {
       const started = await startDownload(link, viewer, video, source);
 
-      if (onComputer) writeWanted({ ...readWanted(), [started.job]: { label, file: started.file } });
+      if (onComputer) wantCopy(started.job, label, started.file);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setFetching({ state: 'started', job: started.job });
     } catch (error) {
@@ -173,17 +194,7 @@ export function SaveWhenDone() {
   const version = useSyncExternalStore(subscribeAsked, () => asked);
 
   useEffect(() => {
-    const wanting = readWanted();
-
-    for (const id of done.filter((candidate) => wanting[candidate])) {
-      const { label, file } = wanting[id];
-      save(link, id, label, file).then(() => {
-        if (copyOf(id)?.state !== 'saved') return;
-        const left = readWanted();
-        delete left[id];
-        writeWanted(left);
-      });
-    }
+    saveWanted(link, done);
   }, [done, link, version]);
 
   return null;
