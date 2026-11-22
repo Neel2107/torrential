@@ -18,7 +18,11 @@ if ! command -v pnpm >/dev/null 2>&1; then
   exit 1
 fi
 
-pnpm -C "$root/mobile" -s check || {
+log=$(mktemp)
+if ! pnpm -C "$root/mobile" -s check >"$log" 2>&1; then
+  cat "$log" >&2
+  rm -f "$log"
   echo "pre-commit: pnpm -C mobile -s check failed; fix it before committing." >&2
   exit 1
-}
+fi
+rm -f "$log"
