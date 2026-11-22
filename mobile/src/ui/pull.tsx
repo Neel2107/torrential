@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { createContext, use, useCallback, useMemo, useRef, type ReactNode } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import Animated, {
   cancelAnimation,
@@ -17,11 +17,13 @@ import Animated, {
 
 import { motion } from '@/theme';
 
-import { Mark } from './Mark';
+import Svg, { ClipPath, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+
+import { TRIANGLE } from './Mark';
 
 /**
  * Pull to refresh as X has it: the header stretches with the finger and the mark grows in it; let
- * go past the line and the header snaps back while the mark flips until the feed is fresh. No
+ * go past the line and the header snaps back while the mark breathes until the feed is fresh. No
  * spinner and no gap above the feed.
  *
  * Android lists cannot be pulled past their top, so a pan beside the list's own scrolling does the
@@ -32,16 +34,18 @@ import { Mark } from './Mark';
 const MOST = 130;
 /** Past this a release refreshes. */
 const LINE = 70;
-/** One flip of the mark. */
-const TURN = 520;
-/** A refresh flips at least this long, so a quick answer still reads as a refresh. */
-const AT_LEAST = 700;
+/** One pass of light down the three bands. */
+const CYCLE = 750;
+/** A refresh lights at least this long, one full pass and its fade, so a quick answer still reads as one. */
+const AT_LEAST = 1000;
 
 type Pull = {
   /** Points pulled, after resistance. */
   pull: SharedValue<number>;
-  /** Degrees the mark has turned. */
+  /** How far into a breath the mark is while the feed refreshes, 0 to 1. */
   spin: SharedValue<number>;
+  /** 1 while refreshing, easing to 0 after, so the bands return to rest smoothly. */
+  busy: SharedValue<number>;
 };
 
 const Context = createContext<Pull | null>(null);
@@ -49,7 +53,8 @@ const Context = createContext<Pull | null>(null);
 export function PullProvider({ children }: { children: ReactNode }) {
   const pull = useSharedValue(0);
   const spin = useSharedValue(0);
-  const value = useMemo(() => ({ pull, spin }), [pull, spin]);
+  const busy = useSharedValue(0);
+  const value = useMemo(() => ({ pull, spin, busy }), [pull, spin, busy]);
   return <Context value={value}>{children}</Context>;
 }
 
@@ -71,7 +76,7 @@ function resist(distance: number): number {
  * offset (iOS), and the feed's style, which moves it down with the pull on Android.
  */
 export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => Promise<unknown>) {
-  const { pull, spin } = usePull();
+  const { pull, spin, busy: lit } = usePull();
   const busy = useRef(false);
   const crossed = useSharedValue(false);
 
@@ -80,19 +85,15 @@ export function usePullToRefresh(offset: SharedValue<number>, onRefresh: () => P
     busy.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     spin.value = 0;
-    spin.value = withRepeat(withTiming(360, { duration: TURN, easing: Easing.inOut(Easing.cubic) }), -1);
+    spin.value = withRepeat(withTiming(1, { duration: CYCLE, easing: Easing.linear }), -1, false);
+    lit.value = withTiming(1, { duration: 160 });
     const started = Date.now();
     await onRefresh().catch(() => {});
     await new Promise((done) => setTimeout(done, Math.max(0, AT_LEAST - (Date.now() - started))));
-    // The flip under way ends where it began, so the mark never stops on its side.
-    const now = spin.value % 360;
-    cancelAnimation(spin);
-    spin.value = now;
-    spin.value = withTiming(360, { duration: TURN * ((360 - now) / 360), easing: Easing.out(Easing.cubic) }, () => {
-      spin.value = 0;
-    });
+    // The bands finish the cycle under way, then settle back to the mark at rest.
+    lit.value = withTiming(0, { duration: 250 }, () => cancelAnimation(spin));
     busy.current = false;
-  }, [onRefresh, spin]);
+  }, [onRefresh, spin, lit]);
 
   const tick = useCallback(() => Haptics.selectionAsync(), []);
 
@@ -156,15 +157,58 @@ export function usePullHeight() {
   return pull;
 }
 
-/** The mark in the bar: it grows with the pull and flips while the feed refreshes. */
+/** How lit band `index` is at `phase` of a pass: each band peaks in turn, top to bottom. */
+function band(phase: number, index: number): number {
+  'worklet';
+  const t = (((phase - index * 0.18) % 1) + 1) % 1;
+  const peak = t < 0.35 ? t / 0.35 : Math.max(0, 1 - (t - 0.35) / 0.4);
+  return 0.3 + 0.7 * peak;
+}
+
+/**
+ * The mark in the bar. It grows with the pull, dim until the pull would refresh, as X's does; while
+ * the feed refreshes its three bands light top to bottom, like pieces of a torrent landing.
+ */
 export function PullMark({ size = 30 }: { size?: number }) {
-  const { pull, spin } = usePull();
+  const { pull, spin, busy } = usePull();
   const style = useAnimatedStyle(() => ({
-    transform: [{ perspective: 600 }, { scale: 1 + (pull.value / MOST) * 0.6 }, { rotateY: `${spin.value}deg` }],
+    opacity: pull.value > 0 ? 0.4 + 0.6 * Math.min(1, pull.value / LINE) : 1,
+    transform: [{ scale: 1 + (pull.value / MOST) * 0.6 }],
   }));
+  // At rest the last band is the faint one still arriving; while refreshing, light runs down all
+  // three. Each band is its own layer: animated SVG props do not reach the drawing on Android.
+  const lit = (index: number, rest: number) => {
+    'worklet';
+    return rest + (band(spin.value, index) - rest) * busy.value;
+  };
+  const top = useAnimatedStyle(() => ({ opacity: lit(0, 1) }));
+  const middle = useAnimatedStyle(() => ({ opacity: lit(1, 1) }));
+  const last = useAnimatedStyle(() => ({ opacity: lit(2, 0.42) }));
+  const layers: [number, number, typeof top][] = [
+    [300, 118, top],
+    [446, 132, middle],
+    [606, 160, last],
+  ];
   return (
-    <Animated.View style={style}>
-      <Mark size={size} />
+    <Animated.View style={[{ width: size, height: size }, style]} accessibilityLabel="torrential">
+      {layers.map(([y, height, opacity]) => (
+        <Animated.View key={y} style={[StyleSheet.absoluteFill, opacity]}>
+          <Svg width={size} height={size} viewBox="308 300 440 440">
+            <Defs>
+              <LinearGradient id={`pull-${y}`} x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor="#c3dbb8" />
+                <Stop offset="1" stopColor="#8fb683" />
+              </LinearGradient>
+              <ClipPath id={`pull-clip-${y}`}>
+                <Path d={TRIANGLE} transform="translate(-40 42)" />
+              </ClipPath>
+            </Defs>
+            <G clipPath={`url(#pull-clip-${y})`}>
+              <Rect x="300" y={y} width="520" height={height} fill={`url(#pull-${y})`} />
+            </G>
+          </Svg>
+        </Animated.View>
+      ))}
     </Animated.View>
   );
 }
