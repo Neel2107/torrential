@@ -14,6 +14,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { day, minutes, minutesLeft } from '@web/lib/format';
@@ -35,6 +36,7 @@ import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
+import { TabStrip, usePagerPosition } from '@/ui/Pager';
 import { Tap } from '@/ui/Tap';
 import { color, font, motion, radius, space, type } from '@/theme';
 
@@ -322,52 +324,94 @@ function Synopsis({ text }: { text: string }) {
 }
 
 function Episodes({ page, watched, current }: { page: Page; watched: Map<string, Watched>; current: string | null }) {
+  const { width } = useWindowDimensions();
   const seasons = page.seasons.filter((s) => s.episodes.length > 0);
   const currentSeason = current ? findEpisode(page, current)?.season : undefined;
   const [season, setSeason] = useState(
     () => currentSeason ?? seasons.find((s) => s.number > 0)?.number ?? seasons[0]?.number ?? 1,
   );
+  const at = Math.max(
+    0,
+    seasons.findIndex((s) => s.number === season),
+  );
+  const position = usePagerPosition(at);
+  const drag = useSharedValue(0);
+
+  const show = (next: number) => {
+    position.value = withTiming(next, GLIDE);
+    setSeason(seasons[next].number);
+  };
 
   useEffect(() => {
-    if (currentSeason !== undefined) setSeason(currentSeason);
+    if (currentSeason === undefined) return;
+    const next = seasons.findIndex((s) => s.number === currentSeason);
+    if (next >= 0) position.value = next;
+    setSeason(currentSeason);
   }, [currentSeason]);
 
-  const episodes = seasons.find((s) => s.number === season)?.episodes ?? [];
+  const swipe = Gesture.Pan()
+    .runOnJS(true)
+    .activeOffsetX([-16, 16])
+    .failOffsetY([-12, 12])
+    .onUpdate((event) => {
+      const room = (event.translationX < 0 ? at < seasons.length - 1 : at > 0) ? 1 : 0.25;
+      drag.value = event.translationX * room;
+      position.value = Math.min(seasons.length - 1, Math.max(0, at - (drag.value / width) * room));
+    })
+    .onEnd((event) => {
+      const far = Math.abs(event.translationX) > width * 0.25 || Math.abs(event.velocityX) > 600;
+      const next = at + (event.translationX < 0 ? 1 : -1);
+      if (far && next >= 0 && next < seasons.length) {
+        Haptics.selectionAsync();
+        drag.value = Math.sign(event.translationX) * -width * 0.15;
+        show(next);
+      } else {
+        position.value = withTiming(at, GLIDE);
+      }
+      drag.value = withSpring(0, { damping: 22, stiffness: 220 });
+    });
+
+  const carried = useAnimatedStyle(() => ({
+    transform: [{ translateX: drag.value * 0.5 }],
+    opacity: 1 - Math.min(0.5, Math.abs(drag.value) / width),
+  }));
+
+  const episodes = seasons[at]?.episodes ?? [];
 
   return (
-    <View style={{ marginTop: space.xl }}>
-      <Animated.ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.seasons}>
-        {seasons.map((s) => {
-          const selected = s.number === season;
-          return (
-            <Tap
-              key={s.number}
-              haptic
-              shrink={0.94}
-              onPress={() => setSeason(s.number)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              style={[styles.chip, selected && styles.chipOn]}
-            >
-              <Text style={[styles.chipText, selected && { color: color.actionInk }]}>{seasonName(s.number)}</Text>
-            </Tap>
-          );
-        })}
-      </Animated.ScrollView>
-      <View style={styles.rule} />
-      {episodes.map((episode, index) => (
-        <EpisodeRow
-          key={`${season}:${episode.episode}`}
-          page={page}
-          episode={episode}
-          watched={watched.get(videoOf(page.id, episode))}
-          index={index}
-          current={current === videoOf(page.id, episode)}
+    <View style={{ marginTop: space.lg }}>
+      {seasons.length > 1 ? (
+        <TabStrip
+          labels={seasons.map((s) => seasonName(s.number))}
+          index={at}
+          position={position}
+          onChange={(next) => setSeason(seasons[next].number)}
+          scroll
+          glide
+          style={styles.seasons}
         />
-      ))}
+      ) : (
+        <View style={styles.rule} />
+      )}
+      <GestureDetector gesture={swipe}>
+        <Animated.View style={carried}>
+          {episodes.map((episode, index) => (
+            <EpisodeRow
+              key={`${season}:${episode.episode}`}
+              page={page}
+              episode={episode}
+              watched={watched.get(videoOf(page.id, episode))}
+              index={index}
+              current={current === videoOf(page.id, episode)}
+            />
+          ))}
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }
+
+const GLIDE = { duration: 260, easing: motion.out };
 
 function EpisodeRow({
   page,
@@ -540,17 +584,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radius.md,
   },
-  seasons: { gap: space.sm, paddingBottom: space.md },
-  chip: {
-    height: 36,
-    paddingHorizontal: 16,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: color.rule,
-    justifyContent: 'center',
-  },
-  chipOn: { backgroundColor: color.ink, borderColor: color.ink },
-  chipText: { fontFamily: font.semibold, fontSize: 14, color: color.soft },
+  seasons: { marginHorizontal: -space.page },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.rule, marginHorizontal: -space.page },
   episode: {
     flexDirection: 'row',

@@ -9,10 +9,14 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { color, font } from '@/theme';
+import { color, font, motion } from '@/theme';
+
+const TAB_PAD = 16;
+const GLIDE = { duration: 260, easing: motion.out };
 
 /** Which page shows, in pages, fractional mid-swipe. */
 export function usePagerPosition(index: number): SharedValue<number> {
@@ -79,15 +83,23 @@ export function TabStrip({
   index,
   position,
   onChange,
+  scroll = false,
+  glide = false,
   style,
 }: {
   labels: string[];
   index: number;
   position: SharedValue<number>;
   onChange: (index: number) => void;
+  /** Tabs as wide as their labels in a strip that scrolls, for more tabs than fit. */
+  scroll?: boolean;
+  /** The underline slides to a tapped tab instead of jumping with the content. */
+  glide?: boolean;
   style?: ViewStyle;
 }) {
   const [spots, setSpots] = useState<({ x: number; width: number } | undefined)[]>([]);
+  const strip = useAnimatedRef<Animated.ScrollView>();
+  const [stripWidth, setStripWidth] = useState(0);
   const ready = spots.length === labels.length && spots.every(Boolean);
   const inputs = labels.map((_, i) => i);
   const lefts = ready ? spots.map((spot) => spot!.x) : inputs.map(() => 0);
@@ -99,36 +111,60 @@ export function TabStrip({
     width: interpolate(position.value, inputs, sizes),
   }));
 
+  const spot = spots[index];
+  useEffect(() => {
+    if (!scroll || !spot || !stripWidth) return;
+    strip.current?.scrollTo({ x: Math.max(0, spot.x + spot.width / 2 - stripWidth / 2), animated: true });
+  }, [scroll, spot, stripWidth, strip]);
+
+  const tabs = labels.map((label, i) => (
+    <Pressable
+      key={label}
+      style={scroll ? styles.tabScroll : styles.tab}
+      onPress={() => {
+        if (i === index) return;
+        Haptics.selectionAsync();
+        position.value = glide ? withTiming(i, GLIDE) : i;
+        onChange(i);
+      }}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: i === index }}
+      accessibilityLabel={label}
+      onLayout={(event) => {
+        const { x, width } = event.nativeEvent.layout;
+        const line = scroll ? width - TAB_PAD * 2 : Math.min(width - 24, 72);
+        setSpots((previous) => {
+          const next = [...previous];
+          next[i] = { x: x + (width - line) / 2, width: line };
+          return next;
+        });
+      }}
+    >
+      <TabLabel label={label} at={i} position={position} />
+    </Pressable>
+  ));
+
+  if (!scroll) {
+    return (
+      <View style={[styles.tabs, style]} accessibilityRole="tablist">
+        {tabs}
+        <Animated.View style={[styles.underline, underline]} />
+      </View>
+    );
+  }
   return (
-    <View style={[styles.tabs, style]} accessibilityRole="tablist">
-      {labels.map((label, i) => (
-        <Pressable
-          key={label}
-          style={styles.tab}
-          onPress={() => {
-            if (i === index) return;
-            Haptics.selectionAsync();
-            position.value = i;
-            onChange(i);
-          }}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: i === index }}
-          accessibilityLabel={label}
-          onLayout={(event) => {
-            const { x, width } = event.nativeEvent.layout;
-            const line = Math.min(width - 24, 72);
-            setSpots((previous) => {
-              const next = [...previous];
-              next[i] = { x: x + (width - line) / 2, width: line };
-              return next;
-            });
-          }}
-        >
-          <TabLabel label={label} at={i} position={position} />
-        </Pressable>
-      ))}
+    <Animated.ScrollView
+      ref={strip}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      onLayout={(event) => setStripWidth(event.nativeEvent.layout.width)}
+      style={[styles.tabs, style]}
+      contentContainerStyle={styles.tabsScroll}
+      accessibilityRole="tablist"
+    >
+      {tabs}
       <Animated.View style={[styles.underline, underline]} />
-    </View>
+    </Animated.ScrollView>
   );
 }
 
@@ -148,6 +184,8 @@ const styles = StyleSheet.create({
   pager: { flex: 1 },
   tabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.rule },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', height: 48 },
+  tabsScroll: { paddingHorizontal: 4 },
+  tabScroll: { alignItems: 'center', justifyContent: 'center', height: 48, paddingHorizontal: TAB_PAD },
   label: { fontFamily: font.bold, fontSize: 15 },
   underline: { position: 'absolute', bottom: 0, height: 4, borderRadius: 2, backgroundColor: color.action },
 });
