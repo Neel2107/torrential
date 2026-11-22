@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 use torrential_core::catalog::Episode;
 use torrential_core::time::now;
 use torrential_core::{
-    ArtKind, AttemptEvent, Decoders, Decoding, Error, ErrorCode, Playback, Player, Plays, Release, ReleaseId,
+    ArtKind, AttemptEvent, Decoders, Decoding, Error, ErrorCode, Kind, Playback, Player, Plays, Release, ReleaseId,
     TitleCard, TitleId, TorrentId, VideoRef, Viewer, Watched,
 };
 
@@ -34,6 +34,18 @@ pub async fn search(ctx: &Ctx, request: &Request) -> Result<Value, Error> {
         return value(Found { titles: Vec::new(), offline: true });
     }
     value(Found { titles: ctx.titles.catalog.search(words.trim()).await?, offline: false })
+}
+
+/// `GET /api/titles/popular?kind=film|series`: what is popular now, in Cinemeta's order. With
+/// title lookups off it lists what it keeps, and says it is offline.
+pub async fn popular(ctx: &Ctx, request: &Request) -> Result<Value, Error> {
+    let kind = match required(request, "kind")?.as_str() {
+        "film" => Kind::Film,
+        "series" => Kind::Series,
+        other => return Err(Error::new(ErrorCode::Usage, format!("kind={other} is not film or series"))),
+    };
+    let offline = !ctx.titles.catalog.online();
+    value(Found { titles: ctx.titles.catalog.popular(kind).await?, offline })
 }
 
 /// What `GET /api/titles` answers.

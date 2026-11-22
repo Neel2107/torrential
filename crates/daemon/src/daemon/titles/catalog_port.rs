@@ -23,6 +23,8 @@ pub trait CatalogPort: Send + Sync {
     /// catalog lists them.
     fn namesakes<'a>(&'a self, card: &'a TitleCard) -> BoxFuture<'a, Result<Vec<TitleCard>, Error>>;
     fn art<'a>(&'a self, id: &'a TitleId, kind: ArtKind) -> BoxFuture<'a, Result<Picture, Error>>;
+    /// The most popular films or series now. Empty when lookups are off and nothing is kept.
+    fn popular(&self, kind: Kind) -> BoxFuture<'_, Result<Vec<TitleCard>, Error>>;
 }
 
 pub struct Live(Catalog);
@@ -56,6 +58,10 @@ impl CatalogPort for Live {
 
     fn art<'a>(&'a self, id: &'a TitleId, kind: ArtKind) -> BoxFuture<'a, Result<Picture, Error>> {
         Box::pin(self.0.art(id, kind))
+    }
+
+    fn popular(&self, kind: Kind) -> BoxFuture<'_, Result<Vec<TitleCard>, Error>> {
+        Box::pin(self.0.popular(kind))
     }
 }
 
@@ -228,6 +234,11 @@ impl CatalogPort for Fake {
                 .ok_or_else(|| Error::new(ErrorCode::NotFound, format!("Cinemeta names no such picture for {id}")))
         });
         Box::pin(async move { found })
+    }
+
+    fn popular(&self, kind: Kind) -> BoxFuture<'_, Result<Vec<TitleCard>, Error>> {
+        let cards: Vec<TitleCard> = self.titles.iter().filter(|t| t.card.kind == kind).map(|t| t.card.clone()).collect();
+        Box::pin(async move { Ok(cards) })
     }
 }
 

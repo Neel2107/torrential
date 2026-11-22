@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use torrential_core::{
-    ArtKind, Display, Error, Playback, Preferences, Screen, Target, TitleCard, TitleDetails, TitleId,
+    ArtKind, Display, Error, Kind, Playback, Preferences, Screen, Target, TitleCard, TitleDetails, TitleId,
 };
 use torrential_search::catalog::Picture;
 
@@ -1559,6 +1559,10 @@ impl CatalogPort for Unanswered {
     fn art<'a>(&'a self, _: &'a TitleId, _: ArtKind) -> BoxFuture<'a, Result<Picture, Error>> {
         Box::pin(std::future::pending())
     }
+
+    fn popular(&self, _: Kind) -> BoxFuture<'_, Result<Vec<TitleCard>, Error>> {
+        Box::pin(std::future::pending())
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -1686,6 +1690,16 @@ async fn a_position_is_saved_only_for_a_film_or_an_aired_episode_the_catalog_lis
         (&json!([]), &json!({ "video": "tt9999901:1:1", "resume_at": null }))
     );
     assert_eq!(post(&h, "/api/watched", json!({ "video": "tt9999901:2:1", "position": 300.0 })).await.0, 200);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn popular_titles_come_by_kind_from_the_catalog() {
+    let (h, _) = titles::night();
+    let (status, films) = get(&h, "/api/titles/popular?kind=film").await;
+    assert_eq!(status, 200);
+    let kinds: Vec<&Value> = films["titles"].as_array().unwrap().iter().map(|card| &card["kind"]).collect();
+    assert!(!kinds.is_empty() && kinds.iter().all(|kind| **kind == json!("film")), "only films: {kinds:?}");
+    assert_eq!(get(&h, "/api/titles/popular?kind=song").await.0, 400, "a kind that is neither is refused");
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -22,10 +22,14 @@ use url::{Host, Origin, Url};
 use self::cinemeta::Described;
 use crate::http::{BROWSER, FetchError, Http, endpoint};
 use crate::imdb;
-use crate::store::{self, Store};
+use crate::store::{self, Kept, Store};
 
 const BASE: &str = "https://v3-cinemeta.strem.io/";
 const LOOKUP_WITHIN: Duration = Duration::from_secs(8);
+/// Cinemeta's lists of what is popular now.
+const POPULAR: &str = "https://cinemeta-catalogs.strem.io/top/";
+/// How long a popular list kept on disk answers before Cinemeta is asked again.
+const POPULAR_FOR: Duration = Duration::from_secs(24 * 60 * 60);
 const LARGEST_LISTING: usize = 1 << 20;
 /// A long-running series lists thousands of episodes.
 const LARGEST_DETAILS: usize = 8 << 20;
@@ -259,6 +263,40 @@ impl Catalog {
         }
         let listed = ranked(words, films.unwrap_or_default(), series.unwrap_or_default());
         Ok(self.remember(holding(words, merged(suggested.unwrap_or_default(), listed))))
+    }
+
+    /// Cinemeta's most popular films or series now, in its order. A list kept from the last day
+    /// answers first, and an older one answers when Cinemeta does not. Turned off, only a kept
+    /// list answers.
+    pub async fn popular(&self, kind: Kind) -> Result<Vec<TitleCard>, Error> {
+        let name = format!("popular {}", cinemeta::segment(kind));
+        let kept = self.store.get(&name).await;
+        let from_kept = |kept: &Kept| cinemeta::listing(&kept.bytes, kind).ok();
+        if let Some(listed) = kept.as_ref().filter(|kept| kept.age() < POPULAR_FOR || !self.online).and_then(from_kept)
+        {
+            return Ok(self.remember(listed));
+        }
+        if !self.online {
+            return Ok(Vec::new());
+        }
+        let url = Url::parse(POPULAR)
+            .and_then(|base| base.join(&format!("catalog/{}/top.json", cinemeta::segment(kind))))
+            .map_err(|e| failed("name Cinemeta's popular list", FetchError::Connect(e.to_string())))?;
+        let fetched = self.http.get(&url, LARGEST_LISTING, Instant::now() + LOOKUP_WITHIN).await;
+        let listed = fetched.and_then(|body| {
+            let listed = cinemeta::listing(&body, kind).map_err(|e| FetchError::Decode(e.to_string()))?;
+            Ok((body, listed))
+        });
+        match listed {
+            Ok((body, listed)) => {
+                self.store.put(&name, &body).await;
+                Ok(self.remember(listed))
+            }
+            Err(e) => match kept.as_ref().and_then(from_kept) {
+                Some(listed) => Ok(self.remember(listed)),
+                None => Err(failed("ask Cinemeta what is popular", e)),
+            },
+        }
     }
 
     /// The titles of `card`'s kind under its normalized name, `card` among them, in the order a
