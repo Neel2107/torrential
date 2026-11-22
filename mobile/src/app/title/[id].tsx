@@ -43,6 +43,7 @@ import { HeroTarget, useHeroPage, useLanded } from '@/ui/hero';
 import { bannerHeight as bannerHeightOf, OVERLAP, POSTER, RING, RISE } from '@/ui/titleGeometry';
 import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
+import { NavRow } from '@/ui/Row';
 import { ProgressRing } from '@/ui/ProgressRing';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
@@ -268,18 +269,12 @@ function Body({ page }: { page: Page }) {
       ) : null}
 
       {target ? (
-        <Animated.View entering={enter(3)}>
-          <Tap
-            shrink={1}
-            highlight
+        <Animated.View entering={enter(3)} style={{ marginTop: space.sm }}>
+          <NavRow
+            label="Choose a source"
+            leading={<Icon name={icons.episodes} size={18} tint={color.soft} />}
             onPress={() => setSourcesOpen(true)}
-            accessibilityLabel="Choose a source"
-            style={styles.sourcesRow}
-          >
-            <Icon name={icons.episodes} size={18} tint={color.soft} />
-            <Text style={[type.label, { flex: 1, color: color.ink }]}>Choose a source</Text>
-            <Icon name={icons.chevron} size={18} tint={color.pencil} />
-          </Tap>
+          />
         </Animated.View>
       ) : null}
 
@@ -727,16 +722,6 @@ const styles = StyleSheet.create({
   fetched: { marginTop: space.md },
   fetchedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 },
   playDetail: { gap: space.sm, marginTop: space.md },
-  sourcesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    marginTop: space.md,
-    marginHorizontal: -space.sm,
-    paddingHorizontal: space.sm,
-    minHeight: 44,
-    borderRadius: radius.md,
-  },
   seasons: { marginHorizontal: -space.page },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.rule, marginHorizontal: -space.page },
   episode: {

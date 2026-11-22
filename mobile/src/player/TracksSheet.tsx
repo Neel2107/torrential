@@ -1,28 +1,19 @@
 import type { ReactNode } from 'react';
 import { useEvent } from 'expo';
 import type { AudioTrack, SubtitleTrack, VideoPlayer } from 'expo-video';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  Keyframe,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import type { MediaInfo, OnlineSubtitle } from '@web/wire';
 
 import { languageLabel, languageName, phoneLanguage, sameLanguage } from './languages';
 import type { OnlineLookup, SubtitleChoice } from './Subtitles';
 
-import { Icon, icons } from '@/ui/Icon';
 import { PageHeader, Pages } from '@/ui/Pages';
+import { NavRow, OptionRow } from '@/ui/Row';
 import { Sheet } from '@/ui/Sheet';
-import { Check } from '@/ui/Check';
-import { Tap } from '@/ui/Tap';
-import { stage as color, font, motion, space, stageType as type } from '@/theme';
+import { stage as color, motion, space, stageType as type } from '@/theme';
 import { chooseAudio, chooseSubtitles } from './control';
 
 type FileChoice = Extract<SubtitleChoice, { kind: 'file' }>;
@@ -97,7 +88,7 @@ export function TracksSheet({
   const subtitleNames = namesOf(subtitles, 'Subtitles');
 
   const off = (
-    <Row
+    <OptionRow
       label="Off"
       selected={!subtitleTrack && !drawn}
       onPress={() => {
@@ -108,7 +99,7 @@ export function TracksSheet({
     />
   );
   const embedded = (track: SubtitleTrack, index: number) => (
-    <Row
+    <OptionRow
       key={`${track.id ?? index}`}
       label={subtitleNames[index]!}
       detail={languageDetail(track.language, subtitleNames[index]!)}
@@ -121,7 +112,7 @@ export function TracksSheet({
     />
   );
   const file = (candidate: FileChoice) => (
-    <Row
+    <OptionRow
       key={`file-${candidate.index}`}
       label={candidate.name.replace(/\.(srt|vtt|ass|ssa|sub)$/i, '')}
       detail="Subtitle file in the torrent"
@@ -132,7 +123,7 @@ export function TracksSheet({
 
   const audioRows = streamAudio
     ? streamAudio.tracks.map((track, index) => (
-        <Row
+        <OptionRow
           key={`stream-${track.stream}`}
           label={track.title || languageName(track.language) || `Audio ${index + 1}`}
           detail={`${track.codec.toUpperCase()} · ${channels(track.channels)} · converted by the engine`}
@@ -146,7 +137,7 @@ export function TracksSheet({
     : audio.map((track: AudioTrack, index) => {
         const fromEngine = media?.audio[index];
         return (
-          <Row
+          <OptionRow
             key={`${track.id ?? index}`}
             label={audio.length === 1 && !languageName(track.language) ? 'Original' : namesOf(audio, 'Audio')[index]!}
             detail={fromEngine ? `${fromEngine.codec.toUpperCase()} · ${channels(fromEngine.channels)}` : null}
@@ -179,7 +170,7 @@ export function TracksSheet({
       {current >= 0 ? embedded(subtitles[current]!, current) : null}
       {drawn?.kind === 'file' ? file(drawn) : null}
       {drawn?.kind === 'online' ? (
-        <Row
+        <OptionRow
           label={languageLabel(drawn.subtitle.language)}
           detail={[drawn.subtitle.exact ? 'Exact match' : 'Online', drawn.subtitle.name].filter(Boolean).join(' · ')}
           selected
@@ -187,7 +178,7 @@ export function TracksSheet({
         />
       ) : null}
       {suggested.map(({ track, index }) => embedded(track, index))}
-      <Next label="All subtitles" count={allSubtitles} onPress={() => setPage('subtitles')} />
+      <NavRow label="All subtitles" count={allSubtitles} onPress={() => setPage('subtitles')} />
     </View>
   );
   const audioColumn = (
@@ -197,12 +188,12 @@ export function TracksSheet({
       {audioCount > MENU_AUDIO ? (
         <>
           {audioSelected >= 0 ? audioRows[audioSelected] : null}
-          <Next label="All audio" count={audioCount} onPress={() => setPage('audio')} />
+          <NavRow label="All audio" count={audioCount} onPress={() => setPage('audio')} />
         </>
       ) : null}
 
       <View style={styles.gap} />
-      <Next label="Timing and style" onPress={() => setPage('style')} />
+      <NavRow label="Timing and style" onPress={() => setPage('style')} />
     </View>
   );
   const menu = (
@@ -263,22 +254,6 @@ export function TracksSheet({
   );
 }
 
-function Next({ label, count, onPress }: { label: string; count?: number; onPress: () => void }) {
-  return (
-    <Tap
-      shrink={1}
-      highlight
-      onPress={onPress}
-      accessibilityLabel={count === undefined ? label : `${label}, ${count}`}
-      style={styles.row}
-    >
-      <Text style={[styles.label, { flex: 1 }]}>{label}</Text>
-      {count !== undefined ? <Text style={type.numeric}>{count}</Text> : null}
-      <Icon name={icons.chevron} size={18} tint={color.pencil} />
-    </Tap>
-  );
-}
-
 function OnlineRows({
   lookup,
   drawn,
@@ -321,7 +296,7 @@ function OnlineRows({
   const versions = chosen ? (byLanguage.get(chosen.language) ?? []) : [];
 
   const row = (subtitle: OnlineSubtitle, label: string, detail: string | null) => (
-    <Row
+    <OptionRow
       key={subtitle.id}
       label={label}
       detail={[subtitle.exact ? 'Exact match' : 'Online', detail].filter(Boolean).join(' · ')}
@@ -339,11 +314,11 @@ function OnlineRows({
       {near.map(best)}
       {chosen && versions.length > 1 ? (
         <>
-          <Disclosure
+          <NavRow
             label={`Other ${languageLabel(chosen.language)} versions`}
             count={versions.length - 1}
-            open={versionsOpen}
-            onToggle={() => setVersionsOpen((open) => !open)}
+            expanded={versionsOpen}
+            onPress={() => setVersionsOpen((open) => !open)}
           />
           {versionsOpen ? (
             <Animated.View entering={FadeIn.duration(motion.quick)}>
@@ -357,11 +332,11 @@ function OnlineRows({
       ) : null}
       {rest.length > 0 ? (
         <>
-          <Disclosure
+          <NavRow
             label={near.length ? 'More languages' : 'Languages'}
             count={rest.length}
-            open={moreOpen}
-            onToggle={() => setMoreOpen((open) => !open)}
+            expanded={moreOpen}
+            onPress={() => setMoreOpen((open) => !open)}
           />
           {moreOpen ? <Animated.View entering={FadeIn.duration(motion.quick)}>{rest.map(best)}</Animated.View> : null}
         </>
@@ -370,74 +345,8 @@ function OnlineRows({
   );
 }
 
-function Disclosure({
-  label,
-  count,
-  open,
-  onToggle,
-}: {
-  label: string;
-  count: number;
-  open: boolean;
-  onToggle: () => void;
-}) {
-  const turn = useSharedValue(open ? 1 : 0);
-  useEffect(() => {
-    turn.set(withTiming(open ? 1 : 0, { duration: motion.quick, easing: motion.out }));
-  }, [open, turn]);
-  const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get() * 180}deg` }] }));
-
-  return (
-    <Tap
-      shrink={1}
-      highlight
-      haptic
-      onPress={onToggle}
-      accessibilityState={{ expanded: open }}
-      accessibilityLabel={`${label}, ${count}`}
-      style={styles.row}
-    >
-      <Text style={[styles.label, { flex: 1 }]}>{label}</Text>
-      <Text style={type.numeric}>{count}</Text>
-      <Animated.View style={chevron}>
-        <Icon name={icons.expand} size={18} tint={color.pencil} />
-      </Animated.View>
-    </Tap>
-  );
-}
-
 function channels(count: number): string {
   return count > 2 ? `${count - 1}.1` : count === 2 ? 'Stereo' : 'Mono';
-}
-
-function Row({
-  label,
-  detail,
-  selected,
-  onPress,
-}: {
-  label: string;
-  detail?: string | null;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Tap
-      shrink={1}
-      highlight
-      haptic
-      onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      style={styles.row}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.label, selected && { color: color.ink, fontFamily: font.semibold }]}>{label}</Text>
-        {detail ? <Text style={type.caption}>{detail}</Text> : null}
-      </View>
-      <Check shown={selected} />
-    </Tap>
-  );
 }
 
 const styles = StyleSheet.create({
@@ -448,15 +357,6 @@ const styles = StyleSheet.create({
   wide: { flexDirection: 'row', gap: space.xl },
   scroll: { flexGrow: 0, flexShrink: 1 },
   page: { paddingHorizontal: space.xl, gap: space.xs, paddingBottom: space.sm },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 52,
-    paddingHorizontal: space.md,
-    borderRadius: 12,
-    gap: space.md,
-  },
-  label: { fontFamily: font.medium, fontSize: 16, color: color.soft },
   empty: { paddingHorizontal: space.md, paddingVertical: space.sm },
   section: { paddingHorizontal: space.md, marginTop: space.md, marginBottom: space.xs },
   status: {

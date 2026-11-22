@@ -33,7 +33,7 @@ import { EngineAvatar } from '@/ui/EngineAvatar';
 import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { JobBadge } from '@/ui/JobBadge';
-import { MenuRow } from '@/ui/MenuRow';
+import { ActionRow } from '@/ui/Row';
 import { rise } from '@/ui/rise';
 import { Pager, usePagerPosition } from '@/ui/Pager';
 import { Sheet } from '@/ui/Sheet';
@@ -451,7 +451,7 @@ function JobMenu({ job, onClose }: { job: Job; onClose: () => void }) {
             {name.title}
           </Text>
           {actions.map((action) => (
-            <MenuRow
+            <ActionRow
               key={action.id}
               icon={action.icon}
               label={action.label}
@@ -633,16 +633,20 @@ function CopyMenu({ job, onClose }: { job: string; onClose: () => void }) {
             {copy.label.title}
           </Text>
           {copy.state === 'saved' ? (
-            <MenuRow
+            <ActionRow
               icon={icons.play}
               label="Play"
               onPress={() => close(() => router.push({ pathname: '/offline', params: { job } }))}
             />
           ) : null}
           {copy.state === 'failed' ? (
-            <MenuRow icon={icons.refresh} label="Try again" onPress={() => close(() => save(link, job, copy.label))} />
+            <ActionRow
+              icon={icons.refresh}
+              label="Try again"
+              onPress={() => close(() => save(link, job, copy.label))}
+            />
           ) : null}
-          <MenuRow
+          <ActionRow
             icon={copy.state === 'saving' ? icons.close : icons.trash}
             label={
               copy.state === 'saving' ? 'Stop saving' : copy.state === 'failed' ? 'Dismiss' : 'Delete from this phone'

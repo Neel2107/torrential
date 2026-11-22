@@ -8,6 +8,7 @@ import type { Release } from '@web/wire';
 
 import { Icon, icons } from '@/ui/Icon';
 import { PageHeader, Pages } from '@/ui/Pages';
+import { NavRow } from '@/ui/Row';
 import { Sheet } from '@/ui/Sheet';
 
 import { useSources } from './sources';
@@ -65,25 +66,15 @@ export function SettingsSheet({
       <Text style={[type.title, styles.heading]}>Settings</Text>
 
       {source ? (
-        <Tap
-          shrink={1}
-          highlight
-          haptic
+        <NavRow
+          label="Source"
+          detail={[readable(source.name).title, source.quality.resolution, source.size && bytes(source.size)]
+            .filter(Boolean)
+            .join(' · ')}
+          value="Change"
           onPress={() => setPage('sources')}
-          accessibilityLabel="Choose a source"
-          style={styles.link}
-        >
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={type.headline}>Source</Text>
-            <Text style={type.caption} numberOfLines={1}>
-              {[readable(source.name).title, source.quality.resolution, source.size && bytes(source.size)]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-          </View>
-          <Text style={type.label}>Change</Text>
-          <Icon name={icons.chevron} size={20} tint={color.pencil} />
-        </Tap>
+          accessibilityLabel="Source. Choose another"
+        />
       ) : null}
 
       <Section title="Speed" value={speedText(speed)}>
@@ -223,13 +214,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipText: { fontFamily: font.semibold, fontSize: 14, color: color.soft, fontVariant: ['tabular-nums'] },
-  link: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    minHeight: 56,
-    marginHorizontal: -space.md,
-    paddingHorizontal: space.md,
-    borderRadius: 12,
-  },
 });

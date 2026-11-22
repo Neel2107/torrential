@@ -39,7 +39,7 @@ import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineProblem } from '@/ui/EngineProblem';
 import { Glass } from '@/ui/Glass';
 import { Icon, icons } from '@/ui/Icon';
-import { MenuRow } from '@/ui/MenuRow';
+import { ActionRow } from '@/ui/Row';
 import { Meter } from '@/ui/Meter';
 import { rise } from '@/ui/rise';
 import { Sheet } from '@/ui/Sheet';
@@ -536,7 +536,7 @@ function NotVideo({ release, onClose }: { release: Release; onClose: () => void 
           {CATEGORIES[release.category ?? 'other']}, not a video, so it cannot play here. Run the command on the
           computer running torrential to download it there.
         </Text>
-        <MenuRow
+        <ActionRow
           icon={copied ? icons.check : icons.link}
           label={copied ? 'Copied' : `Copy “${command}”`}
           onPress={async () => {
@@ -546,7 +546,7 @@ function NotVideo({ release, onClose }: { release: Release; onClose: () => void 
           }}
         />
         {release.magnet ? (
-          <MenuRow
+          <ActionRow
             icon={icons.magnet}
             label="Share the magnet link"
             onPress={() => {
