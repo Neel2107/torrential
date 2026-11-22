@@ -45,6 +45,7 @@ import { lap } from '@/perf';
 import { MoreText } from '@/ui/MoreText';
 import { NavRow } from '@/ui/Row';
 import { ProgressRing } from '@/ui/ProgressRing';
+import { useGrowing } from '@/ui/growing';
 import { rise } from '@/ui/rise';
 import { Skeleton } from '@/ui/Skeleton';
 import { TabStrip, usePagerPosition } from '@/ui/Pager';
@@ -519,21 +520,41 @@ function Episodes({ page, watched, current }: { page: Page; watched: Map<string,
       )}
       <GestureDetector gesture={swipe}>
         <Animated.View style={carried}>
-          {episodes.map((episode, index) => (
-            <EpisodeRow
-              key={episode.episode}
-              page={page}
-              episode={episode}
-              watched={watched.get(videoOf(page.id, episode))}
-              index={index}
-              current={current === videoOf(page.id, episode)}
-              fit={fit}
-            />
-          ))}
+          <EpisodeList key={at} page={page} episodes={episodes} watched={watched} current={current} fit={fit} />
         </Animated.View>
       </GestureDetector>
     </View>
   );
+}
+
+function EpisodeList({
+  page,
+  episodes,
+  watched,
+  current,
+  fit,
+}: {
+  page: Page;
+  episodes: EpisodeInfo[];
+  watched: Map<string, Watched>;
+  current: string | null;
+  fit: EpisodeFit;
+}) {
+  const shown = useGrowing(episodes.length);
+
+  return episodes
+    .slice(0, shown)
+    .map((episode, index) => (
+      <EpisodeRow
+        key={episode.episode}
+        page={page}
+        episode={episode}
+        watched={watched.get(videoOf(page.id, episode))}
+        index={index}
+        current={current === videoOf(page.id, episode)}
+        fit={fit}
+      />
+    ));
 }
 
 const GLIDE = { duration: 260, easing: motion.out };
@@ -552,6 +573,9 @@ function episodeFit(screenWidth: number, fontScale: number): EpisodeFit {
 }
 
 const NEAR_STILLS = 6;
+
+/** Rows that rise in as a page lands; later rows mount below the fold, a few each frame, and just appear. */
+const RISING_ROWS = 4;
 
 function EpisodeRow({
   page,
@@ -576,7 +600,7 @@ function EpisodeRow({
   const aired = episode.has_aired;
 
   return (
-    <Animated.View entering={rise(index)}>
+    <Animated.View entering={index < RISING_ROWS ? rise(index) : undefined}>
       <Tap
         shrink={1}
         highlight
