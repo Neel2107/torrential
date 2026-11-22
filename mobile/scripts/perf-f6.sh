@@ -44,7 +44,8 @@ def grab(name):
     return m.group(1) if m else "?"
 janky = re.search(r"Janky frames: (\d+) \(([\d.]+)%\)", text)
 print("frames\ttotal " + grab("Total frames rendered") + "\tjanky " + (janky.group(2) + "%" if janky else "?") +
-      "\tp50 " + grab("50th percentile").rstrip("ms") + "\tp90 " + grab("90th percentile") + "\tp99 " + grab("99th percentile"))
+      "\tp50 " + grab("50th percentile").rstrip("ms") + "\tp90 " + grab("90th percentile") + "\tp99 " + grab("99th percentile") +
+      "\tworst " + max((b for b, n in re.findall(r"(\d+)ms=(\d+)", text.split("HISTOGRAM:")[1].split("\n")[0]) if int(n) > 0), key=int, default="?") + "ms")
 '
 }
 

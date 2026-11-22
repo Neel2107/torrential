@@ -1,9 +1,9 @@
 import { Button as NativeButton, Host, Image as SwiftImage, Menu as NativeMenu } from '@expo/ui/swift-ui';
 import * as modifiers from '@expo/ui/swift-ui/modifiers';
-import { useState, type ComponentProps } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState, type ComponentProps } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Menu } from '../../modules/glass-menu-android';
+import { Menu, type IMenuHandle } from '../../modules/glass-menu-android';
 
 import { color, scheme, space, type } from '@/theme';
 
@@ -62,27 +62,59 @@ export function MoreMenu({ actions, label }: { actions: RowAction[]; label: stri
     );
   }
 
-  return (
-    <Menu
-      colorScheme={scheme}
-      onSelect={({ id }) => {
-        const action = actions.find((candidate) => candidate.id === id);
+  return <GlassMore actions={actions} label={label} />;
+}
 
-        if (action) runAction(action);
+/** Android's ···, which draws a plain icon until its first press and only then makes the glass menu, opening it once laid out. Each glass menu is a native view holding a native view per action's icon, and a list of rows made them all on its first appearance. */
+function GlassMore({ actions, label }: { actions: RowAction[]; label: string }) {
+  const [made, setMade] = useState(false);
+  const menu = useRef<IMenuHandle>(null);
+  const opened = useRef(false);
+
+  if (!made) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        style={styles.target}
+        onPress={() => setMade(true)}
+      >
+        <Icon name={icons.more} size={20} tint={color.pencil} />
+      </Pressable>
+    );
+  }
+
+  return (
+    <View
+      style={styles.target}
+      onLayout={() => {
+        if (opened.current) return;
+        opened.current = true;
+        menu.current?.open();
       }}
     >
-      <Menu.Trigger glass={false} accessibilityLabel={label} style={styles.target}>
-        <Icon name={icons.more} size={20} tint={color.pencil} />
-      </Menu.Trigger>
-      <Menu.Content fontFamily="Inter_500Medium">
-        {actions.map((action) => (
-          <Menu.Item key={action.id} id={action.id} destructive={action.danger}>
-            <Menu.Item.Icon>{({ color: tint }) => <Icon name={action.icon} size={20} tint={tint} />}</Menu.Item.Icon>
-            <Menu.Item.Title>{action.label}</Menu.Item.Title>
-          </Menu.Item>
-        ))}
-      </Menu.Content>
-    </Menu>
+      <Menu
+        ref={menu}
+        colorScheme={scheme}
+        onSelect={({ id }) => {
+          const action = actions.find((candidate) => candidate.id === id);
+
+          if (action) runAction(action);
+        }}
+      >
+        <Menu.Trigger glass={false} accessibilityLabel={label} style={styles.target}>
+          <Icon name={icons.more} size={20} tint={color.pencil} />
+        </Menu.Trigger>
+        <Menu.Content fontFamily="Inter_500Medium">
+          {actions.map((action) => (
+            <Menu.Item key={action.id} id={action.id} destructive={action.danger}>
+              <Menu.Item.Icon>{({ color: tint }) => <Icon name={action.icon} size={20} tint={tint} />}</Menu.Item.Icon>
+              <Menu.Item.Title>{action.label}</Menu.Item.Title>
+            </Menu.Item>
+          ))}
+        </Menu.Content>
+      </Menu>
+    </View>
   );
 }
 
