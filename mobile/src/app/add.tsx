@@ -75,7 +75,7 @@ export default function Add() {
       setText(payload.value);
       clearSharedPayloads();
     } else if (payload.value) {
-      // Clearing deletes the shared copy, so only once it has been read.
+      /** Clearing deletes the shared copy, so only once it has been read. */
       readFile(payload.value).finally(() => clearSharedPayloads());
     } else {
       clearSharedPayloads();

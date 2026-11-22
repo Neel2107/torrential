@@ -70,6 +70,7 @@ Commit straight to `mobile`, one change per commit. CI (`.github/workflows/mobil
 ## This app
 
 - **Check:** `pnpm -s check` runs tsc, oxlint with the anti-slop rules (`.oxlintrc.json`, plugin vendored in `tools/oxlint/anti-slop`, at most 92 warnings, all known debt, no errors), Prettier and `scripts/compiler-check.js`. oxlint's anti-slop plugin is TypeScript, so use Node 22 (`.nvmrc`; on this Mac `/opt/homebrew/opt/node@22/bin`). The compiler check fails when React Compiler skips more components and hooks than it does today (9). Don’t raise that number; fix the cause.
+- **No comments in code:** lint (`anti-slop/no-comments`) rejects `//` and `/* */` comments in `src`. Name things so the code reads on its own; a rule the code can't show goes in a `/** */` doc comment on what it describes. `// SAFETY:` lines and tool directives (`oxlint-disable`, `@ts-expect-error`) stay.
 - **Shared values:** read and write them with `.get()` and `.set()`, never `.value`. `.value` makes React Compiler skip the whole component.
 - **Inside a worklet** (`useAnimatedStyle`, `useDerivedValue`, gesture callbacks), call only other worklets. A plain helper called there crashes the app on the UI thread in release builds ("Tried to synchronously call a Remote Function"); work the value out in the component and use the result.
 - **Worklet to React:** call back from a worklet with `scheduleOnRN` from `react-native-worklets` (`runOnJS` is deprecated). Never call back every frame; use `useAnimatedReaction` at a threshold.

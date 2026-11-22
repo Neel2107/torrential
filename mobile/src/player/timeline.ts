@@ -62,7 +62,7 @@ export function sourceFor(link: Link, play: PlayInfo, mode: Mode, metadata: Vide
 
   const query = { id: play.id, file: play.video.index, t: mode.from.toFixed(3), video: mode.video, audio: mode.audio };
 
-  // AVPlayer plays a live conversion only as HLS; ExoPlayer reads the one fragmented MP4 stream.
+  /** AVPlayer plays a live conversion only as HLS; ExoPlayer reads the one fragmented MP4 stream. */
   return USES_HLS
     ? { uri: url(link, '/api/hls/index.m3u8', query), headers: authHeaders(link), metadata, contentType: 'hls' }
     : { uri: url(link, '/api/stream', query), headers: authHeaders(link), metadata, contentType: 'progressive' };

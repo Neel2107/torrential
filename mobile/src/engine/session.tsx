@@ -161,7 +161,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       runOnPhone: async () => {
         if (!LocalEngine) throw new Error('This build cannot run the engine on the phone');
 
-        // Android 13 and later show the engine's notification only with permission.
+        /** Android 13 and later show the engine's notification only with permission. */
         if (Platform.OS === 'android' && Platform.Version >= 33) {
           await PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS').catch(() => {});
         }

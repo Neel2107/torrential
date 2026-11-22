@@ -295,7 +295,7 @@ function useJobActions(job: Job): RowAction[] {
   const { session } = useSession();
   const name = useJobName(job);
   const copy = useCopy(job.id);
-  // On the phone's own engine nothing else can clear the files, so removing deletes them.
+  /** On the phone's own engine nothing else can clear the files, so removing deletes them. */
   const onPhone = session.state === 'paired' && session.engine.kind === 'phone';
 
   const running =

@@ -39,7 +39,7 @@ export function Art({
 }) {
   const link = useLink();
   const styles = useStaged(themed, staged);
-  // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
+  /** Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache. */
   const { width, height } = useWindowDimensions();
   const orientation = width > height ? 'landscape' : 'portrait';
   const [failedUri, setFailedUri] = useState<string | null>(null);

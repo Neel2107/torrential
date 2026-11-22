@@ -84,8 +84,7 @@ export function LoadingMark({ size, label = 'Loading' }: { size: number; label?:
     if (reduced) return;
     phase.set(withRepeat(withTiming(1, { duration: PASS, easing: Easing.linear }), -1, false));
   }, [phase, reduced]);
-  // The maths sits inside each style: helper closures in a component are rewritten by the React
-  // Compiler and never reach the UI thread.
+  /** The maths sits inside each style: helper closures in a component are rewritten by the React Compiler and never reach the UI thread. */
   const top = useAnimatedStyle(() => ({ opacity: reduced ? 0.6 : band(phase.get(), 0) }));
   const middle = useAnimatedStyle(() => ({ opacity: reduced ? 0.6 : band(phase.get(), 1) }));
   const last = useAnimatedStyle(() => ({ opacity: reduced ? 0.6 : band(phase.get(), 2) }));

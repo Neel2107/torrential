@@ -19,8 +19,6 @@ import { motion } from '@/theme';
 
 import { BandsMark, fill } from './Bands';
 
-// Android lists cannot be pulled past their top, so a pan beside the scroll does the pulling there.
-// iOS lists bounce, and the bounce is the pull.
 const MOST = 130;
 const LINE = 70;
 const FLIP = 650;
@@ -58,6 +56,7 @@ function resist(distance: number): number {
   return MOST * (1 - Math.exp(-Math.max(0, distance) / (MOST * 1.6)));
 }
 
+/** Android lists cannot be pulled past their top, so a pan beside the scroll does the pulling there. iOS lists bounce, and the bounce is the pull. */
 export function usePullToRefresh<T>(offset: SharedValue<number>, onRefresh: () => Promise<T>) {
   const { pull, spin, busy: lit, holding } = usePull();
   const bounced = useSharedValue(false);
@@ -73,7 +72,7 @@ export function usePullToRefresh<T>(offset: SharedValue<number>, onRefresh: () =
     lit.set(1);
     const started = Date.now();
     await onRefresh().catch(() => {});
-    // Whole turns, so the mark lands face on however quickly the feed came back.
+    /** Whole turns, so the mark lands face on however quickly the feed came back. */
     const turns = Math.max(1, Math.ceil((Date.now() - started) / FLIP));
     await new Promise((done) => setTimeout(done, Math.max(0, started + turns * FLIP - Date.now())));
     const left = 1 - spin.get();
@@ -139,7 +138,7 @@ export function usePullToRefresh<T>(offset: SharedValue<number>, onRefresh: () =
     if (Platform.OS !== 'ios') return;
     pull.set(Math.min(MOST, Math.max(0, -y)));
 
-    // The bounce back after letting go is not a finger pulling.
+    /** The bounce back after letting go is not a finger pulling. */
     if (y >= 0) bounced.set(false);
     else if (!bounced.get()) holding.set(1);
   };

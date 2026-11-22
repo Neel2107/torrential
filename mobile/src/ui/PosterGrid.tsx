@@ -13,7 +13,7 @@ export function PosterGrid({ titles }: { titles: TitleCard[] }) {
   const { width } = useWindowDimensions();
   const columns = Math.max(3, Math.floor((width - space.page * 2) / 150));
   const gap = space.md;
-  // Whole points: three fractional widths can round past the row and push the last poster down a line.
+  /** Whole points: three fractional widths can round past the row and push the last poster down a line. */
   const itemWidth = Math.floor((width - space.page * 2 - gap * (columns - 1)) / columns);
 
   return (

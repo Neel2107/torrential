@@ -11,7 +11,7 @@ import { STAGE_DIFFERS, useStaged } from './stage';
 export function Logo({ id, name, style }: { id: string; name: string; style?: StyleProp<ViewStyle> }) {
   const link = useLink();
   const styles = useStaged(themed, staged);
-  // Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache.
+  /** Android drops the pixels of images behind the player when it rotates and back; a new key reloads them from cache. */
   const { width, height } = useWindowDimensions();
   const orientation = width > height ? 'landscape' : 'portrait';
   const uri = url(link, '/api/title/art', { id, kind: 'logo' });
