@@ -29,6 +29,7 @@ The owner likes floating surfaces, so they're the default for anything that sits
 | Nothing to show yet | `EmptyState` (`src/ui/EmptyState.tsx`) |
 | One choice of a few, side by side (search scope, speed, sleep, subtitle look) | `Chip` (`src/ui/Chip.tsx`); `radio` inside a radio group |
 | A section's title over a screen's content | `SectionHeading` (`src/ui/SectionHeading.tsx`) |
+| Long text cut to a few lines (synopses) | `MoreText` (`src/ui/MoreText.tsx`): the last line fades into "More"; never `numberOfLines`, whose ellipsis doubles a full stop |
 | Text in a narrow column (poster captions) | `maxFontSizeMultiplier={DENSE_TEXT_SCALE}` so words never split |
 
 ## Motion

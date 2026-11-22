@@ -41,6 +41,7 @@ import { HeroTarget, useHeroPage, useLanded } from '@/ui/hero';
 import { bannerHeight as bannerHeightOf, OVERLAP, POSTER, RING, RISE } from '@/ui/titleGeometry';
 import { Icon, icons } from '@/ui/Icon';
 import { Meter } from '@/ui/Meter';
+import { MoreText } from '@/ui/MoreText';
 import { NavRow } from '@/ui/Row';
 import { ProgressRing } from '@/ui/ProgressRing';
 import { rise } from '@/ui/rise';
@@ -275,14 +276,14 @@ function Body({ page }: { page: Page }) {
       ) : null}
 
       {page.synopsis && landed ? (
-        <Animated.View entering={enter(3)}>
-          <Synopsis text={page.synopsis} />
+        <Animated.View entering={enter(3)} style={styles.block}>
+          <MoreText text={page.synopsis} />
         </Animated.View>
       ) : null}
 
       {page.cast.length > 0 && landed ? (
-        <Animated.Text entering={enter(4)} style={[type.caption, styles.block]} numberOfLines={2}>
-          <Text style={{ color: color.soft, fontFamily: font.medium }}>Starring </Text>
+        <Animated.Text entering={enter(4)} style={[type.label, styles.cast]} numberOfLines={2}>
+          <Text style={{ color: color.pencil }}>Starring </Text>
           {page.cast.slice(0, 5).join(', ')}
         </Animated.Text>
       ) : null}
@@ -415,38 +416,6 @@ function SaveButton({ id, saved }: { id: string; saved: boolean }) {
     </Tap>
   );
 }
-
-function Synopsis({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
-  const [lines, setLines] = useState(0);
-  const long = lines > SYNOPSIS_LINES;
-
-  return (
-    <Tap
-      shrink={1}
-      onPress={() => long && setOpen((o) => !o)}
-      accessibilityLabel={text}
-      accessibilityHint={long ? 'Shows all of it' : undefined}
-      style={styles.block}
-    >
-      <Text
-        style={[type.body, styles.measure]}
-        onTextLayout={(event) => setLines(event.nativeEvent.lines.length)}
-        accessible={false}
-        importantForAccessibility="no-hide-descendants"
-        aria-hidden
-      >
-        {text}
-      </Text>
-      <Animated.Text layout={reflow} style={type.body} numberOfLines={open ? undefined : SYNOPSIS_LINES}>
-        {text}
-      </Animated.Text>
-      {long && !open ? <Text style={[type.label, { color: color.ink, marginTop: 2 }]}>More</Text> : null}
-    </Tap>
-  );
-}
-
-const SYNOPSIS_LINES = 3;
 
 function Episodes({ page, watched, current }: { page: Page; watched: Map<string, Watched>; current: string | null }) {
   const { width, fontScale } = useWindowDimensions();
@@ -764,7 +733,7 @@ const styles = StyleSheet.create({
   saveOn: { backgroundColor: color.ink },
   saveText: { fontFamily: font.bold, fontSize: 15 },
   block: { marginTop: space.lg },
-  measure: { position: 'absolute', top: 0, left: 0, right: 0, opacity: 0 },
+  cast: { marginTop: space.md },
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.xl },
   squareButton: {
     width: 48,
