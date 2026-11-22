@@ -68,6 +68,39 @@ export function sourceFor(link: Link, play: PlayInfo, mode: Mode, metadata: Vide
     : { uri: url(link, '/api/stream', query), headers: authHeaders(link), metadata, contentType: 'progressive' };
 }
 
+/** Which fallbacks the player has used up. */
+export type Retried = { direct: boolean; stream: boolean };
+
+/** What plays after the player fails at `at` in `current`, and how long to wait first: the file once more after 1.5 s, then a stream copying the video; a stream once more after 1.5 s, then one converting the video to H.264; then nothing. */
+export function recover(
+  current: Mode,
+  at: number,
+  retried: Retried,
+): { mode: Mode; after: number; retried: Retried } | null {
+  if (current.kind === 'direct' && !retried.direct) {
+    return { mode: { kind: 'direct' }, after: 1500, retried: { ...retried, direct: true } };
+  }
+
+  if (current.kind === 'direct') {
+    return { mode: { kind: 'stream', video: 'copy', from: at, audio: null, reason: 'failed' }, after: 0, retried };
+  }
+
+  if (current.kind === 'stream' && !retried.stream) {
+    return { mode: { ...current, from: at }, after: 1500, retried: { ...retried, stream: true } };
+  }
+
+  if (current.kind === 'stream' && current.video === 'copy') {
+    return { mode: { ...current, video: 'h264', from: at, reason: 'failed' }, after: 0, retried };
+  }
+
+  return null;
+}
+
+/** Where a stream's player counts from: zero (HLS, and some fragmented MP4) or the file's own time, `from`. It picks whichever reading of `currentTime` sits nearer where the stream should be after `elapsed` seconds of playing; the two are `from` apart, far more than a buffering stall moves them. */
+export function streamBase(from: number, currentTime: number, elapsed: number): number {
+  return Math.abs(currentTime - elapsed) < Math.abs(currentTime - (from + elapsed)) ? from : 0;
+}
+
 async function readyFfmpeg(link: Link, media: MediaInfo): Promise<boolean> {
   if (media.ffmpeg === 'ready') return true;
   let ready = false;
@@ -102,8 +135,7 @@ export function useTimeline({
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const decided = useRef(false);
-  const directRetried = useRef(false);
-  const streamRetried = useRef(false);
+  const retried = useRef<Retried>({ direct: false, stream: false });
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
 
@@ -172,10 +204,6 @@ export function useTimeline({
 
   useEventListener(player, 'sourceLoad', (event) => setLoadedDuration(event.duration));
 
-  // A stream's player counts from zero (HLS, and some fragmented MP4) or from the file's own
-  // timestamps. Each tick picks whichever reading sits nearer where the stream should be by now,
-  // judged by the wall clock since it started; the two readings are `from` apart, far more than any
-  // buffering stall moves them.
   useEventListener(player, 'timeUpdate', ({ currentTime }) => {
     const current = modeRef.current;
 
@@ -183,9 +211,7 @@ export function useTimeline({
 
     if (startedAt.current === null) startedAt.current = Date.now();
     const elapsed = ((Date.now() - startedAt.current) / 1000) * (player.playbackRate || 1);
-    const asZeroBased = Math.abs(currentTime - elapsed);
-    const asFileTime = Math.abs(currentTime - (current.from + elapsed));
-    base.current = asZeroBased < asFileTime ? current.from : 0;
+    base.current = streamBase(current.from, currentTime, elapsed);
     baseKnown.current = true;
   });
 
@@ -194,17 +220,13 @@ export function useTimeline({
     const current = modeRef.current;
     const at = current.kind === 'stream' ? Math.max(now(), current.from) : now();
 
-    if (current.kind === 'direct' && !directRetried.current) {
-      directRetried.current = true;
-      retryTimer.current = setTimeout(() => switchTo({ kind: 'direct' }, at), 1500);
-    } else if (current.kind === 'direct') {
-      switchTo({ kind: 'stream', video: 'copy', from: at, audio: null, reason: 'failed' }, at);
-    } else if (current.kind === 'stream' && !streamRetried.current) {
-      streamRetried.current = true;
-      retryTimer.current = setTimeout(() => switchTo({ ...current, from: at }, at), 1500);
-    } else if (current.kind === 'stream' && current.video === 'copy') {
-      switchTo({ ...current, video: 'h264', from: at, reason: 'failed' }, at);
-    }
+    const next = recover(current, at, retried.current);
+
+    if (!next) return;
+    retried.current = next.retried;
+
+    if (next.after > 0) retryTimer.current = setTimeout(() => switchTo(next.mode, at), next.after);
+    else switchTo(next.mode, at);
   });
 
   const seek = useCallback(

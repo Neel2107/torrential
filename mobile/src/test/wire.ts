@@ -1,9 +1,11 @@
 import type {
+  AudioTrack,
   Error as WireError,
   ErrorCode,
   FilesReply,
   Job,
   JobStatus,
+  MediaInfo,
   PlayInfo,
   Position,
   Release,
@@ -110,6 +112,29 @@ export function aPlay(change: Partial<PlayInfo> = {}): PlayInfo {
     total_size: 100,
     video,
     subtitles: [],
+  };
+
+  return { ...base, ...change };
+}
+
+/** An audio track of a video as the engine describes it, English AAC stereo unless the test says. */
+export function anAudioTrack(change: Partial<AudioTrack> = {}): AudioTrack {
+  const base: AudioTrack = { stream: 1, codec: 'aac', channels: 2, language: 'eng', title: null, default: false };
+
+  return { ...base, ...change };
+}
+
+/** What the engine knows of a video file, an MKV with no tracks unless the test says. */
+export function aMedia(change: Partial<MediaInfo> = {}): MediaInfo {
+  const base: MediaInfo = {
+    duration: 888,
+    container: 'matroska,webm',
+    video: null,
+    audio: [],
+    subtitles: [],
+    direct: null,
+    ffmpeg: 'ready',
+    chapters: [],
   };
 
   return { ...base, ...change };
