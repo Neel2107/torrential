@@ -25,6 +25,7 @@ function fitOf(lines: Line[], shown: number): Fit | null {
  * Long body text shown to its first `lines`; the last shown line fades into "More", and a tap shows all of it.
  * Text is cut by height, never by `numberOfLines`, so Android's ellipsis never lands after a full stop.
  * `on` is the colour behind the text, which the fade blends into.
+ * Once cut, the text sits in a layer the cut can't squeeze: iOS reports only the lines a clipped box shows, so measuring inside the cut would find the text short, drop the cut, and loop.
  */
 export function MoreText({ text, lines = 3, on = color.paper }: { text: string; lines?: number; on?: string }) {
   const [open, setOpen] = useState(false);
@@ -40,9 +41,11 @@ export function MoreText({ text, lines = 3, on = color.paper }: { text: string; 
       accessibilityState={fit ? { expanded: open } : undefined}
     >
       <Animated.View layout={reflow} style={fit && { height: open ? fit.full : fit.shut, overflow: 'hidden' }}>
-        <Text style={type.body} onTextLayout={(event) => setFit(fitOf(event.nativeEvent.lines, lines))}>
-          {text}
-        </Text>
+        <View style={fit && styles.uncut}>
+          <Text style={type.body} onTextLayout={(event) => setFit(fitOf(event.nativeEvent.lines, lines))}>
+            {text}
+          </Text>
+        </View>
         {fit && !open ? (
           <View style={[styles.more, { top: fit.lastTop }]} pointerEvents="none">
             <LinearGradient
@@ -60,6 +63,7 @@ export function MoreText({ text, lines = 3, on = color.paper }: { text: string; 
 }
 
 const styles = StyleSheet.create({
+  uncut: { position: 'absolute', top: 0, left: 0, right: 0 },
   more: { position: 'absolute', right: 0, flexDirection: 'row' },
   fade: { width: FADE },
   label: { fontFamily: font.semibold, color: color.ink, paddingLeft: space.xs },
