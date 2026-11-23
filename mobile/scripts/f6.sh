@@ -35,7 +35,7 @@ S=${F6:-$(serial)}
 A="adb -s $S"
 
 dump() {
-  for _ in 1 2 3 4 5; do
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
     if $A shell uiautomator dump /sdcard/f6.xml 2>&1 | grep -q "dumped to"; then
       $A shell cat /sdcard/f6.xml
       return
@@ -50,7 +50,7 @@ find_center() {
 import re, sys
 want = re.compile(sys.argv[1])
 for node in re.findall(r"<node [^>]*>", sys.stdin.read()):
-    label = " ".join(re.findall(r"(?:text|content-desc)=\"([^\"]*)\"", node))
+    label = " ".join(part for part in re.findall(r"(?:text|content-desc)=\"([^\"]*)\"", node) if part)
     if want.search(label):
         x1, y1, x2, y2 = map(int, re.search(r"bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"", node).groups())
         print((x1 + x2) // 2, (y1 + y2) // 2)
