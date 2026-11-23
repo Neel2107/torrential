@@ -15,7 +15,7 @@
 # before the frame counter resets: a uiautomator dump makes the app build its accessibility tree, which costs frames.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-T=${F6:-100.107.101.1:5555}
+T=${F6:-$("$(dirname "$0")/f6.sh" serial)}
 P=${PACKAGE:-dev.torrential.app.preview}
 A="adb -s $T"
 scenario=${1:?cold, title, scroll or tabs}
