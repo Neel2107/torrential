@@ -79,10 +79,17 @@ export default function Settings() {
           </View>
         </Group>
         <Group title="About" index={3}>
-          <Line label="Version" value={Application.nativeApplicationVersion ?? 'Unknown'} />
-          <Line label="Build" value={Application.nativeBuildVersion ?? 'Unknown'} />
-          <Line label="Commit" value={commit} last={!takesUpdates} />
-          {takesUpdates ? <OverTheAir checkNow={check === 'now'} /> : null}
+          <Line
+            label="Version"
+            value={Application.nativeApplicationVersion ?? 'Unknown'}
+            detail={[
+              `Build ${Application.nativeBuildVersion ?? 'unknown'}`,
+              commit,
+              ...(takesUpdates ? [runningBundle(), runtimeVersion] : []),
+            ].join(' · ')}
+            last={!takesUpdates}
+          />
+          {takesUpdates ? <CheckForUpdate checkNow={check === 'now'} /> : null}
         </Group>
       </ScrollView>
     </View>
@@ -118,8 +125,8 @@ const UPDATE_LABELS: Record<UpdatePhase, string> = {
   restarting: 'Restarting…',
 };
 
-/** "torrential preview" only: what this launch runs, and a row that fetches the newest update and restarts. */
-function OverTheAir({ checkNow }: { checkNow: boolean }) {
+/** "torrential preview" only: a row that fetches the newest update and restarts. */
+function CheckForUpdate({ checkNow }: { checkNow: boolean }) {
   const [phase, setPhase] = useState<UpdatePhase>(checkNow ? 'checking' : 'idle');
 
   useEffect(() => {
@@ -132,28 +139,42 @@ function OverTheAir({ checkNow }: { checkNow: boolean }) {
   };
 
   return (
-    <>
-      <Line label="Bundle" value={runningBundle()} />
-      <Line label="Runtime" value={runtimeVersion} />
-      <View style={styles.action}>
-        <ActionRow
-          label={UPDATE_LABELS[phase]}
-          icon={icons.refresh}
-          disabled={phase === 'checking' || phase === 'restarting'}
-          onPress={check}
-        />
-      </View>
-    </>
+    <View style={styles.action}>
+      <ActionRow
+        label={UPDATE_LABELS[phase]}
+        icon={icons.refresh}
+        disabled={phase === 'checking' || phase === 'restarting'}
+        onPress={check}
+      />
+    </View>
   );
 }
 
-function Line({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
+/** A label and its value, with `detail` in small type under them: what someone checking a build reads, kept out of everyone else's way. */
+function Line({
+  label,
+  value,
+  detail,
+  last = false,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  last?: boolean;
+}) {
   return (
-    <View style={[styles.line, !last && styles.rule]}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.lineValue} selectable>
-        {value}
-      </Text>
+    <View style={[styles.lineBlock, !last && styles.rule]}>
+      <View style={styles.line}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.lineValue} selectable>
+          {value}
+        </Text>
+      </View>
+      {detail ? (
+        <Text style={styles.detail} selectable>
+          {detail}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -180,13 +201,9 @@ const styles = StyleSheet.create({
   value: { fontFamily: font.medium, fontSize: 16, color: color.ink },
   status: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 3.5 },
-  line: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.lg,
-    paddingVertical: 14,
-  },
+  lineBlock: { paddingHorizontal: space.lg, paddingVertical: 14, gap: space.xs },
+  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  detail: { ...type.caption, color: color.pencil, fontVariant: ['tabular-nums'] },
   action: { paddingHorizontal: space.lg },
   rule: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.rule },
   label: { fontFamily: font.medium, fontSize: 15, color: color.soft },
