@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { DevSettings, Modal, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 
-import { color, font, isThemeId, motion, radius, saveTheme, space, themeId, themes, type, type ThemeId } from '@/theme';
+import { color, font, isThemeId, motion, radius, saveTheme, space, themeId, themes, type ThemeId } from '@/theme';
 
 import { Mark } from './Mark';
 import { Tap } from './Tap';
@@ -76,7 +76,6 @@ export function ThemePicker() {
           );
         })}
       </View>
-      <Text style={type.caption}>{themes[shown].note}</Text>
       <Modal visible={covered} transparent animationType="none" statusBarTranslucent navigationBarTranslucent>
         {covered && next ? <Cover id={next} /> : null}
       </Modal>
