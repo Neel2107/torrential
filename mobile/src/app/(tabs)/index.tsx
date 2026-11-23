@@ -20,7 +20,6 @@ import { Art } from '@/ui/Art';
 import { useChrome, useChromeScroll } from '@/ui/chrome';
 import { EngineAvatar } from '@/ui/EngineAvatar';
 import { EngineProblem } from '@/ui/EngineProblem';
-import { ADD_IN_TOP_BAR, FAB_ROOM, Fab } from '@/ui/Fab';
 import { Icon, icons } from '@/ui/Icon';
 import { Logo } from '@/ui/Logo';
 import { PullMark, usePullToRefresh } from '@/ui/pull';
@@ -68,7 +67,7 @@ export default function Home() {
           style={pull.feed}
           contentContainerStyle={{
             paddingTop: top + space.md,
-            paddingBottom: bottom + FAB_ROOM,
+            paddingBottom: bottom + space.xl,
           }}
         >
           {home.isPending ? (
@@ -98,18 +97,8 @@ export default function Home() {
       <TopBar
         left={<EngineAvatar />}
         mark={<PullMark size={30} />}
-        right={
-          <Actions
-            actions={[
-              { icon: icons.cast, label: 'Play on TV', onPress: () => router.push('/tv') },
-              ...(ADD_IN_TOP_BAR
-                ? [{ icon: icons.add, label: 'Add a magnet link', onPress: () => router.push('/add') }]
-                : []),
-            ]}
-          />
-        }
+        right={<Actions actions={[{ icon: icons.cast, label: 'Play on TV', onPress: () => router.push('/tv') }]} />}
       />
-      <Fab icon={icons.add} label="Add a magnet link" onPress={() => router.push('/add')} />
     </View>
   );
 }
