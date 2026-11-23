@@ -28,7 +28,7 @@ import { appear, vanish } from '@/ui/presets';
 
 type Mode = 'scan' | 'type';
 
-function explain(cause: unknown): string {
+function explain(cause: unknown, base: string): string {
   if (cause instanceof EngineError) {
     if (cause.status === 400) return 'That code is not the one your computer shows. Check it and try again.';
 
@@ -40,6 +40,9 @@ function explain(cause: unknown): string {
 
     return sentence(cause.message);
   }
+
+  if (/^https?:\/\/[^/:]+\.local(:|\/|$)/i.test(base))
+    return "Can't reach the computer by its name. Type the IP address its Devices page shows, such as 192.168.1.20:52991, with the code.";
 
   return "Can't reach that address. Check that this phone is on the same network as the computer.";
 }
@@ -82,7 +85,7 @@ export default function Pair() {
       router.replace('/');
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setProblem(explain(error));
+      setProblem(explain(error, base));
       scanned.current = false;
     }
 

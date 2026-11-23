@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, jest, test } from '@jest/globals';
 
 import { answer, anOpenStream, inBytes, inPieces, json, LINK, refusal } from '@/test/engine';
 import { aJob, anError } from '@/test/wire';
@@ -183,6 +183,20 @@ describe('pairing with a code', () => {
     await expect(pair(LINK.base, '123456')).rejects.toMatchObject({
       message: 'The engine paired this phone but sent no device token.',
     });
+  });
+
+  test('a computer that never answers fails after ten seconds instead of waiting forever', async () => {
+    jest.useFakeTimers();
+    answer(
+      ({ init }) =>
+        new Promise((_, reject) => init.signal?.addEventListener('abort', () => reject(new Error('aborted')))),
+    );
+
+    const pairing = pair('http://mac.local:52991', '123456');
+    const settled = expect(pairing).rejects.toThrow('aborted');
+    jest.advanceTimersByTime(10_000);
+    await settled;
+    jest.useRealTimers();
   });
 
   test('a wrong code rejects with what the engine says', async () => {

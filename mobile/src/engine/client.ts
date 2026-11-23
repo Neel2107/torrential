@@ -220,13 +220,22 @@ export async function events<T>(link: Link, path: string, signal: AbortSignal, o
   });
 }
 
+/** How long pairing waits for the computer to answer. Android's networking never gives up on its own, so a name that resolves to an address the phone can't reach would leave pairing waiting forever. */
+const PAIR_WITHIN_MS = 10_000;
+
 export async function pair(base: string, code: string): Promise<string> {
-  const response = await transport.fetch(`${base}/api/pair`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': USER_AGENT },
-    body: JSON.stringify({ code }),
-    credentials: 'omit',
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PAIR_WITHIN_MS);
+
+  const response = await transport
+    .fetch(`${base}/api/pair`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': USER_AGENT },
+      body: JSON.stringify({ code }),
+      credentials: 'omit',
+      signal: controller.signal,
+    })
+    .finally(() => clearTimeout(timer));
 
   if (!response.ok) throw await failure(response);
   const cookie = response.headers.get('set-cookie') ?? '';
