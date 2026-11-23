@@ -25,6 +25,7 @@ export function PosterGrid({ titles }: { titles: TitleCard[] }) {
   );
 }
 
+/** A poster and its caption: name, rating and year. A caption is narrow, so it leaves out "Series", which the label read aloud still says. */
 export function Poster({ title, width }: { title: TitleCard; width: number }) {
   return (
     <TitleTap
@@ -46,7 +47,7 @@ export function Poster({ title, width }: { title: TitleCard; width: number }) {
       <Text style={[type.label, styles.name]} numberOfLines={2} maxFontSizeMultiplier={DENSE_TEXT_SCALE}>
         {title.name}
       </Text>
-      <TitleFacts rating={title.rating} facts={[cardFacts(title)].filter(Boolean)} />
+      <TitleFacts rating={title.rating} facts={title.year ? [String(title.year)] : []} />
     </TitleTap>
   );
 }
