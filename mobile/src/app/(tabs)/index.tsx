@@ -1,14 +1,7 @@
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 
@@ -109,13 +102,6 @@ const TIGHT_FONT_SCALE = 1.15;
 function ContinueCarousel({ items }: { items: Continue[] }) {
   const { width } = useWindowDimensions();
   const cardWidth = items.length > 1 ? width - space.page * 2 - 28 : width - space.page * 2;
-  const [page, setPage] = useState(0);
-
-  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const next = Math.round(event.nativeEvent.contentOffset.x / (cardWidth + space.md));
-
-    if (next !== page) setPage(next);
-  };
 
   return (
     <Animated.View entering={rise(0)} style={styles.carousel}>
@@ -126,21 +112,12 @@ function ContinueCarousel({ items }: { items: Continue[] }) {
         snapToInterval={cardWidth + space.md}
         decelerationRate="fast"
         disableIntervalMomentum
-        onScroll={onScroll}
-        scrollEventThrottle={32}
         contentContainerStyle={{ paddingHorizontal: space.page, gap: space.md }}
       >
         {items.map((item, index) => (
           <ContinueCard key={item.video} item={item} width={cardWidth} index={index} />
         ))}
       </Animated.ScrollView>
-      {items.length > 1 ? (
-        <View style={styles.dots} accessible={false}>
-          {items.map((item, index) => (
-            <View key={item.video} style={[styles.dot, index === page && styles.dotActive]} />
-          ))}
-        </View>
-      ) : null}
     </Animated.View>
   );
 }
@@ -271,8 +248,5 @@ const styles = StyleSheet.create({
   edgeMeter: { position: 'absolute', left: space.lg, right: space.lg, bottom: space.md },
   cardText: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingTop: space.md, paddingHorizontal: 2 },
   cardTextTight: { flexDirection: 'column', alignItems: 'flex-start', gap: 2 },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: space.xs },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.rule },
-  dotActive: { width: 18, backgroundColor: color.soft },
   empty: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xxl, paddingTop: 96 },
 });
